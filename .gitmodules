@@ -8,3 +8,6 @@
 [submodule "lib/juice-contracts-v4"]
 	path = lib/juice-contracts-v4
 	url = https://github.com/Bananapus/juice-contracts-v4
+[submodule "lib/v3-core"]
+	path = lib/v3-core
+	url = https://github.com/uniswap/v3-core
