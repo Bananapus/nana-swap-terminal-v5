@@ -5,18 +5,18 @@
 [submodule "lib/ds-test"]
 	path = lib/ds-test
 	url = https://github.com/dapphub/ds-test
-[submodule "lib/juice-contracts-v4"]
-	path = lib/juice-contracts-v4
-	url = https://github.com/Bananapus/juice-contracts-v4
-[submodule "lib/v3-core"]
-	path = lib/v3-core
-	url = https://github.com/uniswap/v3-core
-[submodule "lib/v3-periphery"]
-	path = lib/v3-periphery
-	url = https://github.com/uniswap/v3-periphery
 [submodule "lib/uniswap-v3-foundry-quote"]
 	path = lib/uniswap-v3-foundry-quote
 	url = https://github.com/exhausted-pigeon-srl/uniswap-v3-foundry-quote
 [submodule "lib/uniswap-v3-foundry-pool"]
 	path = lib/uniswap-v3-foundry-pool
 	url = https://github.com/exhausted-pigeon-srl/uniswap-v3-foundry-pool
+[submodule "lib/v3-core"]
+	path = lib/v3-core
+	url = https://github.com/uniswap/v3-core
+[submodule "lib/v3-periphery"]
+	path = lib/v3-periphery
+	url = https://github.com/uniswap/v3-periphery
+[submodule "lib/juice-contracts-v4"]
+	path = lib/juice-contracts-v4
+	url = https://github.com/Bananapus/juice-contracts-v4

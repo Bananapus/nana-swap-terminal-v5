@@ -27,20 +27,20 @@ import {OracleLibrary} from "@uniswap/v3-periphery/contracts/libraries/OracleLib
 import {TickMath} from "@uniswap/v3-core/contracts/libraries/TickMath.sol";
 import {IUniswapV3SwapCallback} from "@uniswap/v3-core/contracts/interfaces/callback/IUniswapV3SwapCallback.sol";
 
-import {IJBDirectory} from "./interfaces/IJBDirectory.sol";
-import {IJBPermissions} from "./interfaces/IJBPermissions.sol";
-import {IJBProjects} from "./interfaces/IJBProjects.sol";
-import {IJBTerminalStore} from "./interfaces/IJBTerminalStore.sol";
-import {JBMetadataResolver} from "./libraries/JBMetadataResolver.sol";
-import {JBSingleAllowanceContext} from "./structs/JBSingleAllowanceContext.sol";
-import {JBPermissioned} from "./abstract/JBPermissioned.sol";
-import {JBPermissionIds} from "./libraries/JBPermissionIds.sol";
-import {JBAccountingContext} from "./structs/JBAccountingContext.sol";
-import {JBConstants} from "./libraries/JBConstants.sol";
+import {IJBDirectory} from "juice-contracts-v4/src/interfaces/IJBDirectory.sol";
+import {IJBPermissions} from "juice-contracts-v4/src/interfaces/IJBPermissions.sol";
+import {IJBProjects} from "juice-contracts-v4/src/interfaces/IJBProjects.sol";
+import {IJBTerminalStore} from "juice-contracts-v4/src/interfaces/IJBTerminalStore.sol";
+import {JBMetadataResolver} from "juice-contracts-v4/src/libraries/JBMetadataResolver.sol";
+import {JBSingleAllowanceContext} from "juice-contracts-v4/src/structs/JBSingleAllowanceContext.sol";
+import {JBPermissioned} from "juice-contracts-v4/src/abstract/JBPermissioned.sol";
+import {JBPermissionIds} from "juice-contracts-v4/src/libraries/JBPermissionIds.sol";
+import {JBAccountingContext} from "juice-contracts-v4/src/structs/JBAccountingContext.sol";
+import {JBConstants} from "juice-contracts-v4/src/libraries/JBConstants.sol";
 
 import {IJBTerminal, IJBPermitTerminal, IJBMultiTerminal} from "./interfaces/terminal/IJBMultiTerminal.sol";
 
-import {IWETH9} from "./interfaces/external/IWETH9.sol";
+import {IWETH9} from "./interfaces/IWETH9.sol";
 
 /// @notice Terminal providing an intermediate layer when receiving a payment in a token without
 ///         a native terminal deployed. This terminal will swap the token received for a given token,
