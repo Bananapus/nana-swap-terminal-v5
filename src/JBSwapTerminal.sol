@@ -18,15 +18,12 @@ import {Address} from "lib/openzeppelin-contracts/contracts/utils/Address.sol";
 import {IERC165} from "lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
 import {IERC20, IERC20Metadata} from "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
-
 import {IPermit2} from "lib/permit2/src/interfaces/IPermit2.sol";
 import {IAllowanceTransfer} from "lib/permit2/src/interfaces/IPermit2.sol";
-
 import {IUniswapV3Pool} from "lib/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {OracleLibrary} from "lib/v3-periphery/contracts/libraries/OracleLibrary.sol";
 import {TickMath} from "lib/v3-core/contracts/libraries/TickMath.sol";
 import {IUniswapV3SwapCallback} from "lib/v3-core/contracts/interfaces/callback/IUniswapV3SwapCallback.sol";
-
 import {IJBTerminal} from "lib/juice-contracts-v4/src/interfaces/terminal/IJBTerminal.sol";
 import {IJBPermitTerminal} from "lib/juice-contracts-v4/src/interfaces/terminal/IJBPermitTerminal.sol";
 import {IJBDirectory} from "lib/juice-contracts-v4/src/interfaces/IJBDirectory.sol";
