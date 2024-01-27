@@ -1,2 +1,3 @@
+ds-test/=lib/forge-std/lib/ds-test/src/
 lib/openzeppelin-contracts/=lib/openzeppelin-contracts/
 lib/permit2/=lib/juice-contracts-v4/lib/permit2/

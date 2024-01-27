@@ -11,7 +11,7 @@
 // TODO: natspecs
 
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.16;
+pragma solidity 0.8.23;
 
 import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
 import {Address} from "lib/openzeppelin-contracts/contracts/utils/Address.sol";
@@ -27,6 +27,8 @@ import {OracleLibrary} from "lib/v3-periphery/contracts/libraries/OracleLibrary.
 import {TickMath} from "lib/v3-core/contracts/libraries/TickMath.sol";
 import {IUniswapV3SwapCallback} from "lib/v3-core/contracts/interfaces/callback/IUniswapV3SwapCallback.sol";
 
+import {IJBTerminal} from "lib/juice-contracts-v4/src/interfaces/terminal/IJBTerminal.sol";
+import {IJBPermitTerminal} from "lib/juice-contracts-v4/src/interfaces/terminal/IJBPermitTerminal.sol";
 import {IJBDirectory} from "lib/juice-contracts-v4/src/interfaces/IJBDirectory.sol";
 import {IJBPermissions} from "lib/juice-contracts-v4/src/interfaces/IJBPermissions.sol";
 import {IJBProjects} from "lib/juice-contracts-v4/src/interfaces/IJBProjects.sol";
@@ -37,8 +39,6 @@ import {JBPermissioned} from "lib/juice-contracts-v4/src/abstract/JBPermissioned
 import {JBPermissionIds} from "lib/juice-contracts-v4/src/libraries/JBPermissionIds.sol";
 import {JBAccountingContext} from "lib/juice-contracts-v4/src/structs/JBAccountingContext.sol";
 import {JBConstants} from "lib/juice-contracts-v4/src/libraries/JBConstants.sol";
-
-import {IJBTerminal, IJBPermitTerminal, IJBMultiTerminal} from "./interfaces/terminal/IJBMultiTerminal.sol";
 
 import {IWETH9} from "./interfaces/IWETH9.sol";
 
