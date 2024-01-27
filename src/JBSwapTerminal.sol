@@ -36,10 +36,10 @@ import {IJBTerminalStore} from "lib/juice-contracts-v4/src/interfaces/IJBTermina
 import {JBMetadataResolver} from "lib/juice-contracts-v4/src/libraries/JBMetadataResolver.sol";
 import {JBSingleAllowanceContext} from "lib/juice-contracts-v4/src/structs/JBSingleAllowanceContext.sol";
 import {JBPermissioned} from "lib/juice-contracts-v4/src/abstract/JBPermissioned.sol";
-import {JBPermissionIds} from "lib/juice-contracts-v4/src/libraries/JBPermissionIds.sol";
 import {JBAccountingContext} from "lib/juice-contracts-v4/src/structs/JBAccountingContext.sol";
 import {JBConstants} from "lib/juice-contracts-v4/src/libraries/JBConstants.sol";
 
+import {JBSwapTerminalPermissionIds} from "./libraries/JBSwapTerminalPermissionIds.sol";
 import {IWETH9} from "./interfaces/IWETH9.sol";
 
 /// @notice Terminal providing an intermediate layer when receiving a payment in a token without
@@ -362,7 +362,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
 
     // add a pool to use for a given token in
     function addDefaultPool(uint256 _projectId, address _token, IUniswapV3Pool _pool) external {
-        _requirePermissionFrom(PROJECTS.ownerOf(_projectId), _projectId, JBPermissionIds.MODIFY_DEFAULT_POOL);
+        _requirePermissionFrom(PROJECTS.ownerOf(_projectId), _projectId, JBSwapTerminalPermissionIds.MODIFY_DEFAULT_POOL);
         poolFor[_projectId][_token][address(0)] = _pool;
         accountingContextFor[_projectId][_token] = JBAccountingContext({
             token: _token,
@@ -374,7 +374,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     function addAccountingContextsFor(uint256 projectId, address[] calldata tokens) external {}
 
     function addTwapParamsFor(uint256 _projectId, uint32 _quotePeriod, uint160 _maxDelta) external {
-        _requirePermissionFrom(PROJECTS.ownerOf(_projectId), _projectId, JBPermissionIds.MODIFY_TWAP_PARAMS);
+        _requirePermissionFrom(PROJECTS.ownerOf(_projectId), _projectId, JBSwapTerminalPermissionIds.MODIFY_TWAP_PARAMS);
         _twapParamsOf[_projectId] = uint256(_quotePeriod | uint256(_maxDelta) << 32);
     }
 
