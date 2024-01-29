@@ -11,22 +11,21 @@
 // TODO: natspecs
 
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.16;
+pragma solidity 0.8.23;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-import {IERC20, IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-
-import {IPermit2} from "permit2/src/interfaces/IPermit2.sol";
-import {IAllowanceTransfer} from "permit2/src/interfaces/IPermit2.sol";
-
+import {Ownable} from "lib/openzeppelin-contracts/contracts/access/Ownable.sol";
+import {Address} from "lib/openzeppelin-contracts/contracts/utils/Address.sol";
+import {IERC165} from "lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
+import {IERC20, IERC20Metadata} from "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {SafeERC20} from "lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IPermit2} from "lib/permit2/src/interfaces/IPermit2.sol";
+import {IAllowanceTransfer} from "lib/permit2/src/interfaces/IPermit2.sol";
 import {IUniswapV3Pool} from "lib/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {OracleLibrary} from "lib/v3-periphery/contracts/libraries/OracleLibrary.sol";
 import {TickMath} from "lib/v3-core/contracts/libraries/TickMath.sol";
 import {IUniswapV3SwapCallback} from "lib/v3-core/contracts/interfaces/callback/IUniswapV3SwapCallback.sol";
-
+import {IJBTerminal} from "lib/juice-contracts-v4/src/interfaces/terminal/IJBTerminal.sol";
+import {IJBPermitTerminal} from "lib/juice-contracts-v4/src/interfaces/terminal/IJBPermitTerminal.sol";
 import {IJBDirectory} from "lib/juice-contracts-v4/src/interfaces/IJBDirectory.sol";
 import {IJBPermissions} from "lib/juice-contracts-v4/src/interfaces/IJBPermissions.sol";
 import {IJBProjects} from "lib/juice-contracts-v4/src/interfaces/IJBProjects.sol";
@@ -34,12 +33,10 @@ import {IJBTerminalStore} from "lib/juice-contracts-v4/src/interfaces/IJBTermina
 import {JBMetadataResolver} from "lib/juice-contracts-v4/src/libraries/JBMetadataResolver.sol";
 import {JBSingleAllowanceContext} from "lib/juice-contracts-v4/src/structs/JBSingleAllowanceContext.sol";
 import {JBPermissioned} from "lib/juice-contracts-v4/src/abstract/JBPermissioned.sol";
-import {JBPermissionIds} from "lib/juice-contracts-v4/src/libraries/JBPermissionIds.sol";
 import {JBAccountingContext} from "lib/juice-contracts-v4/src/structs/JBAccountingContext.sol";
 import {JBConstants} from "lib/juice-contracts-v4/src/libraries/JBConstants.sol";
 
-import {IJBTerminal, IJBPermitTerminal, IJBMultiTerminal} from "./interfaces/terminal/IJBMultiTerminal.sol";
-
+import {JBSwapTerminalPermissionIds} from "./libraries/JBSwapTerminalPermissionIds.sol";
 import {IWETH9} from "./interfaces/IWETH9.sol";
 
 /// @notice Terminal providing an intermediate layer when receiving a payment in a token without
@@ -362,7 +359,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
 
     // add a pool to use for a given token in
     function addDefaultPool(uint256 _projectId, address _token, IUniswapV3Pool _pool) external {
-        _requirePermissionFrom(PROJECTS.ownerOf(_projectId), _projectId, JBPermissionIds.MODIFY_DEFAULT_POOL);
+        _requirePermissionFrom(PROJECTS.ownerOf(_projectId), _projectId, JBSwapTerminalPermissionIds.MODIFY_DEFAULT_POOL);
         poolFor[_projectId][_token][address(0)] = _pool;
         accountingContextFor[_projectId][_token] = JBAccountingContext({
             token: _token,
@@ -374,7 +371,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     function addAccountingContextsFor(uint256 projectId, address[] calldata tokens) external {}
 
     function addTwapParamsFor(uint256 _projectId, uint32 _quotePeriod, uint160 _maxDelta) external {
-        _requirePermissionFrom(PROJECTS.ownerOf(_projectId), _projectId, JBPermissionIds.MODIFY_TWAP_PARAMS);
+        _requirePermissionFrom(PROJECTS.ownerOf(_projectId), _projectId, JBSwapTerminalPermissionIds.MODIFY_TWAP_PARAMS);
         _twapParamsOf[_projectId] = uint256(_quotePeriod | uint256(_maxDelta) << 32);
     }
 
