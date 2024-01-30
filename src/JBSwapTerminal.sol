@@ -39,8 +39,13 @@ import {JBConstants} from "lib/juice-contracts-v4/src/libraries/JBConstants.sol"
 import {JBSwapTerminalPermissionIds} from "./libraries/JBSwapTerminalPermissionIds.sol";
 import {IWETH9} from "./interfaces/IWETH9.sol";
 
-/// @notice The `JBSwapTerminal` accepts payments in any token. When the `JBSwapTerminal` is paid, it uses a Uniswap pool to exchange the tokens it received for tokens that another one of its project's terminals can accept. Then, it pays that terminal with the tokens it got from the pool, forwarding the specified beneficiary to receive any tokens or NFTs minted by that payment, as well as payment metadata and other arguments.
-/// @dev To prevent excessive slippage, the user/client can specify a minimum quote and a pool to use in their payment's metadata using the `JBMetadataResolver` format. If they don't, a quote is calculated for them based on the TWAP oracle for the project's default pool for that token (set by the project's owner).
+/// @notice The `JBSwapTerminal` accepts payments in any token. When the `JBSwapTerminal` is paid, it uses a Uniswap
+/// pool to exchange the tokens it received for tokens that another one of its project's terminals can accept. Then, it
+/// pays that terminal with the tokens it got from the pool, forwarding the specified beneficiary to receive any tokens
+/// or NFTs minted by that payment, as well as payment metadata and other arguments.
+/// @dev To prevent excessive slippage, the user/client can specify a minimum quote and a pool to use in their payment's
+/// metadata using the `JBMetadataResolver` format. If they don't, a quote is calculated for them based on the TWAP
+/// oracle for the project's default pool for that token (set by the project's owner).
 /// @custom:benediction DEVS BENEDICAT ET PROTEGAT CONTRACTVS MEAM
 contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTerminal, IUniswapV3SwapCallback {
     // A library that adds default safety checks to ERC20 functionality.
@@ -61,7 +66,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// - No memory reused (i.e. expansion to pay for every newly stored word),
     /// - The first operation being storing the struct, and
     /// - Starting at the initial free memory pointer, 0x80):
-    /// 
+    ///
     /// Scenario 1: Without packing:
     /// `new msize = 128 + 9`
     /// `mem_cost = 137**2 / 512 + 3 * 137 = 447 units`
@@ -140,7 +145,8 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     mapping(uint256 projectId => mapping(address tokenIn => mapping(address tokenOut => IUniswapV3Pool))) public poolFor;
 
     /// @notice A mapping which stores accounting contexts to use for a given project ID and token.
-    /// @dev Accounting contexts are set up for a project ID and token when the project's owner uses `addDefaultPool(...)` for that token.
+    /// @dev Accounting contexts are set up for a project ID and token when the project's owner uses
+    /// `addDefaultPool(...)` for that token.
     mapping(uint256 projectId => mapping(address token => JBAccountingContext)) public accountingContextFor;
 
     //*********************************************************************//
@@ -208,19 +214,26 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     // ---------------------- external transactions ---------------------- //
     //*********************************************************************//
 
-    /// @notice Pay a project by swapping the incoming tokens for tokens that one of the project's other terminals accepts, passing along the funds received from the swap and the specified parameters.
+    /// @notice Pay a project by swapping the incoming tokens for tokens that one of the project's other terminals
+    /// accepts, passing along the funds received from the swap and the specified parameters.
     /// @param projectId The ID of the project being paid.
     /// @param token The address of the token being paid in.
-    /// @param amount The amount of tokens being paid in, as a fixed point number with the same amount of decimals as the `token`. If `token` is the native token, `amount` is ignored and `msg.value` is used in its place.
-    /// @param beneficiary The beneficiary address to pass along to the other terminal. If the other terminal mints tokens, for example, they will be minted for this address.
-    /// @param minReturnedTokens The minimum number of project tokens expected in return, as a fixed point number with the same number of decimals as the other terminal. This value will be passed along to the other terminal.
+    /// @param amount The amount of tokens being paid in, as a fixed point number with the same amount of decimals as
+    /// the `token`. If `token` is the native token, `amount` is ignored and `msg.value` is used in its place.
+    /// @param beneficiary The beneficiary address to pass along to the other terminal. If the other terminal mints
+    /// tokens, for example, they will be minted for this address.
+    /// @param minReturnedTokens The minimum number of project tokens expected in return, as a fixed point number with
+    /// the same number of decimals as the other terminal. This value will be passed along to the other terminal.
     /// @param memo A memo to pass along to the emitted event.
-    /// @param metadata Bytes in `JBMetadataResolver`'s format which can contain a quote from the user/client. The quote should contain a minimum amount of tokens to receive from the swap and the pool to use. This metadata is also passed to the other terminal's emitted event, as well as its data hook and pay hook if applicable.
-    /// @return The number of tokens received from the swap, as a fixed point number with the same amount of decimals as that token.
+    /// @param metadata Bytes in `JBMetadataResolver`'s format which can contain a quote from the user/client. The quote
+    /// should contain a minimum amount of tokens to receive from the swap and the pool to use. This metadata is also
+    /// passed to the other terminal's emitted event, as well as its data hook and pay hook if applicable.
+    /// @return The number of tokens received from the swap, as a fixed point number with the same amount of decimals as
+    /// that token.
     function pay(
-        uint256 projectId ,
+        uint256 projectId,
         address token,
-        uint256 amount ,
+        uint256 amount,
         address beneficiary,
         uint256 minReturnedTokens,
         string calldata memo,
@@ -233,7 +246,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         returns (uint256)
     {
         SwapConfig memory swapConfig;
-        swapConfig.projectId = projectId ;
+        swapConfig.projectId = projectId;
 
         if (token == JBConstants.NATIVE_TOKEN) {
             // If the token being paid in is the native token, use `msg.value`.
@@ -243,7 +256,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         } else {
             // Otherwise, use `amount`.
             swapConfig.tokenIn = token;
-            swapConfig.amountIn = amount ;
+            swapConfig.amountIn = amount;
         }
 
         {
@@ -266,8 +279,9 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
                     swapConfig.tokenOut = quoteTokenOut;
                 }
             } else {
-                // If there is no quote, check for this project's default pool for the token and get a quote based on its TWAP.
-                IUniswapV3Pool pool = poolFor[projectId ][token][address(0)];
+                // If there is no quote, check for this project's default pool for the token and get a quote based on
+                // its TWAP.
+                IUniswapV3Pool pool = poolFor[projectId][token][address(0)];
 
                 swapConfig.pool = pool;
 
@@ -287,7 +301,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
 
         // Get a reference to the project's primary terminal for `token`.
         IJBTerminal terminal = DIRECTORY.primaryTerminalOf(
-            projectId , swapConfig.outIsNativeToken ? JBConstants.NATIVE_TOKEN : swapConfig.tokenOut
+            projectId, swapConfig.outIsNativeToken ? JBConstants.NATIVE_TOKEN : swapConfig.tokenOut
         );
 
         // Revert if the project does not have a primary terminal for `token`.
@@ -317,14 +331,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// @param amount0Delta The amount of token 0 being used for the swap.
     /// @param amount1Delta The amount of token 1 being used for the swap.
     /// @param data Data passed in by the swap operation.
-    function uniswapV3SwapCallback(
-        int256 amount0Delta,
-        int256 amount1Delta,
-        bytes calldata data
-    )
-        external
-        override
-    {
+    function uniswapV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata data) external override {
         // Unpack the data from the original swap config (forwarded through `_swap(...)`).
         (address tokenIn, bool shouldWrap) = abi.decode(data, (address, bool));
 
@@ -362,14 +369,15 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         revert UNSUPPORTED();
     }
 
-    /// @notice Set a project's default pool and accounting context for the specified token. Only the project's owner or an address with `MODIFY_DEFAULT_POOL` permission from the owner can call this function.
+    /// @notice Set a project's default pool and accounting context for the specified token. Only the project's owner or
+    /// an address with `MODIFY_DEFAULT_POOL` permission from the owner can call this function.
     /// @param projectId The ID of the project to set the default pool for.
     /// @param token The address of the token to set the default pool for.
     /// @param pool The Uniswap V3 pool to set as the default for the specified token.
     function addDefaultPool(uint256 projectId, address token, IUniswapV3Pool pool) external {
         // Enforce permissions.
         _requirePermissionFrom(PROJECTS.ownerOf(projectId), projectId, JBSwapTerminalPermissionIds.MODIFY_DEFAULT_POOL);
-        
+
         // Update the project's default pool for the token.
         poolFor[projectId][token][address(0)] = pool;
 
@@ -384,15 +392,16 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// @notice Empty implementation to satisfy the interface. Accounting contexts are set in `addDefaultPool(...)`.
     function addAccountingContextsFor(uint256 projectId, address[] calldata tokens) external {}
 
-
-    /// @notice Set the specified project's rules for calculating a quote based on the TWAP. Only the project's owner or an address with `MODIFY_TWAP_PARAMS` permission from the owner can call this function.
+    /// @notice Set the specified project's rules for calculating a quote based on the TWAP. Only the project's owner or
+    /// an address with `MODIFY_TWAP_PARAMS` permission from the owner can call this function.
     /// @param projectId The ID of the project to set the TWAP-based quote rules for.
     /// @param secondsAgo The period of time over which the TWAP is calculated, in seconds.
-    /// @param slippageTolerance The maximum spread allowed between the amount received and the TWAP (as a fraction out of `SLIPPAGE_DENOMINATOR`).
+    /// @param slippageTolerance The maximum spread allowed between the amount received and the TWAP (as a fraction out
+    /// of `SLIPPAGE_DENOMINATOR`).
     function addTwapParamsFor(uint256 projectId, uint32 secondsAgo, uint160 slippageTolerance) external {
         // Enforce permissions.
         _requirePermissionFrom(PROJECTS.ownerOf(projectId), projectId, JBSwapTerminalPermissionIds.MODIFY_TWAP_PARAMS);
-        
+
         // Set the TWAP params for the project.
         _twapParamsOf[projectId] = uint256(secondsAgo | uint256(slippageTolerance) << 32);
     }
@@ -405,7 +414,8 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     //*********************************************************************//
 
     /// @notice Get a quote based on the TWAP.
-    /// @dev The TWAP is calculated over `secondsAgo` seconds, and the quote cannot unfavourably deviate from the TWAP by more than `slippageTolerance` (as a fraction out of `SLIPPAGE_DENOMINATOR`).
+    /// @dev The TWAP is calculated over `secondsAgo` seconds, and the quote cannot unfavourably deviate from the TWAP
+    /// by more than `slippageTolerance` (as a fraction out of `SLIPPAGE_DENOMINATOR`).
     /// @param swapConfig The swap config to base the quote on.
     /// @return minSqrtPriceX96 The minimum acceptable price for the swap.
     function _getTwapFrom(SwapConfig memory swapConfig) internal view returns (uint160) {
@@ -490,8 +500,10 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
             recipient: address(this), // Send output tokens to this terminal.
             zeroForOne: zeroForOne, // The direction of the swap.
             amountSpecified: int256(swapConfig.amountIn), // The amount of input tokens to swap.
-            sqrtPriceLimitX96: zeroForOne ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1, // The price limit for the swap.
-            data: abi.encode(tokenIn, swapConfig.inIsNativeToken) // Additional data which will be forwarded to the callback.
+            sqrtPriceLimitX96: zeroForOne ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1, // The price
+                // limit for the swap.
+            data: abi.encode(tokenIn, swapConfig.inIsNativeToken) // Additional data which will be forwarded to the
+                // callback.
         });
 
         // Calculate the amount of tokens received from the swap.
@@ -533,7 +545,8 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// @param from The address to transfer tokens from.
     /// @param to The address to transfer tokens to.
     /// @param token The address of the token being transfered.
-    /// @param amount The amount of tokens to transfer, as a fixed point number with the same number of decimals as the token.
+    /// @param amount The amount of tokens to transfer, as a fixed point number with the same number of decimals as the
+    /// token.
     function _transferFor(address from, address payable to, address token, uint256 amount) internal virtual {
         // If the token is native token, assume the `sendValue` standard.
         if (token == JBConstants.NATIVE_TOKEN) return Address.sendValue(to, amount);
@@ -555,11 +568,12 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// @notice Logic to be triggered before transferring tokens from this terminal.
     /// @param to The address to transfer tokens to.
     /// @param token The token being transfered.
-    /// @param amount The amount of tokens to transfer, as a fixed point number with the same number of decimals as the token.
+    /// @param amount The amount of tokens to transfer, as a fixed point number with the same number of decimals as the
+    /// token.
     function _beforeTransferFor(address to, address token, uint256 amount) internal virtual {
         // If the token is the native token, return early.
         if (token == JBConstants.NATIVE_TOKEN) return;
-        
+
         // Otherwise, set the appropriate allowance for the recipient.
         IERC20(token).safeIncreaseAllowance(to, amount);
     }

@@ -190,7 +190,8 @@
 
 //         deal(address(_otherTokenIn), address(_sender), _amountIn);
 
-//         uint256 _minAmountOut = _uniswapV3ForgeQuoter.getAmountOut(_otherTokenPool, _amountIn, address(_otherTokenIn));
+//         uint256 _minAmountOut = _uniswapV3ForgeQuoter.getAmountOut(_otherTokenPool, _amountIn,
+// address(_otherTokenIn));
 
 //         vm.prank(_projectOwner);
 //         _swapTerminal.addDefaultPool(_projectId, address(_otherTokenIn), _otherTokenPool);
