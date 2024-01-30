@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+/// @notice Permission IDs for `JBPermissions`. These grant permissions scoped to the `JBSwapTerminal`.
 library JBSwapTerminalPermissionIds {
     // 1-20 - `JBPermissionIds`
     // 21 - `JBHandlePermissionIds`
