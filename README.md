@@ -37,8 +37,6 @@ Some useful commands:
 
 To learn more, visit the [Foundry Book](https://book.getfoundry.sh/) docs.
 
-We recommend using [Juan Blanco's solidity extension](https://marketplace.visualstudio.com/items?itemName=JuanBlanco.solidity) for VSCode.
-
 ## Utilities
 
 For convenience, several utility commands are available in `util.sh`. To see a list, run:

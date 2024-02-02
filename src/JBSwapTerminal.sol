@@ -56,29 +56,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     //*********************************************************************//
 
     /// @notice A struct representing the parameters of a swap.
-    /// @dev This struct is only used in memory.
-    /// The extra cost comes from `mstore` and related memory expansion, as well as `mload`.
-    /// The memory expansion is calculated as follows:
-    /// `memory_size_word = (memory_byte_size + 31) / 32`
-    /// `memory_cost = (memory_size_word ** 2) / 512 + (3 * memory_size_word)`
-    ///
-    /// Assuming:
-    /// - No memory reused (i.e. expansion to pay for every newly stored word),
-    /// - The first operation being storing the struct, and
-    /// - Starting at the initial free memory pointer, 0x80):
-    ///
-    /// Scenario 1: Without packing:
-    /// `new msize = 128 + 9`
-    /// `mem_cost = 137**2 / 512 + 3 * 137 = 447 units`
-    /// The 447 units should be substracted from the previous cost, but we just want to compare.
-    ///
-    /// Scenario 2: With packing (packing in 6 words):
-    /// `mem_cost = 134**2 / 512 + 3 * 134 = 437 units`
-    /// Achieving a 6 word representation by downcasting `projectId` to a `uint96`,
-    /// then packing it with the pool address,
-    /// then packing `(tokenIn, inIsNativeToken)` and `(tokenOut, outIsNativeToken)`.
-    /// We need to pack once (in `pay(...)`) and adding a mask/shifting at least 6 times (18 units) is more
-    /// expensive than the memory expansion cost.
+    /// @dev This struct is only used in memory (no packing).
     struct SwapConfig {
         uint256 projectId;
         IUniswapV3Pool pool;
