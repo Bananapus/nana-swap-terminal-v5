@@ -177,13 +177,13 @@ contract TestSwapTerminal_Fork is Test {
 
         // Make a payment.
         _swapTerminal.pay({
-            _projectId: _projectId,
-            _amount: _amountIn,
-            _token: address(UNI),
-            _beneficiary: _beneficiary,
-            _minReturnedTokens: 1,
-            _memo: "Take my money!",
-            _metadata: _metadata
+            projectId: _projectId,
+            amount: _amountIn,
+            token: address(UNI),
+            beneficiary: _beneficiary,
+            minReturnedTokens: 1,
+            memo: "Take my money!",
+            metadata: _metadata
         });
 
         // Make sure the beneficiary has a balance of project tokens
@@ -237,13 +237,13 @@ contract TestSwapTerminal_Fork is Test {
 
         // Make a payment.
         _swapTerminal.pay({
-            _projectId: _projectId,
-            _amount: _amountIn,
-            _token: address(_otherTokenIn),
-            _beneficiary: _beneficiary,
-            _minReturnedTokens: 1,
-            _memo: "Take my money!",
-            _metadata: _metadata
+            projectId: _projectId,
+            amount: _amountIn,
+            token: address(_otherTokenIn),
+            beneficiary: _beneficiary,
+            minReturnedTokens: 1,
+            memo: "Take my money!",
+            metadata: _metadata
         });
 
         // Make sure the beneficiary has a balance of project tokens
