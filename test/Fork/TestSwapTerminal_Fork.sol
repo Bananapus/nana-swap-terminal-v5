@@ -39,7 +39,7 @@ import {IJBRulesetApprovalHook} from "lib/juice-contracts-v4/src/interfaces/IJBR
 
 
 
-import {MockERC20} from "lib/juice-contracts-v4/test/mock/MockERC20.sol";
+import {MockERC20} from "../helper/MockERC20.sol";
 
 
 import "forge-std/Test.sol";
@@ -132,6 +132,9 @@ contract TestSwapTerminal_Fork is Test {
 
         _poolTestHelper = new PoolTestHelper();
         vm.label(address(_poolTestHelper), "poolTestHelper");
+        
+        // Force compiling to make the artifact available for deployCodeTo
+        // MockERC20 _ = new MockERC20("MockERC20", "MockERC20", 18);
 
         deployCodeTo("MockERC20.sol", abi.encode("token", "token", uint8(18)), address(_otherTokenIn));
         vm.label(address(_otherTokenIn), "_otherTokenIn");
