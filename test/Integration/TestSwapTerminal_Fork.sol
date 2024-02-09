@@ -41,6 +41,12 @@ import {MockERC20} from "../helper/MockERC20.sol";
 
 import "forge-std/Test.sol";
 
+
+// TODO: multihop
+// TODO: redeem if token in is JB project and no pool but pool for redeemed-target token
+
+
+
 /// @notice Swap terminal test on a Sepolia fork
 contract TestSwapTerminal_Fork is Test {
     using JBRulesetMetadataResolver for JBRuleset;

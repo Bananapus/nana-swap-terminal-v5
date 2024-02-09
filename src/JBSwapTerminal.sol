@@ -25,11 +25,14 @@ import {OracleLibrary} from "lib/v3-periphery/contracts/libraries/OracleLibrary.
 import {TickMath} from "lib/v3-core/contracts/libraries/TickMath.sol";
 import {IUniswapV3SwapCallback} from "lib/v3-core/contracts/interfaces/callback/IUniswapV3SwapCallback.sol";
 import {IJBTerminal} from "lib/juice-contracts-v4/src/interfaces/terminal/IJBTerminal.sol";
+import {IJBRedeemTerminal} from "lib/juice-contracts-v4/src/interfaces/terminal/IJBRedeemTerminal.sol";
 import {IJBPermitTerminal} from "lib/juice-contracts-v4/src/interfaces/terminal/IJBPermitTerminal.sol";
 import {IJBDirectory} from "lib/juice-contracts-v4/src/interfaces/IJBDirectory.sol";
 import {IJBPermissions} from "lib/juice-contracts-v4/src/interfaces/IJBPermissions.sol";
 import {IJBProjects} from "lib/juice-contracts-v4/src/interfaces/IJBProjects.sol";
 import {IJBTerminalStore} from "lib/juice-contracts-v4/src/interfaces/IJBTerminalStore.sol";
+import {IJBToken} from "lib/juice-contracts-v4/src/interfaces/IJBToken.sol";
+import {IJBTokens} from "lib/juice-contracts-v4/src/interfaces/IJBTokens.sol";
 import {JBMetadataResolver} from "lib/juice-contracts-v4/src/libraries/JBMetadataResolver.sol";
 import {JBSingleAllowanceContext} from "lib/juice-contracts-v4/src/structs/JBSingleAllowanceContext.sol";
 import {JBPermissioned} from "lib/juice-contracts-v4/src/abstract/JBPermissioned.sol";
@@ -113,6 +116,9 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// @dev "wETH" is used as a generic term throughout, but any native token wrapper can be used.
     IWETH9 public immutable WETH;
 
+    /// @notice The contract that stores and manages the tokens used by the protocol.
+    IJBTokens public immutable TOKENS;
+
     //*********************************************************************//
     // --------------------- public stored properties -------------------- //
     //*********************************************************************//
@@ -176,16 +182,18 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         IJBPermissions permissions,
         IJBDirectory directory,
         IPermit2 permit2,
-        address owner,
-        IWETH9 weth
+        address _owner,
+        IWETH9 weth,
+        IJBTokens tokens
     )
         JBPermissioned(permissions)
-        Ownable(owner)
+        Ownable(_owner)
     {
         PROJECTS = projects;
         DIRECTORY = directory;
         PERMIT2 = permit2;
         WETH = weth;
+        TOKENS = tokens;
     }
 
     //*********************************************************************//
@@ -261,10 +269,57 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
                 // its TWAP.
                 IUniswapV3Pool pool = poolFor[projectId][token][address(0)];
 
-                swapConfig.pool = pool;
-
                 // If this project doesn't have a default pool specified for this token, revert.
-                if (address(pool) == address(0)) revert NO_DEFAULT_POOL_DEFINED();
+                if (address(pool) == address(0)) {
+                    // check if token in is a JB token
+                    uint256 tokenInProjectId = TOKENS.projectIdOf(IJBToken(token));
+
+                    if (tokenInProjectId == 0) revert NO_DEFAULT_POOL_DEFINED();
+
+                    // find a terminal with a token which has a pool paired with the token out
+                    IJBTerminal[] memory tokenInTerminals = DIRECTORY.terminalsOf(projectId);
+                    IJBRedeemTerminal tokenInTerminal;
+
+                    for(uint256 i = 0; i < tokenInTerminals.length; i++) {
+                        IJBTerminal _terminal = tokenInTerminals[i];
+                        JBAccountingContext memory accountingContext = _terminal.accountingContextForTokenOf(tokenInProjectId, token);
+
+                        if (accountingContext.token != address(0)) {
+                            IUniswapV3Pool terminalPool = poolFor[tokenInProjectId][accountingContext.token][address(0)];
+
+                            if (address(terminalPool) != address(0)) {
+                                pool = terminalPool;
+                                swapConfig.tokenIn = accountingContext.token;
+                                swapConfig.projectId = tokenInProjectId;
+                                tokenInTerminal = IJBRedeemTerminal(address(_terminal));
+                                break;
+                            }
+                        }
+                    }
+
+                    if (address(pool) == address(0)) revert NO_DEFAULT_POOL_DEFINED();
+
+                    // if so, check if we can redeem,
+                    // todo: check if we can redeem
+
+                    // pull funds from sender
+                    uint256 amountToRedeem; // todo
+
+                    // redeem tokens
+                    uint256 _amountReceived = tokenInTerminal.redeemTokensOf(
+                        address(this),
+                        swapConfig.projectId,
+                        address(tokenInTerminal),
+                        amountToRedeem,
+                        0,
+                        payable(this),
+                        ""
+                    );
+
+                    swapConfig.amountIn = _amountReceived;
+                }
+
+                swapConfig.pool = pool;
 
                 (address poolToken0, address poolToken1) = (pool.token0(), pool.token1());
 
@@ -282,7 +337,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
             projectId, swapConfig.outIsNativeToken ? JBConstants.NATIVE_TOKEN : swapConfig.tokenOut
         );
 
-        // Revert if the project does not have a primary terminal for `token`.
+        // Revert if the project does not have a primary terminal for `token`
         if (address(terminal) == address(0)) revert TOKEN_NOT_ACCEPTED();
 
         // Accept funds for the swap.
