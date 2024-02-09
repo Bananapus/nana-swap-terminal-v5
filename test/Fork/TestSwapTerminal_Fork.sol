@@ -13,7 +13,7 @@ import "../../src/JBSwapTerminal.sol";
 import {IWETH9} from "../../src/interfaces/IWETH9.sol";
 
 import {MetadataResolverHelper} from "lib/juice-contracts-v4/test/helpers/MetadataResolverHelper.sol";
-import {JBMultiTerminal} from "lib/juice-contracts-v4/src/JBMultiTerminal.sol"; 
+import {JBMultiTerminal} from "lib/juice-contracts-v4/src/JBMultiTerminal.sol";
 
 import {JBTokens} from "lib/juice-contracts-v4/src/JBTokens.sol";
 
@@ -37,11 +37,7 @@ import {JBFundAccessLimitGroup} from "lib/juice-contracts-v4/src/structs/JBFundA
 
 import {IJBRulesetApprovalHook} from "lib/juice-contracts-v4/src/interfaces/IJBRulesetApprovalHook.sol";
 
-
-
-
 import {MockERC20} from "../helper/MockERC20.sol";
-
 
 import "forge-std/Test.sol";
 
@@ -157,7 +153,8 @@ contract TestSwapTerminal_Fork is Test {
 
         deal(address(UNI), address(_sender), _amountIn);
 
-        uint256 _initialTerminalBalance = _terminalStore.balanceOf(address(_projectTerminal), _projectId, JBConstants.NATIVE_TOKEN);
+        uint256 _initialTerminalBalance =
+            _terminalStore.balanceOf(address(_projectTerminal), _projectId, JBConstants.NATIVE_TOKEN);
         uint256 _initialBeneficiaryBalance = _tokens.totalBalanceOf(_beneficiary, _projectId);
 
         uint256 _minAmountOut = _uniswapV3ForgeQuoter.getAmountOut(POOL, _amountIn, address(UNI));
@@ -194,15 +191,18 @@ contract TestSwapTerminal_Fork is Test {
         uint256 _reservedRate = _terminalStore.RULESETS().currentOf(_projectId).reservedRate();
         uint256 _totalMinted = _weight * _minAmountOut / 1 ether;
         uint256 _reservedToken = _totalMinted * _reservedRate / JBConstants.MAX_RESERVED_RATE;
-        
+
         // 1 wei delta for rounding
-        assertApproxEqAbs(_tokens.totalBalanceOf(_beneficiary, _projectId), _initialBeneficiaryBalance + _totalMinted - _reservedToken, 1);
+        assertApproxEqAbs(
+            _tokens.totalBalanceOf(_beneficiary, _projectId),
+            _initialBeneficiaryBalance + _totalMinted - _reservedToken,
+            1
+        );
 
         // Make sure the native token balance in terminal is up to date.
         uint256 _terminalBalance = _minAmountOut + _initialTerminalBalance;
         assertEq(
-            _terminalStore.balanceOf(address(_projectTerminal), _projectId, JBConstants.NATIVE_TOKEN),
-        _terminalBalance
+            _terminalStore.balanceOf(address(_projectTerminal), _projectId, JBConstants.NATIVE_TOKEN), _terminalBalance
         );
     }
 
@@ -213,7 +213,8 @@ contract TestSwapTerminal_Fork is Test {
 
         deal(address(_otherTokenIn), address(_sender), _amountIn);
 
-        uint256 _initialTerminalBalance = _terminalStore.balanceOf(address(_projectTerminal), _projectId, JBConstants.NATIVE_TOKEN);
+        uint256 _initialTerminalBalance =
+            _terminalStore.balanceOf(address(_projectTerminal), _projectId, JBConstants.NATIVE_TOKEN);
         uint256 _initialBeneficiaryBalance = _tokens.totalBalanceOf(_beneficiary, _projectId);
 
         uint256 _minAmountOut = _uniswapV3ForgeQuoter.getAmountOut(_otherTokenPool, _amountIn, address(_otherTokenIn));
@@ -250,15 +251,18 @@ contract TestSwapTerminal_Fork is Test {
         uint256 _reservedRate = _terminalStore.RULESETS().currentOf(_projectId).reservedRate();
         uint256 _totalMinted = _weight * _minAmountOut / 1 ether;
         uint256 _reservedToken = _totalMinted * _reservedRate / JBConstants.MAX_RESERVED_RATE;
-        
+
         // 1 wei delta for rounding
-        assertApproxEqAbs(_tokens.totalBalanceOf(_beneficiary, _projectId), _initialBeneficiaryBalance + _totalMinted - _reservedToken, 1);
+        assertApproxEqAbs(
+            _tokens.totalBalanceOf(_beneficiary, _projectId),
+            _initialBeneficiaryBalance + _totalMinted - _reservedToken,
+            1
+        );
 
         // Make sure the native token balance in terminal is up to date.
         uint256 _terminalBalance = _minAmountOut + _initialTerminalBalance;
         assertEq(
-            _terminalStore.balanceOf(address(_projectTerminal), _projectId, JBConstants.NATIVE_TOKEN),
-        _terminalBalance
+            _terminalStore.balanceOf(address(_projectTerminal), _projectId, JBConstants.NATIVE_TOKEN), _terminalBalance
         );
     }
 }

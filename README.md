@@ -1,35 +1,58 @@
-# juice-contract-template
-Template used to code juicy solidity stuff - includes forge, libs, etc
+# Swap Terminal
 
-Install dependencies (forge tests, Juice-contracts-V3, OZ) via `forge install && yarn install`
+The `JBSwapTerminal` accepts payments in any token. When the `JBSwapTerminal` is paid, it uses a Uniswap pool to exchange the tokens it received for tokens that another one of the project's terminals accepts. Then, it pays the project's primary terminal for the tokens it got from the pool, forwarding the specified beneficiary to receive any tokens or NFTs minted by that payment.
 
-Use this template as a starting point, do not push straight on main, rather create a new branch and open a PR - your reviewer will love you for this.
+EXAMPLE: One of the "Clungle" project's terminals accepts ETH and mints $CLNG tokens. The Clungle project also has a swap terminal. If Jimmy pays the Clungle project with USDC and sets his address as the payment's beneficiary, the swap terminal will swap the USDC for ETH. Then it pays that ETH into the terminal which accepts ETH, minting $CLNG tokens for Jimmy.
 
-# Usage
-use `yarn test` to run tests
+*If you're having trouble understanding this contract, take a look at the [core Juicebox contracts](https://github.com/bananapus/juice-contracts-v4) and the [documentation](https://docs.juicebox.money/) first. If you have questions, reach out on [Discord](https://discord.com/invite/ErQYmth4dS).*
 
-use `yarn test:fork` to run tests in CI mode (including slower mainnet fork tests)
+## Develop
 
-<br>
+`juice-swap-terminal` uses the [Foundry](https://github.com/foundry-rs/foundry) development toolchain for builds, tests, and deployments. To get set up, install [Foundry](https://github.com/foundry-rs/foundry):
 
-use `yarn size` to check contract size
+```bash
+curl -L https://foundry.paradigm.xyz | sh
+```
 
-use `yarn doc` to generate natspec docs
+You can download and install dependencies with:
 
-use `yarn lint` to lint the code
+```bash
+forge install
+```
 
-use `yarn tree` to generate a Solidity dependency tree
+If you run into trouble with `forge install`, try using `git submodule update --init --recursive` to ensure that nested submodules have been properly initialized.
 
-<br>
+Some useful commands:
 
-use `yarn deploy:mainnet` and `yarn deploy:goerli` to deploy and verify (see .env.example for required env vars, using a ledger by default).
+| Command               | Description                                         |
+| --------------------- | --------------------------------------------------- |
+| `forge install`       | Install the dependencies.                           |
+| `forge build`         | Compile the contracts and write artifacts to `out`. |
+| `forge fmt`           | Lint.                                               |
+| `forge test`          | Run the tests.                                      |
+| `forge build --sizes` | Get contract sizes.                                 |
+| `forge coverage`      | Generate a test coverage report.                    |
+| `foundryup`           | Update foundry. Run this periodically.              |
+| `forge clean`         | Remove the build artifacts and cache directories.   |
 
-## Code coverage
-Run `yarn coverage`to display code coverage summary and generate an LCOV report
+To learn more, visit the [Foundry Book](https://book.getfoundry.sh/) docs.
 
-To display code coverage in VSCode:
-- You need to install the [coverage gutters extension (Ryan Luker)](https://marketplace.visualstudio.com/items?itemName=ryanluker.vscode-coverage-gutters) or any other extension handling LCOV reports
-- ctrl shift p > "Coverage Gutters: Display Coverage" (coverage are the colored markdown lines in the left gutter, after the line numbers)
+## Utilities
 
-## PR
-Github CI flow will run both unit and forked tests, log the contracts size (with the tests) and check linting compliance.
+For convenience, several utility commands are available in `util.sh`. To see a list, run:
+
+```bash
+`bash util.sh --help`.
+```
+
+Or make the script executable and run:
+
+```bash
+./util.sh --help
+```
+
+## Terminals
+
+Juicebox projects can accept funds through one or more *terminals*, which can manage both inflows (via payments) and outflows (via redemptions). Terminals usually only accept one token for payments, but if a project has a swap terminal, the swap terminal can accept any token and swap it for tokens which the project *can* accept. After swapping, it redirects the payment to the primary terminal for the token it received.
+
+A project can set its terminals (and primary terminals) in the `JBDirectory` contract.
