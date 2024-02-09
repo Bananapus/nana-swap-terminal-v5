@@ -1,4 +1,4 @@
-name: juice-contracts-template-tests
+name: juice-contracts-sizes
 on:
   pull_request:
     branches:
