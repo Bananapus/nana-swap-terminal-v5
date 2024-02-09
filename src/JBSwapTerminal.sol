@@ -337,7 +337,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         uint256,
         bool,
         string calldata,
-        bytes calldata 
+        bytes calldata
     )
         external
         payable
@@ -347,14 +347,19 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         revert UNSUPPORTED();
     }
 
-    /// @notice Set a project's default pool and accounting context for the specified token. Only the project's owner, 
+    /// @notice Set a project's default pool and accounting context for the specified token. Only the project's owner,
     /// an address with `MODIFY_DEFAULT_POOL` permission from the owner or the protocol owner can call this function.
     /// @param projectId The ID of the project to set the default pool for.
     /// @param token The address of the token to set the default pool for.
     /// @param pool The Uniswap V3 pool to set as the default for the specified token.
     function addDefaultPool(uint256 projectId, address token, IUniswapV3Pool pool) external {
         // Enforce permissions.
-        _requirePermissionAllowingOverrideFrom(PROJECTS.ownerOf(projectId), projectId, JBSwapTerminalPermissionIds.MODIFY_DEFAULT_POOL, msg.sender == PROJECTS.ownerOf(1));
+        _requirePermissionAllowingOverrideFrom(
+            PROJECTS.ownerOf(projectId),
+            projectId,
+            JBSwapTerminalPermissionIds.MODIFY_DEFAULT_POOL,
+            msg.sender == PROJECTS.ownerOf(1)
+        );
 
         // Update the project's default pool for the token.
         poolFor[projectId][token][address(0)] = pool;
