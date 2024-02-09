@@ -265,4 +265,11 @@ contract TestSwapTerminal_Fork is Test {
             _terminalStore.balanceOf(address(_projectTerminal), _projectId, JBConstants.NATIVE_TOKEN), _terminalBalance
         );
     }
+
+    function testProtocolOwnerSetsNewPool() external {
+        vm.prank(_projects.ownerOf(1));
+        _swapTerminal.addDefaultPool(_projectId, address(UNI), POOL);
+
+        assertEq(address(_swapTerminal.poolFor(_projectId, address(UNI), address(0))), address(POOL));
+    }
 }
