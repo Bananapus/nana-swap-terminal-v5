@@ -279,7 +279,7 @@ contract TestSwapTerminal_Fork is Test {
         assertEq(address(_swapTerminal.poolFor(_projectId, address(UNI), address(0))), makeAddr("newPool"));
 
         vm.expectRevert(JBPermissioned.UNAUTHORIZED.selector);
-        vm.prank(address(12345));
+        vm.prank(address(12_345));
         _swapTerminal.addDefaultPool(_projectId, address(UNI), IUniswapV3Pool(address(5432)));
     }
 }
