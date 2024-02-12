@@ -330,14 +330,14 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         if (msg.sender != address(WETH)) revert NO_MSG_VALUE_ALLOWED();
     }
 
-    /// @notice Empty implementation to satisfy the interface (not supported).
+    /// @notice This terminal does not support adding to balances.
     function addToBalanceOf(
-        uint256 projectId,
-        address token,
-        uint256 amount,
-        bool shouldRefundHeldFees,
-        string calldata memo,
-        bytes calldata metadata
+        uint256,
+        address,
+        uint256,
+        bool,
+        string calldata,
+        bytes calldata
     )
         external
         payable
@@ -347,14 +347,19 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         revert UNSUPPORTED();
     }
 
-    /// @notice Set a project's default pool and accounting context for the specified token. Only the project's owner or
-    /// an address with `MODIFY_DEFAULT_POOL` permission from the owner can call this function.
+    /// @notice Set a project's default pool and accounting context for the specified token. Only the project's owner,
+    /// an address with `MODIFY_DEFAULT_POOL` permission from the owner or the protocol owner can call this function.
     /// @param projectId The ID of the project to set the default pool for.
     /// @param token The address of the token to set the default pool for.
     /// @param pool The Uniswap V3 pool to set as the default for the specified token.
     function addDefaultPool(uint256 projectId, address token, IUniswapV3Pool pool) external {
         // Enforce permissions.
-        _requirePermissionFrom(PROJECTS.ownerOf(projectId), projectId, JBSwapTerminalPermissionIds.MODIFY_DEFAULT_POOL);
+        _requirePermissionAllowingOverrideFrom(
+            PROJECTS.ownerOf(projectId),
+            projectId,
+            JBSwapTerminalPermissionIds.MODIFY_DEFAULT_POOL,
+            msg.sender == owner()
+        );
 
         // Update the project's default pool for the token.
         poolFor[projectId][token][address(0)] = pool;
