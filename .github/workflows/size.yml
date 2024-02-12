@@ -1,4 +1,4 @@
-name: juice-contracts-template-tests
+name: juice-contracts-sizes
 on:
   pull_request:
     branches:
@@ -48,5 +48,5 @@ jobs:
         run: yarn install --frozen-lockfile --prefer-offline
       - name: install libraries
         run: git submodule update --init
-      - name: Run tests
-        run: FOUNDRY_PROFILE=CI forge snapshot
+      - name: Check contract sizes
+        run: forge build --sizes

@@ -1,267 +1,268 @@
-// // SPDX-License-Identifier: MIT
-// pragma solidity ^0.8.6;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.6;
 
-// import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-// import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
-// import {UniswapV3ForgeQuoter} from "lib/uniswap-v3-foundry-quote/src/UniswapV3ForgeQuoter.sol";
+import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
+import {UniswapV3ForgeQuoter} from "lib/uniswap-v3-foundry-quote/src/UniswapV3ForgeQuoter.sol";
 
-// import {PoolTestHelper} from "lib/uniswap-v3-foundry-pool/src/PoolTestHelper.sol";
+import {PoolTestHelper} from "lib/uniswap-v3-foundry-pool/src/PoolTestHelper.sol";
 
-// import "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 
-// import /* {*} from */ "./helpers/TestBaseWorkflow.sol";
+import "../../src/JBSwapTerminal.sol";
+import {IWETH9} from "../../src/interfaces/IWETH9.sol";
 
-// import {JBSwapTerminal} from "../src/JBSwapTerminal.sol";
-// import {IWETH9} from "../src/interfaces/external/IWETH9.sol";
+import {MetadataResolverHelper} from "lib/juice-contracts-v4/test/helpers/MetadataResolverHelper.sol";
+import {JBMultiTerminal} from "lib/juice-contracts-v4/src/JBMultiTerminal.sol";
 
-// import {MetadataResolverHelper} from "./helpers/MetadataResolverHelper.sol";
+import {JBTokens} from "lib/juice-contracts-v4/src/JBTokens.sol";
 
-// /// @notice Swap terminal test on a Sepolia fork
-// contract TestSwapTerminal_Fork is TestBaseWorkflow {
-//     IERC20Metadata constant UNI = IERC20Metadata(0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984);
-//     IWETH9 constant WETH = IWETH9(0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14);
-//     IUniswapV3Pool constant POOL = IUniswapV3Pool(0x287B0e934ed0439E2a7b1d5F0FC25eA2c24b64f7);
+import {IJBController} from "lib/juice-contracts-v4/src/interfaces/IJBController.sol";
+import {IJBProjects} from "lib/juice-contracts-v4/src/interfaces/IJBProjects.sol";
+import {IJBPermissions} from "lib/juice-contracts-v4/src/interfaces/IJBPermissions.sol";
+import {IJBDirectory} from "lib/juice-contracts-v4/src/interfaces/IJBDirectory.sol";
+import {IJBTerminalStore} from "lib/juice-contracts-v4/src/interfaces/IJBTerminalStore.sol";
 
-//     // Other token which is either token0 (if UNI is token1) or token1 of the pool
-//     IERC20Metadata internal _otherTokenIn = address(UNI) < address(WETH)
-//         ? IERC20Metadata(address(uint160(address(WETH)) - 1))
-//         : IERC20Metadata(address(uint160(address(WETH)) + 1));
+import {JBConstants} from "lib/juice-contracts-v4/src/libraries/JBConstants.sol";
 
-//     IUniswapV3Pool internal _otherTokenPool;
+import {JBRulesetMetadata} from "lib/juice-contracts-v4/src/structs/JBRulesetMetadata.sol";
+import {JBRulesetMetadataResolver} from "lib/juice-contracts-v4/src/libraries/JBRulesetMetadataResolver.sol";
+import {JBRuleset} from "lib/juice-contracts-v4/src/structs/JBRuleset.sol";
 
-//     JBSwapTerminal internal _swapTerminal;
-//     JBMultiTerminal internal _projectTerminal;
-//     JBTokens internal _tokens;
-//     IJBProjects internal _projects;
-//     IJBPermissions internal _permissions;
-//     IJBDirectory internal _directory;
-//     IPermit2 internal _permit2;
-//     IJBController internal _controller;
-//     JBTerminalStore internal _terminalStore;
+import {JBRulesetConfig} from "lib/juice-contracts-v4/src/structs/JBRulesetConfig.sol";
 
-//     address internal _owner;
-//     address internal _sender;
+import {JBSplitGroup} from "lib/juice-contracts-v4/src/structs/JBSplitGroup.sol";
 
-//     uint256 internal _projectId = 4;
-//     address internal _projectOwner;
-//     address internal _terminalOwner;
-//     address internal _beneficiary;
+import {JBFundAccessLimitGroup} from "lib/juice-contracts-v4/src/structs/JBFundAccessLimitGroup.sol";
 
-//     MetadataResolverHelper internal _metadataResolver;
-//     UniswapV3ForgeQuoter internal _uniswapV3ForgeQuoter;
-//     PoolTestHelper internal _poolTestHelper;
+import {IJBRulesetApprovalHook} from "lib/juice-contracts-v4/src/interfaces/IJBRulesetApprovalHook.sol";
 
-//     function setUp() public override {
-//         vm.createSelectFork("https://rpc.ankr.com/eth_sepolia", 5_022_528);
+import {MockERC20} from "../helper/MockERC20.sol";
 
-//         vm.label(address(UNI), "UNI");
-//         vm.label(address(WETH), "WETH");
-//         vm.label(address(POOL), "POOL");
+import "forge-std/Test.sol";
 
-//         // TODO: find a new way to parse broadcast json
-//         // _controller = IJBController(stdJson.readAddress(
-//         //         vm.readFile("broadcast/Deploy.s.sol/11155420/run-latest.json"), ".address"
-//         //     ));
+/// @notice Swap terminal test on a Sepolia fork
+contract TestSwapTerminal_Fork is Test {
+    using JBRulesetMetadataResolver for JBRuleset;
 
-//         _controller = IJBController(0x15e9030Dd25b27d7e6763598B87445daf222C115);
-//         vm.label(address(_controller), "controller");
+    IERC20Metadata constant UNI = IERC20Metadata(0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984);
+    IWETH9 constant WETH = IWETH9(0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14);
+    IUniswapV3Pool constant POOL = IUniswapV3Pool(0x287B0e934ed0439E2a7b1d5F0FC25eA2c24b64f7);
 
-//         _projects = IJBProjects(0x95df60b57Ee581680F5c243554E16BD4F3A6a192);
-//         vm.label(address(_projects), "projects");
+    // Other token which is either token0 (if UNI is token1) or token1 of the pool
+    IERC20Metadata internal _otherTokenIn = address(UNI) < address(WETH)
+        ? IERC20Metadata(address(uint160(address(WETH)) - 1))
+        : IERC20Metadata(address(uint160(address(WETH)) + 1));
 
-//         _permissions = IJBPermissions(0x607763b1458419Edb09f56CE795057A2958e2001);
-//         vm.label(address(_permissions), "permissions");
+    IUniswapV3Pool internal _otherTokenPool;
 
-//         _directory = IJBDirectory(0x862ea57d0C473a5c7c8330d92C7824dbd60269EC);
-//         vm.label(address(_directory), "directory");
+    JBSwapTerminal internal _swapTerminal;
+    JBMultiTerminal internal _projectTerminal;
+    JBTokens internal _tokens;
+    IJBProjects internal _projects;
+    IJBPermissions internal _permissions;
+    IJBDirectory internal _directory;
+    IPermit2 internal _permit2;
+    IJBController internal _controller;
+    IJBTerminalStore internal _terminalStore;
 
-//         _permit2 = IPermit2(0x000000000022D473030F116dDEE9F6B43aC78BA3);
-//         vm.label(address(_permit2), "permit2");
+    MetadataResolverHelper internal _metadataResolver;
+    UniswapV3ForgeQuoter internal _uniswapV3ForgeQuoter;
+    PoolTestHelper internal _poolTestHelper;
 
-//         _tokens = JBTokens(0xdb42B6D08755c3f09AdB8C35A19A558bc1b40C9b);
-//         vm.label(address(_tokens), "tokens");
+    address internal _owner = makeAddr("owner");
+    address internal _sender = makeAddr("sender");
+    address internal _beneficiary = makeAddr("beneficiary");
+    address internal _projectOwner;
 
-//         _terminalStore = JBTerminalStore(0x6b2c93da6Af4061Eb6dAe4aCFc15632b54c37DE5);
-//         vm.label(address(_terminalStore), "terminalStore");
+    uint256 internal _projectId = 4;
 
-//         _projectTerminal = JBMultiTerminal(0x4319cb152D46Db72857AfE368B19A4483c0Bff0D);
-//         vm.label(address(_projectTerminal), "projectTerminal");
+    function setUp() public {
+        vm.createSelectFork("https://rpc.ankr.com/eth_sepolia", 5_022_528);
 
-//         _owner = makeAddr("owner");
-//         _sender = makeAddr("sender");
+        vm.label(address(UNI), "UNI");
+        vm.label(address(WETH), "WETH");
+        vm.label(address(POOL), "POOL");
 
-//         _projectOwner = _projects.ownerOf(_projectId);
-//         vm.label(_projectOwner, "projectOwner");
+        // TODO: find a new way to parse broadcast json
+        // _controller = IJBController(stdJson.readAddress(
+        //         vm.readFile("broadcast/Deploy.s.sol/11155420/run-latest.json"), ".address"
+        //     ));
 
-//         _swapTerminal = new JBSwapTerminal(_projects, _permissions, _directory, _permit2, _owner, WETH);
-//         vm.label(address(_swapTerminal), "swapTerminal");
+        _controller = IJBController(0x15e9030Dd25b27d7e6763598B87445daf222C115);
+        vm.label(address(_controller), "controller");
 
-//         _metadataResolver = new MetadataResolverHelper();
-//         vm.label(address(_metadataResolver), "metadataResolver");
+        _projects = IJBProjects(0x95df60b57Ee581680F5c243554E16BD4F3A6a192);
+        vm.label(address(_projects), "projects");
 
-//         _uniswapV3ForgeQuoter = new UniswapV3ForgeQuoter();
-//         vm.label(address(_uniswapV3ForgeQuoter), "uniswapV3ForgeQuoter");
+        _permissions = IJBPermissions(0x607763b1458419Edb09f56CE795057A2958e2001);
+        vm.label(address(_permissions), "permissions");
 
-//         _poolTestHelper = new PoolTestHelper();
-//         vm.label(address(_poolTestHelper), "poolTestHelper");
+        _directory = IJBDirectory(0x862ea57d0C473a5c7c8330d92C7824dbd60269EC);
+        vm.label(address(_directory), "directory");
 
-//         deployCodeTo("MockERC20.sol", abi.encode("token", "token", uint8(18)), address(_otherTokenIn));
-//         vm.label(address(_otherTokenIn), "_otherTokenIn");
+        _permit2 = IPermit2(0x000000000022D473030F116dDEE9F6B43aC78BA3);
+        vm.label(address(_permit2), "permit2");
 
-//         _otherTokenPool = IUniswapV3Pool(
-//             IUniswapV3Factory(0x0227628f3F023bb0B980b67D528571c95c6DaC1c).createPool(
-//                 address(_otherTokenIn), address(WETH), 3000
-//             )
-//         );
-//         vm.label(address(_otherTokenPool), "_otherTokenPool");
+        _tokens = JBTokens(0xdb42B6D08755c3f09AdB8C35A19A558bc1b40C9b);
+        vm.label(address(_tokens), "tokens");
 
-//         // Copying UNI sqrt price to hjave a realistic value
-//         (uint160 _sqrtPrice,,,,,,) = POOL.slot0();
-//         _otherTokenPool.initialize(_sqrtPrice);
+        _terminalStore = IJBTerminalStore(0x6b2c93da6Af4061Eb6dAe4aCFc15632b54c37DE5);
+        vm.label(address(_terminalStore), "terminalStore");
 
-//         // Mint some tokens to the pool helper (for an obscure reason, forge std reverts if initial supply is 0)
-//         MockERC20(address(_otherTokenIn)).mint(address(_poolTestHelper), 1000 * 1e18);
-//         WETH.deposit{value: 1000 * 1e18}();
-//         WETH.transfer(address(_poolTestHelper), 1000 * 1e18);
+        _projectTerminal = JBMultiTerminal(0x4319cb152D46Db72857AfE368B19A4483c0Bff0D);
+        vm.label(address(_projectTerminal), "projectTerminal");
 
-//         _poolTestHelper.addLiquidityFullRange(address(_otherTokenPool), 100_000 * 1e18, 100_000 * 1e18);
-//     }
+        _projectOwner = _projects.ownerOf(_projectId);
+        vm.label(_projectOwner, "projectOwner");
 
-//     /// @notice Test paying a swap terminal in UNI to contribute to JuiceboxDAO project (in the eth terminal), using
-//     /// metadata
-//     /// @dev    Quote at the forked block 5022528 : 1 UNI = 1.33649 ETH with max slippage suggested (uni sdk): 0.5%
-//     function testPayUniSwapEthPayEth() external {
-//         // NOTE: bullet proofing for coming fuzzed token
-//         uint256 _amountIn = 10 * 10 ** UNI.decimals();
+        _swapTerminal = new JBSwapTerminal(_projects, _permissions, _directory, _permit2, _owner, WETH);
+        vm.label(address(_swapTerminal), "swapTerminal");
 
-//         deal(address(UNI), address(_sender), _amountIn);
+        _metadataResolver = new MetadataResolverHelper();
+        vm.label(address(_metadataResolver), "metadataResolver");
 
-//         // 10 uni - 8%
-//         // uint256 _minAmountOut = 10 * 1.33649 ether * 92 / 100;
-//         uint256 _minAmountOut = _uniswapV3ForgeQuoter.getAmountOut(POOL, _amountIn, address(UNI));
+        _uniswapV3ForgeQuoter = new UniswapV3ForgeQuoter();
+        vm.label(address(_uniswapV3ForgeQuoter), "uniswapV3ForgeQuoter");
 
-//         vm.prank(_projectOwner);
-//         _swapTerminal.addDefaultPool(_projectId, address(UNI), POOL);
+        _poolTestHelper = new PoolTestHelper();
+        vm.label(address(_poolTestHelper), "poolTestHelper");
 
-//         // Build the metadata using the minimum amount out, the pool address and the token out address
-//         bytes[] memory _data = new bytes[](1);
-//         _data[0] = abi.encode(_minAmountOut, address(POOL), JBConstants.NATIVE_TOKEN);
+        deployCodeTo("MockERC20.sol", abi.encode("token", "token", uint8(18)), address(_otherTokenIn));
+        vm.label(address(_otherTokenIn), "_otherTokenIn");
 
-//         // Pass the delegate id
-//         bytes4[] memory _ids = new bytes4[](1);
-//         _ids[0] = bytes4("SWAP");
+        _otherTokenPool = IUniswapV3Pool(
+            IUniswapV3Factory(0x0227628f3F023bb0B980b67D528571c95c6DaC1c).createPool(
+                address(_otherTokenIn), address(WETH), 3000
+            )
+        );
+        vm.label(address(_otherTokenPool), "_otherTokenPool");
 
-//         // Generate the metadata
-//         bytes memory _metadata = _metadataResolver.createMetadata(_ids, _data);
+        // Copying UNI sqrt price to hjave a realistic value
+        (uint160 _sqrtPrice,,,,,,) = POOL.slot0();
+        _otherTokenPool.initialize(_sqrtPrice);
 
-//         // Approve the transfer
-//         vm.startPrank(_sender);
-//         UNI.approve(address(_swapTerminal), _amountIn);
+        _poolTestHelper.addLiquidityFullRange(address(_otherTokenPool), 100_000 * 1e18, 100_000 * 1e18);
+    }
 
-//         // Make a payment.
-//         _swapTerminal.pay({
-//             _projectId: _projectId,
-//             _amount: _amountIn,
-//             _token: address(UNI),
-//             _beneficiary: _beneficiary,
-//             _minReturnedTokens: 1,
-//             _memo: "Take my money!",
-//             _metadata: _metadata
-//         });
+    /// @notice Test paying a swap terminal in UNI to contribute to JuiceboxDAO project (in the eth terminal), using
+    /// metadata
+    /// @dev    Quote at the forked block 5022528 : 1 UNI = 1.33649 ETH with max slippage suggested (uni sdk): 0.5%
+    function testPayUniSwapEthPayEth(uint256 _amountIn) external {
+        _amountIn = bound(_amountIn, 1 ether, 100 ether);
 
-//         // // Make sure the beneficiary has a balance of project tokens.
-//         // uint256 _beneficiaryTokenBalance =
-//         //     UD60x18unwrap(UD60x18mul(UD60x18wrap(_amountIn * _quote), UD60x18wrap(_weight)));
-//         // assertEq(_tokens.totalBalanceOf(_beneficiary, _projectId), _beneficiaryTokenBalance);
+        deal(address(UNI), address(_sender), _amountIn);
 
-//         // // Make sure the native token balance in terminal is up to date.
-//         // uint256 _terminalBalance = _amountIn * _quote;
-//         // assertEq(
-//         //     jbTerminalStore().balanceOf(address(_projectTerminal), _projectId, JBConstants.NATIVE_TOKEN),
-//         // _terminalBalance
-//         // );
-//     }
+        uint256 _initialTerminalBalance =
+            _terminalStore.balanceOf(address(_projectTerminal), _projectId, JBConstants.NATIVE_TOKEN);
+        uint256 _initialBeneficiaryBalance = _tokens.totalBalanceOf(_beneficiary, _projectId);
 
-//     /// @notice Test paying a swap terminal in another token, which has an address either bigger or smaller than UNI
-//     ///         to test the opposite pool token ordering
-//     function testPayAndSwapOtherTokenOrder() external {
-//         // NOTE: bullet proofing for coming fuzzed token
-//         uint256 _amountIn = 10 * 10 ** _otherTokenIn.decimals();
+        uint256 _minAmountOut = _uniswapV3ForgeQuoter.getAmountOut(POOL, _amountIn, address(UNI));
 
-//         deal(address(_otherTokenIn), address(_sender), _amountIn);
+        vm.prank(_projectOwner);
+        _swapTerminal.addDefaultPool(_projectId, address(UNI), POOL);
 
-//         uint256 _minAmountOut = _uniswapV3ForgeQuoter.getAmountOut(_otherTokenPool, _amountIn,
-// address(_otherTokenIn));
+        // Build the metadata using the minimum amount out, the pool address and the token out address
+        bytes[] memory _data = new bytes[](1);
+        _data[0] = abi.encode(_minAmountOut, address(POOL), JBConstants.NATIVE_TOKEN);
 
-//         vm.prank(_projectOwner);
-//         _swapTerminal.addDefaultPool(_projectId, address(_otherTokenIn), _otherTokenPool);
+        bytes4[] memory _ids = new bytes4[](1);
+        _ids[0] = bytes4("SWAP");
 
-//         // Build the metadata using the minimum amount out, the pool address and the token out address
-//         bytes[] memory _data = new bytes[](1);
-//         _data[0] = abi.encode(_minAmountOut, address(_otherTokenPool), JBConstants.NATIVE_TOKEN);
+        bytes memory _metadata = _metadataResolver.createMetadata(_ids, _data);
 
-//         // Pass the delegate id
-//         bytes4[] memory _ids = new bytes4[](1);
-//         _ids[0] = bytes4("SWAP");
+        // Approve the transfer
+        vm.startPrank(_sender);
+        UNI.approve(address(_swapTerminal), _amountIn);
 
-//         // Generate the metadata
-//         bytes memory _metadata = _metadataResolver.createMetadata(_ids, _data);
+        // Make a payment.
+        _swapTerminal.pay({
+            projectId: _projectId,
+            amount: _amountIn,
+            token: address(UNI),
+            beneficiary: _beneficiary,
+            minReturnedTokens: 1,
+            memo: "Take my money!",
+            metadata: _metadata
+        });
 
-//         // Approve the transfer
-//         vm.startPrank(_sender);
-//         _otherTokenIn.approve(address(_swapTerminal), _amountIn);
+        // Make sure the beneficiary has a balance of project tokens
+        uint256 _weight = _terminalStore.RULESETS().currentOf(_projectId).weight;
+        uint256 _reservedRate = _terminalStore.RULESETS().currentOf(_projectId).reservedRate();
+        uint256 _totalMinted = _weight * _minAmountOut / 1 ether;
+        uint256 _reservedToken = _totalMinted * _reservedRate / JBConstants.MAX_RESERVED_RATE;
 
-//         // Make a payment.
-//         _swapTerminal.pay({
-//             _projectId: _projectId,
-//             _amount: _amountIn,
-//             _token: address(_otherTokenIn),
-//             _beneficiary: _beneficiary,
-//             _minReturnedTokens: 1,
-//             _memo: "Take my money!",
-//             _metadata: _metadata
-//         });
-//     }
+        // 1 wei delta for rounding
+        assertApproxEqAbs(
+            _tokens.totalBalanceOf(_beneficiary, _projectId),
+            _initialBeneficiaryBalance + _totalMinted - _reservedToken,
+            1
+        );
 
-//     function _reconfigure() internal {
-//         JBRulesetMetadata memory _metadata = JBRulesetMetadata({
-//             reservedRate: 0,
-//             redemptionRate: 0,
-//             baseCurrency: uint32(uint160(JBConstants.NATIVE_TOKEN)),
-//             pausePay: false,
-//             pauseCreditTransfers: false,
-//             allowOwnerMinting: false,
-//             allowTerminalMigration: false,
-//             allowSetTerminals: true,
-//             allowControllerMigration: false,
-//             allowSetController: false,
-//             holdFees: false,
-//             useTotalSurplusForRedemptions: false,
-//             useDataHookForPay: false,
-//             useDataHookForRedeem: false,
-//             dataHook: address(0),
-//             metadata: 0
-//         });
+        // Make sure the native token balance in terminal is up to date.
+        uint256 _terminalBalance = _minAmountOut + _initialTerminalBalance;
+        assertEq(
+            _terminalStore.balanceOf(address(_projectTerminal), _projectId, JBConstants.NATIVE_TOKEN), _terminalBalance
+        );
+    }
 
-//         JBRuleset memory _ruleset = jbRulesets().currentOf(_projectId);
+    /// @notice Test paying a swap terminal in another token, which has an address either bigger or smaller than UNI
+    ///         to test the opposite pool token ordering
+    function testPayAndSwapOtherTokenOrder(uint256 _amountIn) external {
+        _amountIn = bound(_amountIn, 1 ether, 100 ether);
 
-//         // Package a ruleset configuration.
-//         JBRulesetConfig[] memory _rulesetConfig = new JBRulesetConfig[](1);
-//         _rulesetConfig[0].mustStartAtOrAfter = 0;
-//         _rulesetConfig[0].duration = _ruleset.duration;
-//         _rulesetConfig[0].weight = 0;
-//         _rulesetConfig[0].decayRate = 0;
-//         _rulesetConfig[0].approvalHook = IJBRulesetApprovalHook(address(0));
-//         _rulesetConfig[0].metadata = _metadata;
-//         _rulesetConfig[0].splitGroups = new JBSplitGroup[](0);
-//         _rulesetConfig[0].fundAccessLimitGroups = new JBFundAccessLimitGroup[](0);
+        deal(address(_otherTokenIn), address(_sender), _amountIn);
 
-//         vm.prank(multisig());
-//         _controller.queueRulesetsOf(_projectId, _rulesetConfig, "");
+        uint256 _initialTerminalBalance =
+            _terminalStore.balanceOf(address(_projectTerminal), _projectId, JBConstants.NATIVE_TOKEN);
+        uint256 _initialBeneficiaryBalance = _tokens.totalBalanceOf(_beneficiary, _projectId);
 
-//         vm.warp(block.timestamp + _ruleset.duration);
+        uint256 _minAmountOut = _uniswapV3ForgeQuoter.getAmountOut(_otherTokenPool, _amountIn, address(_otherTokenIn));
 
-//         // Set a new primary terminal for UNI
-//         _directory.setPrimaryTerminalOf(_projectId, address(UNI), _swapTerminal);
-//     }
-// }
+        vm.prank(_projectOwner);
+        _swapTerminal.addDefaultPool(_projectId, address(_otherTokenIn), _otherTokenPool);
+
+        // Build the metadata using the minimum amount out, the pool address and the token out address
+        bytes[] memory _data = new bytes[](1);
+        _data[0] = abi.encode(_minAmountOut, address(_otherTokenPool), JBConstants.NATIVE_TOKEN);
+
+        bytes4[] memory _ids = new bytes4[](1);
+        _ids[0] = bytes4("SWAP");
+
+        bytes memory _metadata = _metadataResolver.createMetadata(_ids, _data);
+
+        // Approve the transfer
+        vm.startPrank(_sender);
+        _otherTokenIn.approve(address(_swapTerminal), _amountIn);
+
+        // Make a payment.
+        _swapTerminal.pay({
+            projectId: _projectId,
+            amount: _amountIn,
+            token: address(_otherTokenIn),
+            beneficiary: _beneficiary,
+            minReturnedTokens: 1,
+            memo: "Take my money!",
+            metadata: _metadata
+        });
+
+        // Make sure the beneficiary has a balance of project tokens
+        uint256 _weight = _terminalStore.RULESETS().currentOf(_projectId).weight;
+        uint256 _reservedRate = _terminalStore.RULESETS().currentOf(_projectId).reservedRate();
+        uint256 _totalMinted = _weight * _minAmountOut / 1 ether;
+        uint256 _reservedToken = _totalMinted * _reservedRate / JBConstants.MAX_RESERVED_RATE;
+
+        // 1 wei delta for rounding
+        assertApproxEqAbs(
+            _tokens.totalBalanceOf(_beneficiary, _projectId),
+            _initialBeneficiaryBalance + _totalMinted - _reservedToken,
+            1
+        );
+
+        // Make sure the native token balance in terminal is up to date.
+        uint256 _terminalBalance = _minAmountOut + _initialTerminalBalance;
+        assertEq(
+            _terminalStore.balanceOf(address(_projectTerminal), _projectId, JBConstants.NATIVE_TOKEN), _terminalBalance
+        );
+    }
+}
