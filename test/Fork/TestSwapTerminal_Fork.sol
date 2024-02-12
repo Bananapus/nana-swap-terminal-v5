@@ -268,13 +268,18 @@ contract TestSwapTerminal_Fork is Test {
 
     /// @notice Test setting a new pool for a project using the protocol owner address
     function testProtocolOwnerSetsNewPool() external {
-        vm.prank(_projects.ownerOf(1));
+        vm.prank(_swapTerminal.owner());
         _swapTerminal.addDefaultPool(_projectId, address(UNI), POOL);
 
         assertEq(address(_swapTerminal.poolFor(_projectId, address(UNI), address(0))), address(POOL));
 
         vm.prank(_projects.ownerOf(_projectId));
         _swapTerminal.addDefaultPool(_projectId, address(UNI), IUniswapV3Pool(makeAddr("newPool")));
+
         assertEq(address(_swapTerminal.poolFor(_projectId, address(UNI), address(0))), makeAddr("newPool"));
+
+        vm.expectRevert(JBPermissioned.UNAUTHORIZED.selector);
+        vm.prank(address(12345));
+        _swapTerminal.addDefaultPool(_projectId, address(UNI), IUniswapV3Pool(address(5432)));
     }
 }

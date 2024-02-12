@@ -358,7 +358,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
             PROJECTS.ownerOf(projectId),
             projectId,
             JBSwapTerminalPermissionIds.MODIFY_DEFAULT_POOL,
-            msg.sender == PROJECTS.ownerOf(1)
+            msg.sender == owner()
         );
 
         // Update the project's default pool for the token.
