@@ -8,6 +8,7 @@ optimizer_runs = 100000000
 block_number = 14126430
 block_timestamp = 1643802347
 runs = 4096
+libs = ["node_modules", "lib"]
 
 [profile.fork] # run via FOUNDRY_PROFILE=fork foundry test
 
