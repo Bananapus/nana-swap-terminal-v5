@@ -49,4 +49,4 @@ jobs:
       - name: install libraries
         run: git submodule update --init
       - name: Check contract sizes
-        run: forge build --sizes
+        run: FOUNDRY_PROFILE=ci_sizes forge build --sizes
