@@ -1,4 +1,4 @@
-name: contracts-template-lint
+name: contracts-template-tests
 on:
   pull_request:
     branches:
@@ -10,7 +10,7 @@ jobs:
   forge-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
       - uses: bahmutov/npm-install@v1
@@ -18,5 +18,9 @@ jobs:
         uses: onbjerg/foundry-toolchain@v1
         with:
           version: nightly
-      - name: Check linting
-        run: forge fmt --check
+      - name: install libraries
+        run: git submodule update --init
+      - name: Run tests
+        run: FOUNDRY_PROFILE=default forge snapshot
+      - name: Check contract sizes
+        run: FOUNDRY_PROFILE=ci_sizes forge build --sizes
