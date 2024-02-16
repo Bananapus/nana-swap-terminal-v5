@@ -1,26 +1,28 @@
-name: contracts-template-tests
+name: test
 on:
   pull_request:
     branches:
       - main
+      - master
   push:
     branches:
       - main
+      - master
 jobs:
   forge-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - uses: bahmutov/npm-install@v1
+      - uses: actions/setup-node@v4
+          with:
+            node-version: latest
+      - name: Install npm dependencies
+        run: npm install
       - name: Install Foundry
-        uses: onbjerg/foundry-toolchain@v1
-        with:
-          version: nightly
-      - name: install libraries
-        run: git submodule update --init
+        uses: foundry-rs/foundry-toolchain@v1
       - name: Run tests
-        run: FOUNDRY_PROFILE=default forge snapshot
+        run: forge snapshot --fail-fast --summary --detailed
       - name: Check contract sizes
         run: FOUNDRY_PROFILE=ci_sizes forge build --sizes

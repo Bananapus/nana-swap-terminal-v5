@@ -5,6 +5,7 @@ node_modules
 
 # Foundry
 out
+.gas-snapshot
 
 # Hardhat files
 cache
