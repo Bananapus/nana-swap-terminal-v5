@@ -3,39 +3,39 @@ pragma solidity ^0.8.6;
 
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
-import {UniswapV3ForgeQuoter} from "lib/uniswap-v3-foundry-quote/src/UniswapV3ForgeQuoter.sol";
+import {UniswapV3ForgeQuoter} from "@exhausted-pigeon/uniswap-v3-foundry-quote/src/UniswapV3ForgeQuoter.sol";
 
-import {PoolTestHelper} from "lib/uniswap-v3-foundry-pool/src/PoolTestHelper.sol";
+import {PoolTestHelper} from "@exhausted-pigeon/uniswap-v3-foundry-pool/src/PoolTestHelper.sol";
 
-import "lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import "../../src/JBSwapTerminal.sol";
 import {IWETH9} from "../../src/interfaces/IWETH9.sol";
 
-import {MetadataResolverHelper} from "lib/juice-contracts-v4/test/helpers/MetadataResolverHelper.sol";
-import {JBMultiTerminal} from "lib/juice-contracts-v4/src/JBMultiTerminal.sol";
+import {MetadataResolverHelper} from "@bananapus/core/test/helpers/MetadataResolverHelper.sol";
+import {JBMultiTerminal} from "@bananapus/core/src/JBMultiTerminal.sol";
 
-import {JBTokens} from "lib/juice-contracts-v4/src/JBTokens.sol";
+import {JBTokens} from "@bananapus/core/src/JBTokens.sol";
 
-import {IJBController} from "lib/juice-contracts-v4/src/interfaces/IJBController.sol";
-import {IJBProjects} from "lib/juice-contracts-v4/src/interfaces/IJBProjects.sol";
-import {IJBPermissions} from "lib/juice-contracts-v4/src/interfaces/IJBPermissions.sol";
-import {IJBDirectory} from "lib/juice-contracts-v4/src/interfaces/IJBDirectory.sol";
-import {IJBTerminalStore} from "lib/juice-contracts-v4/src/interfaces/IJBTerminalStore.sol";
+import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
+import {IJBProjects} from "@bananapus/core/src/interfaces/IJBProjects.sol";
+import {IJBPermissions} from "@bananapus/core/src/interfaces/IJBPermissions.sol";
+import {IJBDirectory} from "@bananapus/core/src/interfaces/IJBDirectory.sol";
+import {IJBTerminalStore} from "@bananapus/core/src/interfaces/IJBTerminalStore.sol";
 
-import {JBConstants} from "lib/juice-contracts-v4/src/libraries/JBConstants.sol";
+import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
 
-import {JBRulesetMetadata} from "lib/juice-contracts-v4/src/structs/JBRulesetMetadata.sol";
-import {JBRulesetMetadataResolver} from "lib/juice-contracts-v4/src/libraries/JBRulesetMetadataResolver.sol";
-import {JBRuleset} from "lib/juice-contracts-v4/src/structs/JBRuleset.sol";
+import {JBRulesetMetadata} from "@bananapus/core/src/structs/JBRulesetMetadata.sol";
+import {JBRulesetMetadataResolver} from "@bananapus/core/src/libraries/JBRulesetMetadataResolver.sol";
+import {JBRuleset} from "@bananapus/core/src/structs/JBRuleset.sol";
 
-import {JBRulesetConfig} from "lib/juice-contracts-v4/src/structs/JBRulesetConfig.sol";
+import {JBRulesetConfig} from "@bananapus/core/src/structs/JBRulesetConfig.sol";
 
-import {JBSplitGroup} from "lib/juice-contracts-v4/src/structs/JBSplitGroup.sol";
+import {JBSplitGroup} from "@bananapus/core/src/structs/JBSplitGroup.sol";
 
-import {JBFundAccessLimitGroup} from "lib/juice-contracts-v4/src/structs/JBFundAccessLimitGroup.sol";
+import {JBFundAccessLimitGroup} from "@bananapus/core/src/structs/JBFundAccessLimitGroup.sol";
 
-import {IJBRulesetApprovalHook} from "lib/juice-contracts-v4/src/interfaces/IJBRulesetApprovalHook.sol";
+import {IJBRulesetApprovalHook} from "@bananapus/core/src/interfaces/IJBRulesetApprovalHook.sol";
 
 import {MockERC20} from "../helper/MockERC20.sol";
 

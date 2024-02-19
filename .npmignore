@@ -3,9 +3,20 @@ node_modules
 *.txt
 !remappings.txt
 
-# Foundry
+# Git
+.git/
+.github/
+.gitmodules
+
+# Misc
+.example.env
+utils/
+
+# Output
 out
-.gas-snapshot
+
+# Foundry
+lib/
 
 # Hardhat files
 cache
