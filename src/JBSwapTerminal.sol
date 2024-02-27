@@ -291,6 +291,9 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         // Swap. The callback will ensure that we're within the intended slippage tolerance.
         uint256 receivedFromSwap = _swap(swapConfig);
 
+        // Trigger the `beforeTransferFor` hook.
+        _beforeTransferFor(address(terminal), swapConfig.tokenOut, receivedFromSwap);
+
         // Pay the primary terminal, passing along the beneficiary and other arguments.
         terminal.pay{value: swapConfig.outIsNativeToken ? receivedFromSwap : 0}(
             swapConfig.projectId,
