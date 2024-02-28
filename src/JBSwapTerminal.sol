@@ -8,7 +8,9 @@
 // SOLVED: use quoter to check if 7% price impact is expected (uni-weth has low liq on Sepolia, so probably is)
 // TOdo: if pool out == weth, check if the project terminal accepts weth or eth/native token
 // TODO: sweep any leftover
-// TODO: natspecs
+
+// TODO (1): check if tokenin == tokenout, do not swap is so
+
 
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
@@ -268,7 +270,6 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
 
                 (address poolToken0, address poolToken1) = (pool.token0(), pool.token1());
 
-                // TODO: What does this comment mean? "Uniswap pool aren't using native token, stay false by default"
                 // Set the `tokenOut` to the token in the pool that isn't the token being paid in.
                 swapConfig.tokenOut = poolToken0 == token ? poolToken1 : poolToken0;
 
@@ -289,7 +290,12 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         swapConfig.amountIn = _acceptFundsFor(swapConfig, metadata);
 
         // Swap. The callback will ensure that we're within the intended slippage tolerance.
-        uint256 receivedFromSwap = _swap(swapConfig);
+        uint256 receivedFromSwap;
+        if(
+            (swapConfig.inIsNativeToken && swapConfig.outIsNativeToken) ||
+            (swapConfig.tokenIn == swapConfig.tokenOut)
+        ) receivedFromSwap = _swap(swapConfig);
+        else receivedFromSwap = swapConfig.amountIn;
 
         // Trigger the `beforeTransferFor` hook.
         _beforeTransferFor(address(terminal), swapConfig.tokenOut, receivedFromSwap);
