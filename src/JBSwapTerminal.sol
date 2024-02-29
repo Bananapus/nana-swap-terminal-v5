@@ -9,8 +9,7 @@
 // TOdo: if pool out == weth, check if the project terminal accepts weth or eth/native token
 // TODO: sweep any leftover
 
-// TODO (1): check if tokenin == tokenout, do not swap is so
-
+// solved: check if tokenin == tokenout, do not swap is so
 
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
@@ -291,11 +290,14 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
 
         // Swap. The callback will ensure that we're within the intended slippage tolerance.
         uint256 receivedFromSwap;
-        if(
-            (swapConfig.inIsNativeToken && swapConfig.outIsNativeToken) ||
-            (swapConfig.tokenIn == swapConfig.tokenOut)
-        ) receivedFromSwap = _swap(swapConfig);
-        else receivedFromSwap = swapConfig.amountIn;
+
+        // If the token in is the same as the token out, don't swap, just call the next terminal
+        if ((swapConfig.inIsNativeToken && swapConfig.outIsNativeToken) || (swapConfig.tokenIn == swapConfig.tokenOut))
+        {
+            receivedFromSwap = swapConfig.amountIn;
+        } else {
+            receivedFromSwap = _swap(swapConfig);
+        }
 
         // Trigger the `beforeTransferFor` hook.
         _beforeTransferFor(address(terminal), swapConfig.tokenOut, receivedFromSwap);
@@ -435,12 +437,6 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     function _acceptFundsFor(SwapConfig memory swapConfig, bytes calldata metadata) internal returns (uint256) {
         // Get a reference to address of the token being paid in.
         address token = swapConfig.tokenIn;
-
-        // TODO: Should this be un-commented?
-        // Make sure the project has set an accounting context for the token being paid.
-        // if (_accountingContextForTokenOf[_projectId][token].token == address(0)) {
-        //     revert TOKEN_NOT_ACCEPTED();
-        // }
 
         // If native tokens are being paid in, return the `msg.value`.
         if (token == JBConstants.NATIVE_TOKEN) return msg.value;
