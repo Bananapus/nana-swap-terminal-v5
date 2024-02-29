@@ -9,6 +9,8 @@
 // TOdo: if pool out == weth, check if the project terminal accepts weth or eth/native token
 // TODO: sweep any leftover
 
+// todo: accounting context? remove
+
 // solved: check if tokenin == tokenout, do not swap is so
 
 // SPDX-License-Identifier: MIT
@@ -375,12 +377,12 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         // Update the project's default pool for the token.
         poolFor[projectId][token][address(0)] = pool;
 
-        // Update the project's accounting context for the token.
-        accountingContextFor[projectId][token] = JBAccountingContext({
-            token: token,
-            decimals: IERC20Metadata(token).decimals(),
-            currency: uint32(uint160(token))
-        });
+        // // Update the project's accounting context for the token.
+        // accountingContextFor[projectId][token] = JBAccountingContext({
+        //     token: token,
+        //     decimals: IERC20Metadata(token).decimals(),
+        //     currency: uint32(uint160(token))
+        // });
     }
 
     /// @notice Empty implementation to satisfy the interface. Accounting contexts are set in `addDefaultPool(...)`.
