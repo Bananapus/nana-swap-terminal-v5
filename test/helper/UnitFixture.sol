@@ -7,13 +7,12 @@ import "../../src/JBSwapTerminal.sol";
 
 /// @notice Deploy the swap terminal and create the mocks
 contract UnitFixture is Test {
-
     // -- swap terminal dependencies --
-    IJBProjects public mockJBProjects ;
-    IJBPermissions public mockJBPermissions ;
-    IJBDirectory public mockJBDirectory ;
+    IJBProjects public mockJBProjects;
+    IJBPermissions public mockJBPermissions;
+    IJBDirectory public mockJBDirectory;
     IPermit2 public mockPermit2;
-    IWETH9 public mockWETH ;
+    IWETH9 public mockWETH;
 
     address public terminalOwner;
 
@@ -28,21 +27,8 @@ contract UnitFixture is Test {
         mockWETH = IWETH9(makeAddr("mockWETH"));
         terminalOwner = makeAddr("terminalOwner");
 
-        // -- etch every mock, to avoid empty address errors --
-        vm.etch(address(mockJBProjects), hex"6969");
-        vm.etch(address(mockJBPermissions), hex"6969");
-        vm.etch(address(mockJBDirectory), hex"6969");
-        vm.etch(address(mockPermit2), hex"6969");
-        vm.etch(address(mockWETH), hex"6969");
-
         // -- deploy the swap terminal --
-        swapTerminal = new JBSwapTerminal(
-            mockJBProjects,
-            mockJBPermissions,
-            mockJBDirectory,
-            mockPermit2,
-            terminalOwner,
-            mockWETH
-        );
+        swapTerminal =
+            new JBSwapTerminal(mockJBProjects, mockJBPermissions, mockJBDirectory, mockPermit2, terminalOwner, mockWETH);
     }
 }

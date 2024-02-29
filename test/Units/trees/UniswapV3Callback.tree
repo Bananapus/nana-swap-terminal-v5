@@ -1,0 +1,86 @@
+JBSwapTerminal::pay // branch coverage
+├── when tokenIn is the native token
+│   ├── it should use weth as tokenIn // test in the uniswap call
+│   ├── it should set inIsNativeToken to true // test in the uniswap call
+│   └── it should use msg value as amountIn
+├── when tokenIn is an erc20 token
+│   ├── it should use tokenIn as tokenIn // test in the uniswap call
+│   ├── it should set inIsNativeToken to false // test in the uniswap call
+│   ├── it should use amountIn as amountIn
+│   ├── when a msg value is passed along an erc20 token
+│   │   └── it should revert
+│   ├── when tokenIn uses an erc20 approval
+│   │   └── it should use the token transferFrom
+│   └── when permit2 data are passed
+│       ├── it should use the permit2 call
+│       └── when the permit2 allowance is less than the amountIn
+│           └── it should revert
+├── when a quote is provided
+│   ├── it should use the quote as amountOutMin
+│   ├── when the amount received is less than the amountOutMin
+│   │   └── it should revert
+│   ├── it should use the pool passed
+│   ├── it should use the token passed as tokenOut
+│   └── when the token out is the native token
+│        ├── it should use weth as tokenOut
+│        └── it should set outIsNativeToken to true
+├── when no quote is passed
+│   ├── it should use the default pool
+│   ├── when no default pool is defined
+│   │   └── it should revert
+│   ├── it should take the other pool token as tokenOut
+│   ├── it should get a twap and compute a min amount
+│   └── when the amount received is less than the twap amountOutMin
+│       └── it should revert
+├── when the other pool token is the native token
+│   ├── it should use weth as tokenOut
+│   ├── it should set outIsNativeToken to true
+│   ├── it should unwrap the tokenOut after swapping
+│   └── it should use the native token for the next terminal pay()
+├── when the tokenOut is an erc20 token
+│   ├── it should use tokenOut as tokenOut
+│   ├── it should set outIsNativeToken to false
+│   ├── it should set the correct approval
+│   └── it should use the tokenOut for the next terminal pay()
+└── when the tokenOut has no terminal defined
+    └── it should revert
+
+JBSwapTerminal::uniswapV3SwapCallback // path coverage + boundary
+├── when amount0 is positive
+│   ├── when shouldWrap is true - token0
+│   │   └── it should wrap and send the token0 to the pool
+│   └── when shouldWrap is false - token0
+│       └── it should send the token0 to the pool
+├── when amount1 is positive
+│   ├── when shouldWrap is true - token1
+│   │   └── it should wrap and send the token1 to the pool
+│   └── when shouldWrap is false - token1
+│       └── it should send the token1 to the pool
+└── when both amounts are 0
+    └── it should not transfer anything
+
+JBSwapTerminal::addToBalanceOf // path coverage
+└── when called
+    └── it should revert
+
+JBSwapTerminal::addDefaultPool // path coverage
+├── when called by a project owner
+│   └── it should add the pool to the project
+└── when called by a non project owner
+    ├── when the caller has the role
+    │   └── it should add the pool to the project
+    ├── when the caller is the terminal owner
+    │   └── it should add the pool to the project
+    └── when the caller is not the terminal owner
+        └── it should revert
+
+JBSwapTerminal::addTwapParamsFor // path coverage
+├── when called by a project owner
+│   └── it should add the twap params to the project
+└── when called by a non project owner
+    ├── when the caller has the role
+    │   └── it should add the twap params to the project
+    ├── when the caller is the terminal owner
+    │   └── it should revert
+    └── when the caller is not the terminal owner
+        └── it should revert
