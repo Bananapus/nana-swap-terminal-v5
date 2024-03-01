@@ -81,6 +81,6 @@ JBSwapTerminal::addTwapParamsFor // path coverage
     ├── when the caller has the role
     │   └── it should add the twap params to the project
     ├── when the caller is the terminal owner
-    │   └── it should revert
+    │   └── it should add the twap params to the project
     └── when the caller is not the terminal owner
         └── it should revert
