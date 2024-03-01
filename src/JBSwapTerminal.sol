@@ -134,6 +134,15 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     // ------------------------- external views -------------------------- //
     //*********************************************************************//
 
+    /// @notice Returns the default twap parameters for a given project.
+    /// @param projectId The ID of the project to retrieve TWAP parameters for.
+    /// @return secondsAgo The period of time in the past to calculate the TWAP from.
+    /// @return slippageTolerance The maximum allowed slippage tolerance when calculating the TWAP, as a fraction out of `SLIPPAGE_DENOMINATOR`.
+    function twapParamsOf(uint256 projectId) public view returns (uint32 secondsAgo, uint160 slippageTolerance) {
+        uint256 twapParams = _twapParamsOf[projectId];
+        return (uint32(twapParams), uint160(twapParams >> 32));
+    }
+
     /// @notice Get the accounting context for the specified project ID and token.
     /// @dev Accounting contexts are set up in `addDefaultPool(...)`.
     /// @param projectId The ID of the project to get the accounting context for.
@@ -361,7 +370,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     }
 
     /// @notice Set a project's default pool and accounting context for the specified token. Only the project's owner,
-    /// an address with `MODIFY_DEFAULT_POOL` permission from the owner or the protocol owner can call this function.
+    /// an address with `MODIFY_DEFAULT_POOL` permission from the owner or the terminal owner can call this function.
     /// @param projectId The ID of the project to set the default pool for.
     /// @param token The address of the token to set the default pool for.
     /// @param pool The Uniswap V3 pool to set as the default for the specified token.
@@ -389,14 +398,14 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     function addAccountingContextsFor(uint256 projectId, address[] calldata tokens) external {}
 
     /// @notice Set the specified project's rules for calculating a quote based on the TWAP. Only the project's owner or
-    /// an address with `MODIFY_TWAP_PARAMS` permission from the owner can call this function.
+    /// an address with `MODIFY_TWAP_PARAMS` permission from the owner  or the terminal owner can call this function.
     /// @param projectId The ID of the project to set the TWAP-based quote rules for.
     /// @param secondsAgo The period of time over which the TWAP is calculated, in seconds.
     /// @param slippageTolerance The maximum spread allowed between the amount received and the TWAP (as a fraction out
     /// of `SLIPPAGE_DENOMINATOR`).
     function addTwapParamsFor(uint256 projectId, uint32 secondsAgo, uint160 slippageTolerance) external {
         // Enforce permissions.
-        _requirePermissionFrom(PROJECTS.ownerOf(projectId), projectId, JBSwapTerminalPermissionIds.MODIFY_TWAP_PARAMS);
+        _requirePermissionAllowingOverrideFrom(PROJECTS.ownerOf(projectId), projectId, JBSwapTerminalPermissionIds.MODIFY_TWAP_PARAMS, msg.sender == owner());
 
         // Set the TWAP params for the project.
         _twapParamsOf[projectId] = uint256(secondsAgo | uint256(slippageTolerance) << 32);
@@ -416,9 +425,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// @return minSqrtPriceX96 The minimum acceptable price for the swap.
     function _getTwapFrom(SwapConfig memory swapConfig) internal view returns (uint160) {
         // Unpack the project's TWAP params and get a reference to the period and slippage.
-        uint256 twapParams = _twapParamsOf[swapConfig.projectId];
-        uint32 secondsAgo = uint32(twapParams);
-        uint160 slippageTolerance = uint160(twapParams >> 32);
+        (uint32 secondsAgo, uint160 slippageTolerance) = twapParamsOf(swapConfig.projectId);
 
         // Keep a reference to the TWAP tick.
         (int24 arithmeticMeanTick,) = OracleLibrary.consult(address(swapConfig.pool), secondsAgo);
