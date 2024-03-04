@@ -46,8 +46,43 @@ contract UnitFixture is Test {
         vm.expectCall(target, callData);
     }
 
+    // mock and expect a safe approval to a given token
+    function mockExpectSafeApprove(address token, address owner, address spender, uint256 amount) internal {
+        mockExpectCall(
+            token,
+            abi.encodeCall(
+                IERC20.allowance,
+                (owner, spender)
+            ),
+            abi.encode(0)
+        );
+
+        mockExpectCall(
+            token,
+            abi.encodeCall(
+                IERC20.approve,
+                (spender, amount)
+            ),
+            abi.encode(true)
+        );
+    }
+
     // compare 2 uniswap v3 pool addresses
     function assertEq(IUniswapV3Pool a, IUniswapV3Pool b) internal {
         assertEq(address(a), address(b), "pool addresses are not equal");
+    }
+
+    // create a metadata based on a single entry (abstracting the arrays away)
+    function _createMetadata(bytes4 id, bytes memory data) internal pure returns (bytes memory) {
+        bytes4[] memory idArray = new bytes4[](1);
+        idArray[0] = id;
+
+        bytes[] memory dataArray = new bytes[](1);
+        dataArray[0] = data;
+
+        return JBMetadataResolver.createMetadata(
+            idArray,    
+            dataArray
+        );
     }
 }
