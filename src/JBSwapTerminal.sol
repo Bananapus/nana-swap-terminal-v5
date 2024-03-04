@@ -448,7 +448,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         address token = swapConfig.tokenIn;
 
         // If native tokens are being paid in, return the `msg.value`.
-        if (token == JBConstants.NATIVE_TOKEN) return msg.value;
+        if (swapConfig.inIsNativeToken) return msg.value;
 
         // Otherwise, the `msg.value` should be 0.
         if (msg.value != 0) revert NO_MSG_VALUE_ALLOWED();
@@ -511,31 +511,6 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
 
         // If the output token is a native token, unwrap it from its wrapped form.
         if (swapConfig.outIsNativeToken) WETH.withdraw(amountReceived);
-    }
-
-    // TODO: Is this used anywhere? If so, I'll clean up.
-    /// @notice Reverts an expected payout.
-    /// @param projectId The ID of the project the payout is associated with.
-    /// @param token The address of the token that would be paid out.
-    /// @param expectedDestination The address that the payout was expected to go to.
-    /// @param allowanceAmount The amount that the destination has been allowed to use.
-    /// @param depositAmount The amount of the payout as debited from the project's balance.
-    function _revertTransferFrom(
-        uint256 projectId,
-        address token,
-        address expectedDestination,
-        uint256 allowanceAmount,
-        uint256 depositAmount
-    )
-        internal
-    {
-        // Cancel allowance if needed.
-        if (allowanceAmount != 0 && token != JBConstants.NATIVE_TOKEN) {
-            IERC20(token).safeDecreaseAllowance(expectedDestination, allowanceAmount);
-        }
-
-        // Add the `depositAmount` back to the project's balance.
-        STORE.recordAddedBalanceFor(projectId, token, depositAmount);
     }
 
     /// @notice Transfers tokens.
