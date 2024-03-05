@@ -5,6 +5,7 @@ import "../helper/UnitFixture.sol";
 
 import {JBMetadataResolver} from "@bananapus/core/src/libraries/JBMetadataResolver.sol";
 import {IUniswapV3PoolActions} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import {IPermit2, IAllowanceTransfer} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 
 contract Pay is UnitFixture {
     address caller;
@@ -28,8 +29,8 @@ contract Pay is UnitFixture {
         nextTerminal = makeAddr("nextTerminal");
     }
 
-    function test_PayWhenTokenInIsTheNativeToken(uint256 msgValue, uint256 amountIn, uint256 amountOut) external {
-        vm.deal(address(this), msgValue);
+    function test_PayWhenTokenInIsTheNativeToken(uint256 msgValue, uint256 amountIn, uint256 amountOut) public {
+        vm.deal(caller, msgValue);
 
         tokenIn = JBConstants.NATIVE_TOKEN;
 
@@ -91,6 +92,7 @@ contract Pay is UnitFixture {
 
         // minReturnedTokens is used for the next terminal minAmountOut (where tokenOut is actually becoming the tokenIn,
         // meaning the minReturned insure a min 1:1 token ratio is the next terminal)
+        vm.prank(caller);
         swapTerminal.pay{value: msgValue}({
             projectId: projectId,
             token: tokenIn,
@@ -107,63 +109,271 @@ contract Pay is UnitFixture {
         _;
     }
 
-    function test_PayWhenTokenInIsAnErc20Token() external whenTokenInIsAnErc20Token {
-        vm.skip(true);
-        // mockExpectCall(
-        //     address(mockWETH),
-        //     abi.encodeCall(
-        //         IERC20.balanceOf,
-        //         (address(swapTerminal))
-        //     ),
-        //     abi.encode(0)
-        // );
+    function test_PayWhenTokenInIsAnErc20Token(uint256 amountIn, uint256 amountOut) public whenTokenInIsAnErc20Token {
+        // Should transfer the token in from the caller to the swap terminal
+        mockExpectTransferFrom(
+            caller,
+            address(swapTerminal),
+            tokenIn,
+            amountIn
+        );
 
-        // mockExpectCall(
-        //     address(mockWETH),
-        //     abi.encodeCall(
-        //         IERC20.balanceOf,
-        //         (address(swapTerminal))
-        //     ),
-        //     abi.encode(amountIn)
-        // );
+        bytes memory quoteMetadata = _createMetadata("SWAP", abi.encode(amountOut, pool, tokenOut));
+        
+        // Mock the swap - this is where we make most of the tests
+        mockExpectCall(
+            address(pool),
+            abi.encodeCall( 
+                IUniswapV3PoolActions.swap,
+                (
+                    address(swapTerminal),
+                    tokenIn < tokenOut,
+                    // it should use amountIn as amount in
+                    int256(amountIn),
+                    tokenIn < tokenOut ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1,
+                     // it should use tokenIn
+                     // it should set inIsNativeToken to false
+                    abi.encode(tokenIn, false)
+                )   
+            ),
+            // 0 for 1 => amount0 is the token in (positive), amount1 is the token out (negative/owed to the pool), and vice versa
+            tokenIn < tokenOut ? abi.encode(amountIn, -int256(amountOut)) : abi.encode(-int256(amountOut), amountIn)
+        );  
 
-        // mockExpectCall(
-        //     address(mockWETH),
-        //     abi.encodeCall(
-        //         IERC20.allowance,
-        //         (caller, address(swapTerminal))
-        //     ),  
-        //     abi.encode(amountIn)
-        // );
-        // it should use tokenIn as tokenIn
-        // it should set inIsNativeToken to false
-        // it should use amountIn as amountIn
+        mockExpectCall(
+            address(mockJBDirectory),
+            abi.encodeCall(
+                IJBDirectory.primaryTerminalOf,
+                (projectId, tokenOut)
+            ),
+            abi.encode(nextTerminal)
+        );
+
+        mockExpectSafeApprove(
+            tokenOut,
+            address(swapTerminal),
+            nextTerminal,
+            amountOut
+        );
+
+        // Mock the call to the next terminal, using the token out as new token in
+        mockExpectCall(
+            nextTerminal,
+            abi.encodeCall(
+                IJBTerminal.pay,
+                (
+                    projectId,
+                    tokenOut,
+                    amountOut,
+                    beneficiary,
+                    amountOut,
+                    "",
+                    quoteMetadata
+                )
+            ),
+            abi.encode(1337)
+        );
+
+        // minReturnedTokens is used for the next terminal minAmountOut (where tokenOut is actually becoming the tokenIn,
+        // meaning the minReturned insure a min 1:1 token ratio is the next terminal)
+        vm.prank(caller);
+        swapTerminal.pay{value: 0}({
+            projectId: projectId,
+            token: tokenIn,
+            amount: amountIn, 
+            beneficiary: beneficiary,
+            minReturnedTokens: amountOut,
+            memo: "",
+            metadata: quoteMetadata
+        });
     }
 
-    function test_PayRevertWhen_AMsgValueIsPassedAlongAnErc20Token() external whenTokenInIsAnErc20Token {
-        vm.skip(true);
+    function test_PayRevertWhen_AMsgValueIsPassedAlongAnErc20Token(uint256 msgValue, uint256 amountIn, uint256 amountOut) public whenTokenInIsAnErc20Token {
+        msgValue = bound(msgValue, 1, type(uint256).max);
+        vm.deal(caller, msgValue);
+        
+        bytes memory quoteMetadata = _createMetadata("SWAP", abi.encode(amountOut, pool, tokenOut));
+        
+        mockExpectCall(
+            address(mockJBDirectory),
+            abi.encodeCall(
+                IJBDirectory.primaryTerminalOf,
+                (projectId, tokenOut)
+            ),
+            abi.encode(nextTerminal)
+        );
 
         // it should revert
+        vm.expectRevert(JBSwapTerminal.NO_MSG_VALUE_ALLOWED.selector);
+
+        vm.prank(caller);
+        swapTerminal.pay{value: msgValue}({
+            projectId: projectId,
+            token: tokenIn,
+            amount: amountIn,
+            beneficiary: beneficiary,
+            minReturnedTokens: amountOut,
+            memo: "",
+            metadata: quoteMetadata
+        });
     }
 
-    function test_PayWhenTokenInUsesAnErc20Approval() external whenTokenInIsAnErc20Token {
-        vm.skip(true);
-
+    function test_PayWhenTokenInUsesAnErc20Approval(uint256 amountIn, uint256 amountOut) public whenTokenInIsAnErc20Token {
         // it should use the token transferFrom
+        test_PayWhenTokenInIsAnErc20Token(amountIn, amountOut);
     }
 
     modifier whenPermit2DataArePassed() {
+        
         _;
     }
 
-    function test_PayWhenPermit2DataArePassed() external whenTokenInIsAnErc20Token whenPermit2DataArePassed {
-        vm.skip(true);
+    function test_PayWhenPermit2DataArePassed(uint256 amountIn, uint256 amountOut) public whenTokenInIsAnErc20Token whenPermit2DataArePassed {
+        // 0 amountIn will not trigger a permit2 use
+        vm.assume(amountIn > 0);
 
+        // add the permit2 data to the metadata
+        bytes memory payMetadata = _createMetadata("SWAP", abi.encode(amountOut, pool, tokenOut));
+
+        JBSingleAllowanceContext memory context = JBSingleAllowanceContext({
+            sigDeadline: 0,
+            amount: uint160(amountIn),
+            expiration: 0,
+            nonce: 0,
+            signature: ""
+        });
+
+        payMetadata = JBMetadataResolver.addToMetadata(payMetadata, bytes4(uint32(uint160(address(swapTerminal)))), abi.encode(context));
+        
         // it should use the permit2 call
+        mockExpectCall(
+            address(mockPermit2),
+            abi.encodeWithSelector(
+                bytes4(keccak256("permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)")),
+                abi.encode(
+                    caller,
+                    IAllowanceTransfer.PermitSingle({
+                        details: IAllowanceTransfer.PermitDetails({
+                            token: tokenIn,
+                            amount: uint160(amountIn),
+                            expiration: 0,
+                            nonce: 0
+                        }),
+                        spender: address(swapTerminal),
+                        sigDeadline: 0
+                    }),
+                    ""
+                )
+            ),
+            abi.encode()
+        );
+
+        mockExpectCall(
+            address(mockPermit2),
+            abi.encodeWithSelector(
+                bytes4(keccak256("transferFrom(address,address,uint160,address)")),
+                abi.encode(
+                    caller,
+                    address(swapTerminal),
+                    uint160(amountIn),
+                    tokenIn
+                )
+            ),
+            abi.encode()
+        );
+
+        // no allowance granted outside of permit2
+        mockExpectCall(
+            tokenIn,
+            abi.encodeCall(
+                IERC20.allowance,
+                (caller, address(swapTerminal))
+            ),
+            abi.encode(0)
+        );
+
+        mockExpectCall(
+            tokenIn,
+            abi.encodeCall(
+                IERC20.balanceOf,
+                (
+                    address(swapTerminal)
+                )
+            ),
+            abi.encode(amountIn)
+        );
+
+        // Mock the swap - this is where we make most of the tests
+        mockExpectCall(
+            address(pool),
+            abi.encodeCall( 
+                IUniswapV3PoolActions.swap,
+                (
+                    address(swapTerminal),
+                    tokenIn < tokenOut,
+                    // it should use amountIn as amount in
+                    int256(amountIn),
+                    tokenIn < tokenOut ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1,
+                     // it should use tokenIn
+                     // it should set inIsNativeToken to false
+                    abi.encode(tokenIn, false)
+                )   
+            ),
+            // 0 for 1 => amount0 is the token in (positive), amount1 is the token out (negative/owed to the pool), and vice versa
+            tokenIn < tokenOut ? abi.encode(amountIn, -int256(amountOut)) : abi.encode(-int256(amountOut), amountIn)
+        );  
+
+        mockExpectCall(
+            address(mockJBDirectory),
+            abi.encodeCall(
+                IJBDirectory.primaryTerminalOf,
+                (projectId, tokenOut)
+            ),
+            abi.encode(nextTerminal)
+        );
+
+        mockExpectSafeApprove(
+            tokenOut,
+            address(swapTerminal),
+            nextTerminal,
+            amountOut
+        );
+
+        // Mock the call to the next terminal, using the token out as new token in
+        mockExpectCall(
+            nextTerminal,
+            abi.encodeCall(
+                IJBTerminal.pay,
+                (
+                    projectId,
+                    tokenOut,
+                    amountOut,
+                    beneficiary,
+                    amountOut,
+                    "",
+                    payMetadata
+                )
+            ),
+            abi.encode(1337)
+        );
+
+        // minReturnedTokens is used for the next terminal minAmountOut (where tokenOut is actually becoming the tokenIn,
+        // meaning the minReturned insure a min 1:1 token ratio is the next terminal)
+        vm.prank(caller);
+        swapTerminal.pay{value: 0}({
+            projectId: projectId,
+            token: tokenIn,
+            amount: amountIn, 
+            beneficiary: beneficiary,
+            minReturnedTokens: amountOut,
+            memo: "",
+            metadata: payMetadata
+        });
+
     }
 
     function test_PayRevertWhen_ThePermit2AllowanceIsLessThanTheAmountIn()
-        external
+        public
         whenTokenInIsAnErc20Token
         whenPermit2DataArePassed
     {
@@ -176,7 +386,7 @@ contract Pay is UnitFixture {
         _;
     }
 
-    function test_PayWhenAQuoteIsProvided() external whenAQuoteIsProvided {
+    function test_PayWhenAQuoteIsProvided() public whenAQuoteIsProvided {
         vm.skip(true);
 
         // it should use the quote as amountOutMin
@@ -184,13 +394,13 @@ contract Pay is UnitFixture {
         // it should use the token passed as tokenOut
     }
 
-    function test_PayRevertWhen_TheAmountReceivedIsLessThanTheAmountOutMin() external whenAQuoteIsProvided {
+    function test_PayRevertWhen_TheAmountReceivedIsLessThanTheAmountOutMin() public whenAQuoteIsProvided {
         vm.skip(true);
 
         // it should revert
     }
 
-    function test_PayWhenTheTokenOutIsTheNativeToken() external whenAQuoteIsProvided {
+    function test_PayWhenTheTokenOutIsTheNativeToken() public whenAQuoteIsProvided {
         vm.skip(true);
 
         // it should use weth as tokenOut
@@ -201,7 +411,7 @@ contract Pay is UnitFixture {
         _;
     }
 
-    function test_PayWhenNoQuoteIsPassed() external whenNoQuoteIsPassed {
+    function test_PayWhenNoQuoteIsPassed() public whenNoQuoteIsPassed {
         vm.skip(true);
 
         // it should use the default pool
@@ -209,19 +419,19 @@ contract Pay is UnitFixture {
         // it should get a twap and compute a min amount
     }
 
-    function test_PayRevertWhen_NoDefaultPoolIsDefined() external whenNoQuoteIsPassed {
+    function test_PayRevertWhen_NoDefaultPoolIsDefined() public whenNoQuoteIsPassed {
         vm.skip(true);
 
         // it should revert
     }
 
-    function test_PayRevertWhen_TheAmountReceivedIsLessThanTheTwapAmountOutMin() external whenNoQuoteIsPassed {
+    function test_PayRevertWhen_TheAmountReceivedIsLessThanTheTwapAmountOutMin() public whenNoQuoteIsPassed {
         vm.skip(true);
 
         // it should revert
     }
 
-    function test_PayWhenTheOtherPoolTokenIsTheNativeToken() external {
+    function test_PayWhenTheOtherPoolTokenIsTheNativeToken() public {
         vm.skip(true);
 
         // it should use weth as tokenOut
@@ -230,7 +440,7 @@ contract Pay is UnitFixture {
         // it should use the native token for the next terminal pay()
     }
 
-    function test_PayWhenTheTokenOutIsAnErc20Token() external {
+    function test_PayWhenTheTokenOutIsAnErc20Token() public {
         vm.skip(true);
 
         // it should use tokenOut as tokenOut
@@ -239,7 +449,7 @@ contract Pay is UnitFixture {
         // it should use the tokenOut for the next terminal pay()
     }
 
-    function test_PayRevertWhen_TheTokenOutHasNoTerminalDefined() external {
+    function test_PayRevertWhen_TheTokenOutHasNoTerminalDefined() public {
         vm.skip(true);
 
         // it should revert

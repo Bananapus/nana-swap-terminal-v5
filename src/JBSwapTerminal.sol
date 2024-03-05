@@ -21,8 +21,7 @@ import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {IERC20, IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
-import {IAllowanceTransfer} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
+import {IPermit2, IAllowanceTransfer} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {OracleLibrary} from "@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol";
 import {TickMath} from "@uniswap/v3-core/contracts/libraries/TickMath.sol";
@@ -471,14 +470,11 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
             _permitAllowance(allowance, token);
         }
 
-        // Get a reference to the balance before receiving tokens.
-        uint256 balanceBefore = IERC20(token).balanceOf(address(this));
-
         // Transfer the tokens from the `msg.sender` to this terminal.
         _transferFor(msg.sender, payable(address(this)), token, swapConfig.amountIn);
 
-        // The difference between the balance before and after is the amount received.
-        return IERC20(token).balanceOf(address(this)) - balanceBefore;
+        // The amount actually received.
+        return IERC20(token).balanceOf(address(this));
     }
 
     /// @notice Swaps tokens based on the provided swap configuration.

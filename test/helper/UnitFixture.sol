@@ -67,6 +67,35 @@ contract UnitFixture is Test {
         );
     }
 
+    function mockExpectTransferFrom(address from, address to, address token, uint256 amount) internal {
+        mockExpectCall(
+            token,
+            abi.encodeCall(
+                IERC20.allowance,
+                (from, to)
+            ),  
+            abi.encode(amount)
+        );
+
+        mockExpectCall(
+            token,
+            abi.encodeCall(
+                IERC20.transferFrom,
+                (from, to, amount)
+            ),
+            abi.encode(true)
+        );
+
+        mockExpectCall(
+            token,
+            abi.encodeCall(
+                IERC20.balanceOf,
+                to
+            ),
+            abi.encode(amount)
+        );
+    }
+
     // compare 2 uniswap v3 pool addresses
     function assertEq(IUniswapV3Pool a, IUniswapV3Pool b) internal {
         assertEq(address(a), address(b), "pool addresses are not equal");
