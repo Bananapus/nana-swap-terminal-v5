@@ -250,20 +250,18 @@ contract Pay is UnitFixture {
             address(mockPermit2),
             abi.encodeWithSelector(
                 bytes4(keccak256("permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)")),
-                abi.encode(
-                    caller,
-                    IAllowanceTransfer.PermitSingle({
-                        details: IAllowanceTransfer.PermitDetails({
-                            token: tokenIn,
-                            amount: uint160(amountIn),
-                            expiration: 0,
-                            nonce: 0
-                        }),
-                        spender: address(swapTerminal),
-                        sigDeadline: 0
+                caller,
+                IAllowanceTransfer.PermitSingle({
+                    details: IAllowanceTransfer.PermitDetails({
+                        token: tokenIn,
+                        amount: uint160(amountIn),
+                        expiration: 0,
+                        nonce: 0
                     }),
-                    ""
-                )
+                    spender: address(swapTerminal),
+                    sigDeadline: 0
+                }),
+                ""
             ),
             abi.encode("test1")
         );
@@ -272,12 +270,10 @@ contract Pay is UnitFixture {
             address(mockPermit2),
             abi.encodeWithSelector(
                 bytes4(keccak256("transferFrom(address,address,uint160,address)")),
-                abi.encode(
-                    caller,
-                    address(swapTerminal),
-                    uint160(amountIn),
-                    tokenIn
-                )
+                caller,
+                address(swapTerminal),
+                uint160(amountIn),
+                tokenIn
             ),
             abi.encode("test")
         );
