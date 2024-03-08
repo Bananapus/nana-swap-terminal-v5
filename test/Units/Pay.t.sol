@@ -230,7 +230,7 @@ contract Pay is UnitFixture {
 
     function test_PayWhenPermit2DataArePassed(uint256 amountIn, uint256 amountOut) public whenTokenInIsAnErc20Token whenPermit2DataArePassed {
         // 0 amountIn will not trigger a permit2 use
-        vm.assume(amountIn > 0);
+        amountIn = bound(amountIn, 1, type(uint160).max);
 
         // add the permit2 data to the metadata
         bytes memory payMetadata = _createMetadata("SWAP", abi.encode(amountOut, pool, tokenOut));
@@ -265,10 +265,10 @@ contract Pay is UnitFixture {
                     ""
                 )
             ),
-            abi.encode()
+            abi.encode("test1")
         );
 
-        mockExpectCall(
+        vm.mockCall(
             address(mockPermit2),
             abi.encodeWithSelector(
                 bytes4(keccak256("transferFrom(address,address,uint160,address)")),
@@ -279,7 +279,7 @@ contract Pay is UnitFixture {
                     tokenIn
                 )
             ),
-            abi.encode()
+            abi.encode("test")
         );
 
         // no allowance granted outside of permit2
@@ -372,32 +372,114 @@ contract Pay is UnitFixture {
 
     }
 
-    function test_PayRevertWhen_ThePermit2AllowanceIsLessThanTheAmountIn()
+    function test_PayRevertWhen_ThePermit2AllowanceIsLessThanTheAmountIn(uint256 amountIn)
         public
         whenTokenInIsAnErc20Token
         whenPermit2DataArePassed
     {
-        vm.skip(true);
+        uint256 amountOut = 1337;
 
+        // 0 amountIn will not trigger a permit2 use
+        vm.assume(amountIn > 0);
+
+        // add the permit2 data to the metadata
+        bytes memory payMetadata = _createMetadata("SWAP", abi.encode(amountOut, pool, tokenOut));
+
+        JBSingleAllowanceContext memory context = JBSingleAllowanceContext({
+            sigDeadline: 0,
+            amount: uint160(amountIn) - 1,
+            expiration: 0,
+            nonce: 0,
+            signature: ""
+        });
+
+        payMetadata = JBMetadataResolver.addToMetadata(payMetadata, bytes4(uint32(uint160(address(swapTerminal)))), abi.encode(context));
+
+        mockExpectCall(
+            address(mockJBDirectory),
+            abi.encodeCall(
+                IJBDirectory.primaryTerminalOf,
+                (projectId, tokenOut)
+            ),
+            abi.encode(nextTerminal)
+        );
+        
         // it should revert
+        vm.expectRevert(JBSwapTerminal.PERMIT_ALLOWANCE_NOT_ENOUGH.selector);
+        vm.prank(caller);
+        swapTerminal.pay{value: 0}({
+            projectId: projectId,
+            token: tokenIn,
+            amount: amountIn, 
+            beneficiary: beneficiary,
+            minReturnedTokens: amountOut,
+            memo: "",
+            metadata: payMetadata
+        });
     }
 
     modifier whenAQuoteIsProvided() {
         _;
     }
 
-    function test_PayWhenAQuoteIsProvided() public whenAQuoteIsProvided {
-        vm.skip(true);
-
+    function test_PayWhenAQuoteIsProvided(uint256 msgValue, uint256 amountIn, uint256 amountOut) public whenAQuoteIsProvided {
         // it should use the quote as amountOutMin
         // it should use the pool passed
         // it should use the token passed as tokenOut
+        test_PayWhenTokenInIsTheNativeToken(msgValue, amountIn, amountOut);
     }
 
-    function test_PayRevertWhen_TheAmountReceivedIsLessThanTheAmountOutMin() public whenAQuoteIsProvided {
-        vm.skip(true);
+    function test_PayRevertWhen_TheAmountReceivedIsLessThanTheAmountOutMin(uint256 msgValue, uint256 minAmountOut, uint256 amountReceived) public whenAQuoteIsProvided {
+        minAmountOut = bound(minAmountOut, 1, type(uint256).max);
+        amountReceived = bound(amountReceived, 0, minAmountOut - 1);
+        vm.deal(caller, msgValue);
+
+        tokenIn = JBConstants.NATIVE_TOKEN;
+
+        bytes memory quoteMetadata = _createMetadata("SWAP", abi.encode(minAmountOut, pool, tokenOut));
+        
+        // Mock the swap - this is where we make most of the tests
+        mockExpectCall(
+            address(pool),
+            abi.encodeCall( 
+                IUniswapV3PoolActions.swap,
+                (
+                    address(swapTerminal),
+                    address(mockWETH) < tokenOut,
+                    // it should use msg value as amountIn
+                    int256(msgValue),
+                    address(mockWETH) < tokenOut ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1,
+                     // it should use weth as tokenIn
+                     // it should set inIsNativeToken to true
+                    abi.encode(mockWETH, true)
+                )   
+            ),
+            // 0 for 1 => amount0 is the token in (positive), amount1 is the token out (negative/owed to the pool), and vice versa
+            address(mockWETH) < tokenOut ? abi.encode(msgValue, -int256(amountReceived)) : abi.encode(-int256(amountReceived), msgValue)
+        );  
+
+        mockExpectCall(
+            address(mockJBDirectory),
+            abi.encodeCall(
+                IJBDirectory.primaryTerminalOf,
+                (projectId, tokenOut)
+            ),
+            abi.encode(nextTerminal)
+        );
 
         // it should revert
+        vm.expectRevert(abi.encodeWithSelector(JBSwapTerminal.MAX_SLIPPAGE.selector, amountReceived, minAmountOut));
+
+        vm.prank(caller);
+        swapTerminal.pay{value: msgValue}({
+            projectId: projectId,
+            token: tokenIn,
+            amount: 0, // should be discarded
+            beneficiary: beneficiary,
+            minReturnedTokens: amountReceived,
+            memo: "",
+            metadata: quoteMetadata
+        });
     }
 
     function test_PayWhenTheTokenOutIsTheNativeToken() public whenAQuoteIsProvided {
