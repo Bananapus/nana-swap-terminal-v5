@@ -172,11 +172,11 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         address[] memory genericTokenContexts = tokensWithAContext[0];
 
         JBAccountingContext[] memory contexts = new JBAccountingContext[](projectTokenContexts.length + genericTokenContexts.length);
-        uint256 actualLength = tokens.length;
+        uint256 actualLength = projectTokenContexts.length;
 
         // include all the project specific contexts
-        for (uint256 i = 0; i < tokens.length; i++) {
-            contexts[i] = accountingContextFor[projectId][tokens[i]];
+        for (uint256 i = 0; i < projectTokenContexts.length; i++) {
+            contexts[i] = accountingContextFor[projectId][projectTokenContexts[i]];
         }
 
         // add the generic contexts, iff they are not defined for the project (ie do not include duplicates)
