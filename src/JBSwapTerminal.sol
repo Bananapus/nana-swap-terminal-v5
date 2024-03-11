@@ -116,24 +116,41 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     IWETH9 public immutable WETH;
 
     //*********************************************************************//
-    // --------------------- public stored properties -------------------- //
+    // --------------------- internal stored properties -------------------- //
     //*********************************************************************//
 
-    /// @notice A mapping which stores the default pool to use for a given project ID and set of tokens.
+    /// @notice A mapping which stores the default pool to use for a given project ID and token.
     /// @dev Default pools are set by the project owner with `addDefaultPool(...)`.
     /// @dev Default pools are used when a payer doesn't specify a pool in their payment's metadata.
-    mapping(uint256 projectId => mapping(address tokenIn => mapping(address tokenOut => IUniswapV3Pool))) public poolFor;
+    mapping(uint256 projectId => mapping(address tokenIn => IUniswapV3Pool)) internal poolFor;
 
     /// @notice A mapping which stores accounting contexts to use for a given project ID and token.
     /// @dev Accounting contexts are set up for a project ID and token when the project's owner uses
     /// `addDefaultPool(...)` for that token.
-    mapping(uint256 projectId => mapping(address token => JBAccountingContext)) public accountingContextFor;
+    mapping(uint256 projectId => mapping(address token => JBAccountingContext)) internal accountingContextFor;
 
-    mapping(uint256 projectId => address[]) public tokensWithAContext;
+    mapping(uint256 projectId => address[]) internal tokensWithAContext;
 
     //*********************************************************************//
     // ------------------------- external views -------------------------- //
     //*********************************************************************//
+
+    function getPoolFor(
+        uint256 projectId,
+        address tokenIn
+    )
+        external
+        view
+        returns (IUniswapV3Pool)
+    {
+        IUniswapV3Pool pool = poolFor[projectId][tokenIn];
+
+        if (address(pool) == address(0)) {
+            pool = poolFor[0][tokenIn];
+        }
+
+        return pool;
+    }
 
     /// @notice Returns the default twap parameters for a given project.
     /// @param projectId The ID of the project to retrieve TWAP parameters for.
@@ -232,11 +249,11 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         IJBPermissions permissions,
         IJBDirectory directory,
         IPermit2 permit2,
-        address owner,
+        address _owner,
         IWETH9 weth
     )
         JBPermissioned(permissions)
-        Ownable(owner)
+        Ownable(_owner)
     {
         PROJECTS = projects;
         DIRECTORY = directory;
@@ -315,11 +332,11 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
             } else {
                 // If there is no quote, check for this project's default pool for the token and get a quote based on
                 // its TWAP.
-                IUniswapV3Pool pool = poolFor[projectId][token][address(0)];
+                IUniswapV3Pool pool = poolFor[projectId][token];
 
                 // If this project doesn't have a default pool specified for this token, try using a generic one.
                 if (address(pool) == address(0)) {
-                    pool = poolFor[0][token][address(0)];
+                    pool = poolFor[0][token];
 
                     // If there's no default pool neither, revert.
                     if (address(pool) == address(0)) revert NO_DEFAULT_POOL_DEFINED();
@@ -425,16 +442,17 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// @param token The address of the token to set the default pool for.
     /// @param pool The Uniswap V3 pool to set as the default for the specified token.
     function addDefaultPool(uint256 projectId, address token, IUniswapV3Pool pool) external {
-        // Enforce permissions.
-        _requirePermissionAllowingOverrideFrom(
-            PROJECTS.ownerOf(projectId),
-            projectId,
-            JBSwapTerminalPermissionIds.MODIFY_DEFAULT_POOL,
-            msg.sender == owner()
-        );
+        // Only the project owner can set the default pool for a token, only the project owner can set the 
+        // pool for its project.
+        if( !(projectId == 0 && msg.sender == owner()) )
+            _requirePermissionFrom(
+                PROJECTS.ownerOf(projectId),
+                projectId,
+                JBSwapTerminalPermissionIds.MODIFY_DEFAULT_POOL
+            );
 
         // Update the project's default pool for the token.
-        poolFor[projectId][token][address(0)] = pool;
+        poolFor[projectId][token] = pool;
 
         // Update the project's accounting context for the token.
         accountingContextFor[projectId][token] = JBAccountingContext({
