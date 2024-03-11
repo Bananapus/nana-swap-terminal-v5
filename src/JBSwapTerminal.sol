@@ -1,17 +1,7 @@
-// SOLVED: +++ weird token0/token1 ordering issue -> double-check the terminal
-// SOVLED: convert native token to weth address at the begining of the flow, then convert back at the end (only oding it
-// once)
-// DROPPED: use sqrtPriceLimit (can be based on min amount or coming from frontend) instead of try-catch (flow from bbd,
-// not used here)
 // TODO: get rid of accept token/transfer in callback/non custodial terminal, even atomically (cf @xBA5ED comment)
 // TODO: add price feed to vanilla project
-// SOLVED: use quoter to check if 7% price impact is expected (uni-weth has low liq on Sepolia, so probably is)
 // TOdo: if pool out == weth, check if the project terminal accepts weth or eth/native token
 // TODO: sweep any leftover
-
-// todo: accounting context? remove
-
-// solved: check if tokenin == tokenout, do not swap is so
 
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
@@ -88,7 +78,6 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
 
     mapping(uint256 projectId => mapping(IUniswapV3Pool pool => uint256 params)) internal _twapParamsOf;
 
-
     /// @notice A mapping which stores the default pool to use for a given project ID and token.
     /// @dev Default pools are set by the project owner with `addDefaultPool(...)`.
     /// @dev Default pools are used when a payer doesn't specify a pool in their payment's metadata.
@@ -100,7 +89,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     mapping(uint256 projectId => mapping(address token => JBAccountingContext)) internal _accountingContextFor;
 
     /// @notice A mapping which stores the tokens that have an accounting context for a given project ID.
-    /// @dev This is used to retrieve all the accounting contexts for a project ID. 
+    /// @dev This is used to retrieve all the accounting contexts for a project ID.
     mapping(uint256 projectId => address[]) internal _tokensWithAContext;
 
     //*********************************************************************//
@@ -139,14 +128,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// @param projectId The ID of the project to retrieve the default pool for.
     /// @param tokenIn The address of the token to retrieve the default pool for.
     /// @return pool The default pool for the token, or the overall default pool for the token if the
-    function getPoolFor(
-        uint256 projectId,
-        address tokenIn
-    )
-        external
-        view
-        returns (IUniswapV3Pool)
-    {
+    function getPoolFor(uint256 projectId, address tokenIn) external view returns (IUniswapV3Pool) {
         IUniswapV3Pool pool = _poolFor[projectId][tokenIn];
 
         if (address(pool) == address(0)) {
@@ -161,7 +143,14 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// @return secondsAgo The period of time in the past to calculate the TWAP from.
     /// @return slippageTolerance The maximum allowed slippage tolerance when calculating the TWAP, as a fraction out of
     /// `SLIPPAGE_DENOMINATOR`.
-    function twapParamsOf(uint256 projectId, IUniswapV3Pool pool) public view returns (uint32 secondsAgo, uint160 slippageTolerance) {
+    function twapParamsOf(
+        uint256 projectId,
+        IUniswapV3Pool pool
+    )
+        public
+        view
+        returns (uint32 secondsAgo, uint160 slippageTolerance)
+    {
         uint256 twapParams = _twapParamsOf[projectId][pool];
 
         if (twapParams == 0) {
@@ -451,14 +440,13 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// @param token The address of the token to set the default pool for.
     /// @param pool The Uniswap V3 pool to set as the default for the specified token.
     function addDefaultPool(uint256 projectId, address token, IUniswapV3Pool pool) external {
-        // Only the project owner can set the default pool for a token, only the project owner can set the 
+        // Only the project owner can set the default pool for a token, only the project owner can set the
         // pool for its project.
-        if( !(projectId == 0 && msg.sender == owner()) )
+        if (!(projectId == 0 && msg.sender == owner())) {
             _requirePermissionFrom(
-                PROJECTS.ownerOf(projectId),
-                projectId,
-                JBPermissionIds.MODIFY_DEFAULT_SWAP_TERMINAL_POOL
+                PROJECTS.ownerOf(projectId), projectId, JBPermissionIds.MODIFY_DEFAULT_SWAP_TERMINAL_POOL
             );
+        }
 
         // Update the project's default pool for the token.
         _poolFor[projectId][token] = pool;
@@ -482,7 +470,14 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// @param secondsAgo The period of time over which the TWAP is calculated, in seconds.
     /// @param slippageTolerance The maximum spread allowed between the amount received and the TWAP (as a fraction out
     /// of `SLIPPAGE_DENOMINATOR`).
-    function addTwapParamsFor(uint256 projectId, IUniswapV3Pool pool, uint32 secondsAgo, uint160 slippageTolerance) external {
+    function addTwapParamsFor(
+        uint256 projectId,
+        IUniswapV3Pool pool,
+        uint32 secondsAgo,
+        uint160 slippageTolerance
+    )
+        external
+    {
         // Enforce permissions.
         _requirePermissionAllowingOverrideFrom(
             PROJECTS.ownerOf(projectId),
