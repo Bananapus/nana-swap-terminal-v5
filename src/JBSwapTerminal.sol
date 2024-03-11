@@ -315,10 +315,15 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
                 // its TWAP.
                 IUniswapV3Pool pool = poolFor[projectId][token][address(0)];
 
-                swapConfig.pool = pool;
+                // If this project doesn't have a default pool specified for this token, try using a generic one.
+                if (address(pool) == address(0)) {
+                    pool = poolFor[0][token][address(0)];
 
-                // If this project doesn't have a default pool specified for this token, revert.
-                if (address(pool) == address(0)) revert NO_DEFAULT_POOL_DEFINED();
+                    // If there's no default pool neither, revert.
+                    if (address(pool) == address(0)) revert NO_DEFAULT_POOL_DEFINED();
+                }
+
+                swapConfig.pool = pool;
 
                 (address poolToken0, address poolToken1) = (pool.token0(), pool.token1());
 
