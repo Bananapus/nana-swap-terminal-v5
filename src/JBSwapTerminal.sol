@@ -86,7 +86,22 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     // --------------------- internal stored properties ------------------ //
     //*********************************************************************//
 
-    mapping(uint256 => uint256) internal _twapParamsOf;
+    mapping(uint256 projectId => mapping(IUniswapV3Pool pool => uint256 params)) internal _twapParamsOf;
+
+
+    /// @notice A mapping which stores the default pool to use for a given project ID and token.
+    /// @dev Default pools are set by the project owner with `addDefaultPool(...)`.
+    /// @dev Default pools are used when a payer doesn't specify a pool in their payment's metadata.
+    mapping(uint256 projectId => mapping(address tokenIn => IUniswapV3Pool)) internal _poolFor;
+
+    /// @notice A mapping which stores accounting contexts to use for a given project ID and token.
+    /// @dev Accounting contexts are set up for a project ID and token when the project's owner uses
+    /// `addDefaultPool(...)` for that token.
+    mapping(uint256 projectId => mapping(address token => JBAccountingContext)) internal _accountingContextFor;
+
+    /// @notice A mapping which stores the tokens that have an accounting context for a given project ID.
+    /// @dev This is used to retrieve all the accounting contexts for a project ID. 
+    mapping(uint256 projectId => address[]) internal _tokensWithAContext;
 
     //*********************************************************************//
     // ------------------------- public constants ------------------------ //
@@ -116,25 +131,14 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     IWETH9 public immutable WETH;
 
     //*********************************************************************//
-    // --------------------- internal stored properties -------------------- //
-    //*********************************************************************//
-
-    /// @notice A mapping which stores the default pool to use for a given project ID and token.
-    /// @dev Default pools are set by the project owner with `addDefaultPool(...)`.
-    /// @dev Default pools are used when a payer doesn't specify a pool in their payment's metadata.
-    mapping(uint256 projectId => mapping(address tokenIn => IUniswapV3Pool)) internal poolFor;
-
-    /// @notice A mapping which stores accounting contexts to use for a given project ID and token.
-    /// @dev Accounting contexts are set up for a project ID and token when the project's owner uses
-    /// `addDefaultPool(...)` for that token.
-    mapping(uint256 projectId => mapping(address token => JBAccountingContext)) internal accountingContextFor;
-
-    mapping(uint256 projectId => address[]) internal tokensWithAContext;
-
-    //*********************************************************************//
     // ------------------------- external views -------------------------- //
     //*********************************************************************//
 
+    /// @notice Returns the default pool for a given project and token or, if a project has no default pool for the
+    ///         token, the overal default pool for the token
+    /// @param projectId The ID of the project to retrieve the default pool for.
+    /// @param tokenIn The address of the token to retrieve the default pool for.
+    /// @return pool The default pool for the token, or the overall default pool for the token if the
     function getPoolFor(
         uint256 projectId,
         address tokenIn
@@ -143,22 +147,27 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         view
         returns (IUniswapV3Pool)
     {
-        IUniswapV3Pool pool = poolFor[projectId][tokenIn];
+        IUniswapV3Pool pool = _poolFor[projectId][tokenIn];
 
         if (address(pool) == address(0)) {
-            pool = poolFor[0][tokenIn];
+            pool = _poolFor[0][tokenIn];
         }
 
         return pool;
     }
 
-    /// @notice Returns the default twap parameters for a given project.
+    /// @notice Returns the default twap parameters for a given pool project.
     /// @param projectId The ID of the project to retrieve TWAP parameters for.
     /// @return secondsAgo The period of time in the past to calculate the TWAP from.
     /// @return slippageTolerance The maximum allowed slippage tolerance when calculating the TWAP, as a fraction out of
     /// `SLIPPAGE_DENOMINATOR`.
-    function twapParamsOf(uint256 projectId) public view returns (uint32 secondsAgo, uint160 slippageTolerance) {
-        uint256 twapParams = _twapParamsOf[projectId];
+    function twapParamsOf(uint256 projectId, IUniswapV3Pool pool) public view returns (uint32 secondsAgo, uint160 slippageTolerance) {
+        uint256 twapParams = _twapParamsOf[projectId][pool];
+
+        if (twapParams == 0) {
+            twapParams = _twapParamsOf[0][pool];
+        }
+
         return (uint32(twapParams), uint160(twapParams >> 32));
     }
 
@@ -176,7 +185,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         override
         returns (JBAccountingContext memory)
     {
-        return accountingContextFor[projectId][token];
+        return _accountingContextFor[projectId][token];
     }
 
     /// @notice Return all the accounting contexts for a specified project ID.
@@ -185,8 +194,8 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// @param projectId The ID of the project to get the accounting contexts for.
     /// @return An array of `JBAccountingContext` containing the accounting contexts for the project ID.
     function accountingContextsOf(uint256 projectId) external view override returns (JBAccountingContext[] memory) {
-        address[] memory projectTokenContexts = tokensWithAContext[projectId];
-        address[] memory genericTokenContexts = tokensWithAContext[0];
+        address[] memory projectTokenContexts = _tokensWithAContext[projectId];
+        address[] memory genericTokenContexts = _tokensWithAContext[0];
 
         JBAccountingContext[] memory contexts =
             new JBAccountingContext[](projectTokenContexts.length + genericTokenContexts.length);
@@ -194,7 +203,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
 
         // include all the project specific contexts
         for (uint256 i = 0; i < projectTokenContexts.length; i++) {
-            contexts[i] = accountingContextFor[projectId][projectTokenContexts[i]];
+            contexts[i] = _accountingContextFor[projectId][projectTokenContexts[i]];
         }
 
         // add the generic contexts, iff they are not defined for the project (ie do not include duplicates)
@@ -209,7 +218,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
             }
 
             if (!skip) {
-                contexts[actualLength] = accountingContextFor[0][genericTokenContexts[i]];
+                contexts[actualLength] = _accountingContextFor[0][genericTokenContexts[i]];
                 actualLength++;
             }
         }
@@ -332,11 +341,11 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
             } else {
                 // If there is no quote, check for this project's default pool for the token and get a quote based on
                 // its TWAP.
-                IUniswapV3Pool pool = poolFor[projectId][token];
+                IUniswapV3Pool pool = _poolFor[projectId][token];
 
                 // If this project doesn't have a default pool specified for this token, try using a generic one.
                 if (address(pool) == address(0)) {
-                    pool = poolFor[0][token];
+                    pool = _poolFor[0][token];
 
                     // If there's no default pool neither, revert.
                     if (address(pool) == address(0)) revert NO_DEFAULT_POOL_DEFINED();
@@ -452,16 +461,16 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
             );
 
         // Update the project's default pool for the token.
-        poolFor[projectId][token] = pool;
+        _poolFor[projectId][token] = pool;
 
         // Update the project's accounting context for the token.
-        accountingContextFor[projectId][token] = JBAccountingContext({
+        _accountingContextFor[projectId][token] = JBAccountingContext({
             token: token,
             decimals: IERC20Metadata(token).decimals(),
             currency: uint32(uint160(token))
         });
 
-        tokensWithAContext[projectId].push(token);
+        _tokensWithAContext[projectId].push(token);
     }
 
     /// @notice Empty implementation to satisfy the interface. Accounting contexts are set in `addDefaultPool(...)`.
@@ -473,7 +482,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// @param secondsAgo The period of time over which the TWAP is calculated, in seconds.
     /// @param slippageTolerance The maximum spread allowed between the amount received and the TWAP (as a fraction out
     /// of `SLIPPAGE_DENOMINATOR`).
-    function addTwapParamsFor(uint256 projectId, uint32 secondsAgo, uint160 slippageTolerance) external {
+    function addTwapParamsFor(uint256 projectId, IUniswapV3Pool pool, uint32 secondsAgo, uint160 slippageTolerance) external {
         // Enforce permissions.
         _requirePermissionAllowingOverrideFrom(
             PROJECTS.ownerOf(projectId),
@@ -483,7 +492,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         );
 
         // Set the TWAP params for the project.
-        _twapParamsOf[projectId] = uint256(secondsAgo | uint256(slippageTolerance) << 32);
+        _twapParamsOf[projectId][pool] = uint256(secondsAgo | uint256(slippageTolerance) << 32);
     }
 
     /// @notice Empty implementation to satisfy the interface.
@@ -500,7 +509,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// @return minSqrtPriceX96 The minimum acceptable price for the swap.
     function _getTwapFrom(SwapConfig memory swapConfig) internal view returns (uint160) {
         // Unpack the project's TWAP params and get a reference to the period and slippage.
-        (uint32 secondsAgo, uint160 slippageTolerance) = twapParamsOf(swapConfig.projectId);
+        (uint32 secondsAgo, uint160 slippageTolerance) = twapParamsOf(swapConfig.projectId, swapConfig.pool);
 
         // Keep a reference to the TWAP tick.
         (int24 arithmeticMeanTick,) = OracleLibrary.consult(address(swapConfig.pool), secondsAgo);
@@ -509,7 +518,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         uint160 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(arithmeticMeanTick);
 
         // Return the lowest acceptable price for the swap based on the TWAP and slippage tolerance.
-        swapConfig.tokenIn < swapConfig.tokenOut
+        return swapConfig.tokenIn < swapConfig.tokenOut
             ? sqrtPriceX96 - (sqrtPriceX96 * slippageTolerance) / SLIPPAGE_DENOMINATOR
             : sqrtPriceX96 + (sqrtPriceX96 * slippageTolerance) / SLIPPAGE_DENOMINATOR;
     }
