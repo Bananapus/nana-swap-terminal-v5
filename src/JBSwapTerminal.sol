@@ -478,13 +478,13 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     )
         external
     {
-        // Enforce permissions.
-        _requirePermissionAllowingOverrideFrom(
-            PROJECTS.ownerOf(projectId),
-            projectId,
-            JBPermissionIds.MODIFY_SWAP_TERMINAL_TWAP_PARAMS,
-            msg.sender == owner()
-        );
+        // Only the project owner can set the default twap params for a pool, only the project owner can set the
+        // params for its project.
+        if (!(projectId == 0 && msg.sender == owner())) {
+            _requirePermissionFrom(
+                PROJECTS.ownerOf(projectId), projectId, JBPermissionIds.MODIFY_SWAP_TERMINAL_TWAP_PARAMS
+            );
+        }
 
         // Set the TWAP params for the project.
         _twapParamsOf[projectId][pool] = uint256(secondsAgo | uint256(slippageTolerance) << 32);
