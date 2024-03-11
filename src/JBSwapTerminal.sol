@@ -171,7 +171,8 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         address[] memory projectTokenContexts = tokensWithAContext[projectId];
         address[] memory genericTokenContexts = tokensWithAContext[0];
 
-        JBAccountingContext[] memory contexts = new JBAccountingContext[](projectTokenContexts.length + genericTokenContexts.length);
+        JBAccountingContext[] memory contexts =
+            new JBAccountingContext[](projectTokenContexts.length + genericTokenContexts.length);
         uint256 actualLength = projectTokenContexts.length;
 
         // include all the project specific contexts
@@ -190,17 +191,18 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
                 }
             }
 
-            if(!skip) {
+            if (!skip) {
                 contexts[actualLength] = accountingContextFor[0][genericTokenContexts[i]];
                 actualLength++;
             }
         }
 
         // Downsize the array to the actual length, if needed
-        if (actualLength < contexts.length)
+        if (actualLength < contexts.length) {
             assembly {
                 mstore(contexts, actualLength)
             }
+        }
 
         return contexts;
     }
@@ -418,7 +420,8 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
 
     /// @notice Set a project's default pool and accounting context for the specified token. Only the project's owner,
     /// an address with `MODIFY_DEFAULT_POOL` permission from the owner or the terminal owner can call this function.
-    /// @param projectId The ID of the project to set the default pool for. The project 0 acts as a catch-all, where non-set pools are defaulted to.
+    /// @param projectId The ID of the project to set the default pool for. The project 0 acts as a catch-all, where
+    /// non-set pools are defaulted to.
     /// @param token The address of the token to set the default pool for.
     /// @param pool The Uniswap V3 pool to set as the default for the specified token.
     function addDefaultPool(uint256 projectId, address token, IUniswapV3Pool pool) external {
