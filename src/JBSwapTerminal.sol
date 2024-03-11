@@ -129,6 +129,8 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// `addDefaultPool(...)` for that token.
     mapping(uint256 projectId => mapping(address token => JBAccountingContext)) public accountingContextFor;
 
+    mapping(uint256 projectId => address[]) public tokensWithAContext;
+
     //*********************************************************************//
     // ------------------------- external views -------------------------- //
     //*********************************************************************//
@@ -160,8 +162,48 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         return accountingContextFor[projectId][token];
     }
 
-    /// @notice Empty implementation to satisfy the interface.
-    function accountingContextsOf(uint256 projectId) external view override returns (JBAccountingContext[] memory) {}
+    /// @notice Return all the accounting contexts for a specified project ID.
+    /// @dev    This includes both project-specific and generic accounting contexts, with the project-specific contexts
+    ///         taking precedence.
+    /// @param projectId The ID of the project to get the accounting contexts for.
+    /// @return An array of `JBAccountingContext` containing the accounting contexts for the project ID.
+    function accountingContextsOf(uint256 projectId) external view override returns (JBAccountingContext[] memory) {
+        address[] memory projectTokenContexts = tokensWithAContext[projectId];
+        address[] memory genericTokenContexts = tokensWithAContext[0];
+
+        JBAccountingContext[] memory contexts = new JBAccountingContext[](projectTokenContexts.length + genericTokenContexts.length);
+        uint256 actualLength = tokens.length;
+
+        // include all the project specific contexts
+        for (uint256 i = 0; i < tokens.length; i++) {
+            contexts[i] = accountingContextFor[projectId][tokens[i]];
+        }
+
+        // add the generic contexts, iff they are not defined for the project (ie do not include duplicates)
+        for (uint256 i = 0; i < genericTokenContexts.length; i++) {
+            bool skip;
+
+            for (uint256 j = 0; j < projectTokenContexts.length; j++) {
+                if (projectTokenContexts[j] == genericTokenContexts[i]) {
+                    skip = true;
+                    break;
+                }
+            }
+
+            if(!skip) {
+                contexts[actualLength] = accountingContextFor[0][genericTokenContexts[i]];
+                actualLength++;
+            }
+        }
+
+        // Downsize the array to the actual length, if needed
+        if (actualLength < contexts.length)
+            assembly {
+                mstore(contexts, actualLength)
+            }
+
+        return contexts;
+    }
 
     /// @notice Empty implementation to satisfy the interface. This terminal has no surplus.
     function currentSurplusOf(uint256 projectId, uint256 decimals, uint256 currency) external view returns (uint256) {}
@@ -371,7 +413,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
 
     /// @notice Set a project's default pool and accounting context for the specified token. Only the project's owner,
     /// an address with `MODIFY_DEFAULT_POOL` permission from the owner or the terminal owner can call this function.
-    /// @param projectId The ID of the project to set the default pool for.
+    /// @param projectId The ID of the project to set the default pool for. The project 0 acts as a catch-all, where non-set pools are defaulted to.
     /// @param token The address of the token to set the default pool for.
     /// @param pool The Uniswap V3 pool to set as the default for the specified token.
     function addDefaultPool(uint256 projectId, address token, IUniswapV3Pool pool) external {
@@ -386,12 +428,14 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         // Update the project's default pool for the token.
         poolFor[projectId][token][address(0)] = pool;
 
-        // // Update the project's accounting context for the token.
-        // accountingContextFor[projectId][token] = JBAccountingContext({
-        //     token: token,
-        //     decimals: IERC20Metadata(token).decimals(),
-        //     currency: uint32(uint160(token))
-        // });
+        // Update the project's accounting context for the token.
+        accountingContextFor[projectId][token] = JBAccountingContext({
+            token: token,
+            decimals: IERC20Metadata(token).decimals(),
+            currency: uint32(uint160(token))
+        });
+
+        tokensWithAContext[projectId].push(token);
     }
 
     /// @notice Empty implementation to satisfy the interface. Accounting contexts are set in `addDefaultPool(...)`.
