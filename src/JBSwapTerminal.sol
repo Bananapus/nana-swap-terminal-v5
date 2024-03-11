@@ -136,7 +136,8 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// @notice Returns the default twap parameters for a given project.
     /// @param projectId The ID of the project to retrieve TWAP parameters for.
     /// @return secondsAgo The period of time in the past to calculate the TWAP from.
-    /// @return slippageTolerance The maximum allowed slippage tolerance when calculating the TWAP, as a fraction out of `SLIPPAGE_DENOMINATOR`.
+    /// @return slippageTolerance The maximum allowed slippage tolerance when calculating the TWAP, as a fraction out of
+    /// `SLIPPAGE_DENOMINATOR`.
     function twapParamsOf(uint256 projectId) public view returns (uint32 secondsAgo, uint160 slippageTolerance) {
         uint256 twapParams = _twapParamsOf[projectId];
         return (uint32(twapParams), uint160(twapParams >> 32));
@@ -404,7 +405,12 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// of `SLIPPAGE_DENOMINATOR`).
     function addTwapParamsFor(uint256 projectId, uint32 secondsAgo, uint160 slippageTolerance) external {
         // Enforce permissions.
-        _requirePermissionAllowingOverrideFrom(PROJECTS.ownerOf(projectId), projectId, JBSwapTerminalPermissionIds.MODIFY_TWAP_PARAMS, msg.sender == owner());
+        _requirePermissionAllowingOverrideFrom(
+            PROJECTS.ownerOf(projectId),
+            projectId,
+            JBSwapTerminalPermissionIds.MODIFY_TWAP_PARAMS,
+            msg.sender == owner()
+        );
 
         // Set the TWAP params for the project.
         _twapParamsOf[projectId] = uint256(secondsAgo | uint256(slippageTolerance) << 32);
