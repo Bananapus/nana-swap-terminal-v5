@@ -37,8 +37,8 @@ import {JBSingleAllowanceContext} from "@bananapus/core/src/structs/JBSingleAllo
 import {JBPermissioned} from "@bananapus/core/src/abstract/JBPermissioned.sol";
 import {JBAccountingContext} from "@bananapus/core/src/structs/JBAccountingContext.sol";
 import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
+import {JBPermissionIds} from "@bananapus/permission-ids/src/JBPermissionIds.sol";
 
-import {JBSwapTerminalPermissionIds} from "./libraries/JBSwapTerminalPermissionIds.sol";
 import {IWETH9} from "./interfaces/IWETH9.sol";
 
 /// @notice The `JBSwapTerminal` accepts payments in any token. When the `JBSwapTerminal` is paid, it uses a Uniswap
@@ -448,7 +448,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
             _requirePermissionFrom(
                 PROJECTS.ownerOf(projectId),
                 projectId,
-                JBSwapTerminalPermissionIds.MODIFY_DEFAULT_POOL
+                JBPermissionIds.MODIFY_DEFAULT_SWAP_TERMINAL_POOL
             );
 
         // Update the project's default pool for the token.
@@ -478,7 +478,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         _requirePermissionAllowingOverrideFrom(
             PROJECTS.ownerOf(projectId),
             projectId,
-            JBSwapTerminalPermissionIds.MODIFY_TWAP_PARAMS,
+            JBPermissionIds.MODIFY_SWAP_TERMINAL_TWAP_PARAMS,
             msg.sender == owner()
         );
 
