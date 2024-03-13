@@ -4,7 +4,6 @@ pragma solidity ^0.8.17;
 import "forge-std/Test.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
-
 import "../../src/JBSwapTerminal.sol";
 
 /// @notice Deploy the swap terminal and create the mocks
@@ -37,63 +36,24 @@ contract UnitFixture is Test {
     // test helpers:
 
     // mock and expect a call to a given address
-    function mockExpectCall(
-        address target,
-        bytes memory callData,
-        bytes memory returnedData
-    ) internal {
+    function mockExpectCall(address target, bytes memory callData, bytes memory returnedData) internal {
         vm.mockCall(target, callData, returnedData);
         vm.expectCall(target, callData);
     }
 
     // mock and expect a safe approval to a given token
     function mockExpectSafeApprove(address token, address owner, address spender, uint256 amount) internal {
-        mockExpectCall(
-            token,
-            abi.encodeCall(
-                IERC20.allowance,
-                (owner, spender)
-            ),
-            abi.encode(0)
-        );
+        mockExpectCall(token, abi.encodeCall(IERC20.allowance, (owner, spender)), abi.encode(0));
 
-        mockExpectCall(
-            token,
-            abi.encodeCall(
-                IERC20.approve,
-                (spender, amount)
-            ),
-            abi.encode(true)
-        );
+        mockExpectCall(token, abi.encodeCall(IERC20.approve, (spender, amount)), abi.encode(true));
     }
 
     function mockExpectTransferFrom(address from, address to, address token, uint256 amount) internal {
-        mockExpectCall(
-            token,
-            abi.encodeCall(
-                IERC20.allowance,
-                (from, to)
-            ),  
-            abi.encode(amount)
-        );
+        mockExpectCall(token, abi.encodeCall(IERC20.allowance, (from, to)), abi.encode(amount));
 
-        mockExpectCall(
-            token,
-            abi.encodeCall(
-                IERC20.transferFrom,
-                (from, to, amount)
-            ),
-            abi.encode(true)
-        );
+        mockExpectCall(token, abi.encodeCall(IERC20.transferFrom, (from, to, amount)), abi.encode(true));
 
-        mockExpectCall(
-            token,
-            abi.encodeCall(
-                IERC20.balanceOf,
-                to
-            ),
-            abi.encode(amount)
-        );
+        mockExpectCall(token, abi.encodeCall(IERC20.balanceOf, to), abi.encode(amount));
     }
 
     // compare 2 uniswap v3 pool addresses
@@ -109,9 +69,6 @@ contract UnitFixture is Test {
         bytes[] memory dataArray = new bytes[](1);
         dataArray[0] = data;
 
-        return JBMetadataResolver.createMetadata(
-            idArray,    
-            dataArray
-        );
+        return JBMetadataResolver.createMetadata(idArray, dataArray);
     }
 }

@@ -24,19 +24,11 @@ contract AddDefaultPool is UnitFixture {
     /// @notice Test that the project owner can add a default pool to its project
     function test_AddDefaultPoolWhenCalledByAProjectOwner() external {
         // Set the project owner
-        mockExpectCall(
-            address(mockJBProjects),
-            abi.encodeCall(IERC721.ownerOf, (projectId)),
-            abi.encode(projectOwner)
-        );
+        mockExpectCall(address(mockJBProjects), abi.encodeCall(IERC721.ownerOf, (projectId)), abi.encode(projectOwner));
 
         // decimals() call while setting the accounting context
-        mockExpectCall(
-            address(token),
-            abi.encodeCall(IERC20Metadata.decimals, ()),
-            abi.encode(18)
-        );
-        
+        mockExpectCall(address(token), abi.encodeCall(IERC20Metadata.decimals, ()), abi.encode(18));
+
         // Add the pool as the project owner
         vm.prank(projectOwner);
         swapTerminal.addDefaultPool(projectId, token, pool);
@@ -47,11 +39,7 @@ contract AddDefaultPool is UnitFixture {
 
     /// @notice Set the project owner
     modifier whenCalledByANonProjectOwner() {
-        mockExpectCall(
-            address(mockJBProjects),
-            abi.encodeCall(IERC721.ownerOf, (projectId)),
-            abi.encode(projectOwner)
-        );
+        mockExpectCall(address(mockJBProjects), abi.encodeCall(IERC721.ownerOf, (projectId)), abi.encode(projectOwner));
 
         vm.startPrank(caller);
         _;
@@ -62,16 +50,15 @@ contract AddDefaultPool is UnitFixture {
         // Give the permission to the caller
         mockExpectCall(
             address(mockJBPermissions),
-            abi.encodeCall(IJBPermissions.hasPermission, (caller, projectOwner, projectId, JBPermissionIds.MODIFY_DEFAULT_SWAP_TERMINAL_POOL)),
+            abi.encodeCall(
+                IJBPermissions.hasPermission,
+                (caller, projectOwner, projectId, JBPermissionIds.MODIFY_DEFAULT_SWAP_TERMINAL_POOL)
+            ),
             abi.encode(true)
         );
 
         // decimals() call while setting the accounting context
-        mockExpectCall(
-            address(token),
-            abi.encodeCall(IERC20Metadata.decimals, ()),
-            abi.encode(18)
-        );
+        mockExpectCall(address(token), abi.encodeCall(IERC20Metadata.decimals, ()), abi.encode(18));
 
         // Add the pool as permissioned caller
         swapTerminal.addDefaultPool(projectId, token, pool);
@@ -87,24 +74,19 @@ contract AddDefaultPool is UnitFixture {
     }
 
     /// @notice Test that the terminal owner can add a default pool for a token (using the wildcard project id 0)
-    function test_AddDefaultPoolWhenTheCallerIsTheTerminalOwner(uint256 _projectIdWithoutPool) external whenCalledByTerminalOwner {
+    function test_AddDefaultPoolWhenTheCallerIsTheTerminalOwner(uint256 _projectIdWithoutPool)
+        external
+        whenCalledByTerminalOwner
+    {
         vm.assume(_projectIdWithoutPool != projectId);
 
         IUniswapV3Pool otherPool = IUniswapV3Pool(makeAddr("otherPool"));
 
         // Set a project owner
-        mockExpectCall(
-            address(mockJBProjects),
-            abi.encodeCall(IERC721.ownerOf, (projectId)),
-            abi.encode(projectOwner)
-        );
+        mockExpectCall(address(mockJBProjects), abi.encodeCall(IERC721.ownerOf, (projectId)), abi.encode(projectOwner));
 
         // decimals() call while setting the accounting context
-        mockExpectCall(
-            address(token),
-            abi.encodeCall(IERC20Metadata.decimals, ()),
-            abi.encode(18)
-        );
+        mockExpectCall(address(token), abi.encodeCall(IERC20Metadata.decimals, ()), abi.encode(18));
 
         // Add the pool for the project wildcard
         swapTerminal.addDefaultPool(0, token, pool);
@@ -121,17 +103,26 @@ contract AddDefaultPool is UnitFixture {
     }
 
     /// @notice Test that other callers cannot add a default pool
-    function test_AddDefaultPoolRevertWhen_TheCallerIsNotTheProjectOwnerAndNoRole() external whenCalledByANonProjectOwner {
+    function test_AddDefaultPoolRevertWhen_TheCallerIsNotTheProjectOwnerAndNoRole()
+        external
+        whenCalledByANonProjectOwner
+    {
         // Do not give specific or generic permission to the caller
         mockExpectCall(
             address(mockJBPermissions),
-            abi.encodeCall(IJBPermissions.hasPermission, (caller, projectOwner, projectId, JBPermissionIds.MODIFY_DEFAULT_SWAP_TERMINAL_POOL)),
+            abi.encodeCall(
+                IJBPermissions.hasPermission,
+                (caller, projectOwner, projectId, JBPermissionIds.MODIFY_DEFAULT_SWAP_TERMINAL_POOL)
+            ),
             abi.encode(false)
         );
 
         mockExpectCall(
             address(mockJBPermissions),
-            abi.encodeCall(IJBPermissions.hasPermission, (caller, projectOwner, 0, JBPermissionIds.MODIFY_DEFAULT_SWAP_TERMINAL_POOL)),
+            abi.encodeCall(
+                IJBPermissions.hasPermission,
+                (caller, projectOwner, 0, JBPermissionIds.MODIFY_DEFAULT_SWAP_TERMINAL_POOL)
+            ),
             abi.encode(false)
         );
 
