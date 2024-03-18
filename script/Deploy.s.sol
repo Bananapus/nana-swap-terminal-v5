@@ -40,7 +40,7 @@ contract DeployScript is Script, Sphinx {
         // Get the permit2 that the multiterminal also makes use of.
         permit2 = core.terminal.PERMIT2();
 
-         // Ethereum Mainnet
+        // Ethereum Mainnet
         if (block.chainid == 1) {
             weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
             // Ethereum Sepolia
@@ -67,6 +67,17 @@ contract DeployScript is Script, Sphinx {
     }
 
     function deploy() public sphinx {
+        // Checks if this version is already deployed,
+        // if it is then we skip the entire script.
+        if (
+            _isDeployed(
+                SWAP_TERMINAL,
+                type(JBSwapTerminal).creationCode,
+                abi.encode(core.projects, core.permissions, core.directory, permit2, address(manager), IWETH9(weth))
+            )
+        ) return;
+
+        // Perform the deployment.
         new JBSwapTerminal{salt: SWAP_TERMINAL}({
             projects: core.projects,
             permissions: core.permissions,
@@ -75,5 +86,25 @@ contract DeployScript is Script, Sphinx {
             _owner: address(manager),
             weth: IWETH9(weth)
         });
+    }
+
+    function _isDeployed(
+        bytes32 salt,
+        bytes memory creationCode,
+        bytes memory arguments
+    )
+        internal
+        view
+        returns (bool)
+    {
+        address _deployedTo = vm.computeCreate2Address({
+            salt: salt,
+            initCodeHash: keccak256(abi.encodePacked(creationCode, arguments)),
+            // Arachnid/deterministic-deployment-proxy address.
+            deployer: address(0x4e59b44847b379578588920cA78FbF26c0B4956C)
+        });
+
+        // Return if code is already present at this address.
+        return address(_deployedTo).code.length != 0;
     }
 }
