@@ -116,7 +116,7 @@ contract TestSwapTerminal_Fork is Test {
         _projectOwner = _projects.ownerOf(_projectId);
         vm.label(_projectOwner, "projectOwner");
 
-        _swapTerminal = new JBSwapTerminal(_projects, _permissions, _directory, _permit2, _owner, WETH);
+        _swapTerminal = new JBSwapTerminal(_projects, _permissions, _directory, _permit2, _owner, WETH, UNI);
         vm.label(address(_swapTerminal), "swapTerminal");
 
         _metadataResolver = new MetadataResolverHelper();

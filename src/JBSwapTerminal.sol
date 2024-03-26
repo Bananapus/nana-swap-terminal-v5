@@ -138,10 +138,10 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// @param tokenIn The address of the token to retrieve the default pool for.
     /// @return pool The default pool for the token, or the overall default pool for the token if the
     function getPoolFor(uint256 projectId, address tokenIn) external view returns (IUniswapV3Pool) {
-        IUniswapV3Pool pool = _poolFor[projectId][tokenIn];
+        IUniswapV3Pool pool = _poolFor[projectId][tokenIn].pool;
 
         if (address(pool) == address(0)) {
-            pool = _poolFor[0][tokenIn];
+            pool = _poolFor[0][tokenIn].pool;
         }
 
         return pool;
@@ -448,7 +448,10 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         }
 
         // Update the project's default pool for the token.
-        _poolFor[projectId][token] = pool;
+        _poolFor[projectId][token] = PoolConfig({
+            pool: pool,
+            tokenOutIsToken0: token < address(TOKEN_OUT)
+        });
 
         // Update the project's accounting context for the token.
         _accountingContextFor[projectId][token] = JBAccountingContext({
@@ -512,7 +515,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         uint160 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(arithmeticMeanTick);
 
         // Return the lowest acceptable price for the swap based on the TWAP and slippage tolerance.
-        return swapConfig.tokenIn < swapConfig.tokenOut
+        return swapConfig.tokenIn < address(TOKEN_OUT)
             ? sqrtPriceX96 - (sqrtPriceX96 * slippageTolerance) / SLIPPAGE_DENOMINATOR
             : sqrtPriceX96 + (sqrtPriceX96 * slippageTolerance) / SLIPPAGE_DENOMINATOR;
     }
@@ -564,7 +567,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         address tokenIn = swapConfig.tokenIn;
 
         // Determine the direction of the swap based on the token addresses.
-        bool zeroForOne = tokenIn < TOKEN_OUT;
+        bool zeroForOne = tokenIn < address(TOKEN_OUT);
 
         // Perform the swap in the specified pool, passing in parameters from the swap configuration.
         (int256 amount0, int256 amount1) = swapConfig.pool.swap({
@@ -584,7 +587,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         if (amountReceived < swapConfig.minAmountOut) revert MAX_SLIPPAGE(amountReceived, swapConfig.minAmountOut);
 
         // If the output token is a native token, unwrap it from its wrapped form.
-        if (swapConfig.outIsNativeToken) WETH.withdraw(amountReceived);
+        if (address(TOKEN_OUT) == JBConstants.NATIVE_TOKEN) WETH.withdraw(amountReceived);
     }
 
     /// @notice Transfers tokens.
