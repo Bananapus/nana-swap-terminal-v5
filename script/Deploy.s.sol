@@ -76,7 +76,15 @@ contract DeployScript is Script, Sphinx {
             _isDeployed(
                 SWAP_TERMINAL,
                 type(JBSwapTerminal).creationCode,
-                abi.encode(core.projects, core.permissions, core.directory, permit2, address(manager), IWETH9(weth), JBConstants.NATIVE_TOKEN)
+                abi.encode(
+                    core.projects,
+                    core.permissions,
+                    core.directory,
+                    permit2,
+                    address(manager),
+                    IWETH9(weth),
+                    JBConstants.NATIVE_TOKEN
+                )
             )
         ) return;
 
