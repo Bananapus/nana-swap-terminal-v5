@@ -106,8 +106,8 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     // ---------------- public immutable stored properties --------------- //
     //*********************************************************************//
 
-    /// @notice The token which flows out of this terminal
-    IERC20 public immutable TOKEN_OUT;
+    /// @notice The token which flows out of this terminal (JBConstants.NATIVE_TOKEN for the chain native token)
+    address public immutable TOKEN_OUT;
 
     /// @notice A flag indicating if the token out is the chain native token (eth on mainnet for instance)
     /// @dev    If so, the token out should be unwrapped before being sent to the next terminal
@@ -259,7 +259,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         IPermit2 permit2,
         address _owner,
         IWETH9 weth,
-        IERC20 tokenOut
+        address tokenOut
     )
         JBPermissioned(permissions)
         Ownable(_owner)
@@ -268,7 +268,11 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         DIRECTORY = directory;
         PERMIT2 = permit2;
         WETH = weth;
-        TOKEN_OUT = tokenOut;
+
+        if(tokenOut == JBConstants.NATIVE_TOKEN) {
+            OUT_IS_NATIVE_TOKEN = true;
+            TOKEN_OUT = address(weth);
+        } else  TOKEN_OUT = tokenOut;
     }
 
     //*********************************************************************//
@@ -324,7 +328,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
 
         // Get a reference to the project's primary terminal for `token`.
         IJBTerminal terminal = DIRECTORY.primaryTerminalOf(
-            projectId, OUT_IS_NATIVE_TOKEN ? JBConstants.NATIVE_TOKEN : address(TOKEN_OUT)
+            projectId, OUT_IS_NATIVE_TOKEN ? JBConstants.NATIVE_TOKEN : TOKEN_OUT
         );
 
         // Revert if the project does not have a primary terminal for `token`.
@@ -337,7 +341,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         uint256 receivedFromSwap;
 
         // If the token in is the same as the token out, don't swap, just call the next terminal
-        if ((swapConfig.inIsNativeToken && OUT_IS_NATIVE_TOKEN) || (swapConfig.tokenIn == address(TOKEN_OUT)))
+        if ((swapConfig.inIsNativeToken && OUT_IS_NATIVE_TOKEN) || (swapConfig.tokenIn == TOKEN_OUT))
         {
             receivedFromSwap = swapConfig.amountIn;
         } else {
@@ -345,12 +349,12 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         }
 
         // Trigger the `beforeTransferFor` hook.
-        _beforeTransferFor(address(terminal), address(TOKEN_OUT), receivedFromSwap);
+        _beforeTransferFor(address(terminal), TOKEN_OUT, receivedFromSwap);
 
         // Pay the primary terminal, passing along the beneficiary and other arguments.
         terminal.pay{value: OUT_IS_NATIVE_TOKEN ? receivedFromSwap : 0}(
             swapConfig.projectId,
-            OUT_IS_NATIVE_TOKEN ? JBConstants.NATIVE_TOKEN : address(TOKEN_OUT),
+            OUT_IS_NATIVE_TOKEN ? JBConstants.NATIVE_TOKEN : TOKEN_OUT,
             receivedFromSwap,
             beneficiary,
             minReturnedTokens,
@@ -423,7 +427,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         // Update the project's default pool for the token.
         _poolFor[projectId][token] = PoolConfig({
             pool: pool,
-            zeroForOne: token < address(TOKEN_OUT)
+            zeroForOne: token < TOKEN_OUT
         });
 
         // Update the project's accounting context for the token.
@@ -568,7 +572,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         address tokenIn = swapConfig.tokenIn;
 
         // Determine the direction of the swap based on the token addresses.
-        bool zeroForOne = tokenIn < address(TOKEN_OUT);
+        bool zeroForOne = tokenIn < TOKEN_OUT;
 
         // Perform the swap in the specified pool, passing in parameters from the swap configuration.
         (int256 amount0, int256 amount1) = swapConfig.pool.swap({
@@ -588,7 +592,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         if (amountReceived < swapConfig.minAmountOut) revert MAX_SLIPPAGE(amountReceived, swapConfig.minAmountOut);
 
         // If the output token is a native token, unwrap it from its wrapped form.
-        if (address(TOKEN_OUT) == JBConstants.NATIVE_TOKEN) WETH.withdraw(amountReceived);
+        if (OUT_IS_NATIVE_TOKEN) WETH.withdraw(amountReceived);
     }
 
     /// @notice Transfers tokens.
@@ -598,11 +602,12 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// @param amount The amount of tokens to transfer, as a fixed point number with the same number of decimals as the
     /// token.
     function _transferFor(address from, address payable to, address token, uint256 amount) internal virtual {
-        // If the token is native token, assume the `sendValue` standard.
-        if (token == JBConstants.NATIVE_TOKEN) return Address.sendValue(to, amount);
 
-        // If the transfer is from this terminal, use `safeTransfer`.
         if (from == address(this)) {
+            // If the token is native token, assume the `sendValue` standard.
+            if (OUT_IS_NATIVE_TOKEN) return Address.sendValue(to, amount);
+            
+            // If the transfer is from this terminal, use `safeTransfer`.
             return IERC20(token).safeTransfer(to, amount);
         }
 
