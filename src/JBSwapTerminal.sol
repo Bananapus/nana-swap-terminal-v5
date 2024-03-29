@@ -280,7 +280,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         IPermit2 permit2,
         address _owner,
         IWETH9 weth,
-        address tokenOut
+        address _tokenOut
     )
         JBPermissioned(permissions)
         Ownable(_owner)
@@ -290,11 +290,11 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         PERMIT2 = permit2;
         WETH = weth;
 
-        if (tokenOut == JBConstants.NATIVE_TOKEN) {
+        if (_tokenOut == JBConstants.NATIVE_TOKEN) {
             OUT_IS_NATIVE_TOKEN = true;
             TOKEN_OUT = address(weth);
         } else {
-            TOKEN_OUT = tokenOut;
+            TOKEN_OUT = _tokenOut;
         }
     }
 
