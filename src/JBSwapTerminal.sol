@@ -79,10 +79,13 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     // --------------------- internal stored properties ------------------ //
     //*********************************************************************//
 
+    /// @notice A mapping which stores the default twap parameters for a given pool and project
+    /// @dev Default parameters are set by the project owner, the project 0 acts as a wildcard
+    /// @dev Default pools are used when a payer doesn't specify a pool in their payment's metadata.
     mapping(uint256 projectId => mapping(IUniswapV3Pool pool => uint256 params)) internal _twapParamsOf;
 
     /// @notice A mapping which stores the default pool to use for a given project ID and token.
-    /// @dev Default pools are set by the project owner with `addDefaultPool(...)`.
+    /// @dev Default pools are set by the project owner with `addDefaultPool(...)`, the project 0 acts as a wildcard
     /// @dev Default pools are used when a payer doesn't specify a pool in their payment's metadata.
     mapping(uint256 projectId => mapping(address tokenIn => PoolConfig)) internal _poolFor;
 
@@ -374,14 +377,13 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     }
 
     /// @notice The Uniswap v3 pool callback where the token transfer is expected to happen.
+    /// @dev This function has no access control, care should be taken to ensure that:
+    ///      - terminal balance is always be 0 between tx (this callback can only be used to sweep accidental leftovers)
+    ///      - callback cannot pull user funds via a preexisting allowance
     /// @param amount0Delta The amount of token 0 being used for the swap.
     /// @param amount1Delta The amount of token 1 being used for the swap.
     /// @param data Data passed in by the swap operation.
     function uniswapV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata data) external override {
-        // Add access control: Terminal balance should be 0, this callback can only be used to sweep + callback is not
-        // pulling
-        // the funds (no approval abuse)
-
         // Unpack the data from the original swap config (forwarded through `_swap(...)`).
         (address tokenIn, bool shouldWrap) = abi.decode(data, (address, bool));
 
