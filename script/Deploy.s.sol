@@ -2,6 +2,9 @@
 pragma solidity 0.8.23;
 
 import "@bananapus/core/script/helpers/CoreDeploymentLib.sol";
+import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
+import {IERC20, IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+
 import {Sphinx} from "@sphinx-labs/contracts/SphinxPlugin.sol";
 import {Script} from "forge-std/Script.sol";
 
@@ -73,7 +76,15 @@ contract DeployScript is Script, Sphinx {
             _isDeployed(
                 SWAP_TERMINAL,
                 type(JBSwapTerminal).creationCode,
-                abi.encode(core.projects, core.permissions, core.directory, permit2, address(manager), IWETH9(weth))
+                abi.encode(
+                    core.projects,
+                    core.permissions,
+                    core.directory,
+                    permit2,
+                    address(manager),
+                    IWETH9(weth),
+                    JBConstants.NATIVE_TOKEN
+                )
             )
         ) return;
 
@@ -84,7 +95,8 @@ contract DeployScript is Script, Sphinx {
             directory: core.directory,
             permit2: permit2,
             _owner: address(manager),
-            weth: IWETH9(weth)
+            weth: IWETH9(weth),
+            _tokenOut: JBConstants.NATIVE_TOKEN
         });
     }
 

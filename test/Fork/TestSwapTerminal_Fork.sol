@@ -116,7 +116,8 @@ contract TestSwapTerminal_Fork is Test {
         _projectOwner = _projects.ownerOf(_projectId);
         vm.label(_projectOwner, "projectOwner");
 
-        _swapTerminal = new JBSwapTerminal(_projects, _permissions, _directory, _permit2, _owner, WETH);
+        _swapTerminal =
+            new JBSwapTerminal(_projects, _permissions, _directory, _permit2, _owner, WETH, JBConstants.NATIVE_TOKEN);
         vm.label(address(_swapTerminal), "swapTerminal");
 
         _metadataResolver = new MetadataResolverHelper();
@@ -162,9 +163,9 @@ contract TestSwapTerminal_Fork is Test {
         vm.prank(_projectOwner);
         _swapTerminal.addDefaultPool(_projectId, address(UNI), POOL);
 
-        // Build the metadata using the minimum amount out, the pool address and the token out address
+        // Build the metadata using the minimum amount out, the pool address and if it's a zero to one swap
         bytes[] memory _data = new bytes[](1);
-        _data[0] = abi.encode(_minAmountOut, address(POOL), JBConstants.NATIVE_TOKEN);
+        _data[0] = abi.encode(_minAmountOut, address(POOL), address(UNI) < address(WETH));
 
         bytes4[] memory _ids = new bytes4[](1);
         _ids[0] = bytes4("SWAP");
@@ -224,7 +225,8 @@ contract TestSwapTerminal_Fork is Test {
 
         // Build the metadata using the minimum amount out, the pool address and the token out address
         bytes[] memory _data = new bytes[](1);
-        _data[0] = abi.encode(_minAmountOut, address(_otherTokenPool), JBConstants.NATIVE_TOKEN);
+        _data[0] =
+            abi.encode(_minAmountOut, address(_otherTokenPool), address(_otherTokenIn) < JBConstants.NATIVE_TOKEN);
 
         bytes4[] memory _ids = new bytes4[](1);
         _ids[0] = bytes4("SWAP");
@@ -271,12 +273,19 @@ contract TestSwapTerminal_Fork is Test {
         vm.prank(_swapTerminal.owner());
         _swapTerminal.addDefaultPool(0, address(UNI), POOL);
 
-        assertEq(address(_swapTerminal.getPoolFor(_projectId, address(UNI))), address(POOL));
+        (IUniswapV3Pool pool, bool zeroToOne) = _swapTerminal.getPoolFor(_projectId, address(UNI));
 
+        assertEq(address(pool), address(POOL));
+        assertEq(zeroToOne, address(UNI) < address(WETH));
+
+        address newPool = makeAddr("newPool");
         vm.prank(_projects.ownerOf(_projectId));
-        _swapTerminal.addDefaultPool(_projectId, address(UNI), IUniswapV3Pool(makeAddr("newPool")));
+        _swapTerminal.addDefaultPool(_projectId, address(UNI), IUniswapV3Pool(newPool));
 
-        assertEq(address(_swapTerminal.getPoolFor(_projectId, address(UNI))), makeAddr("newPool"));
+        (pool, zeroToOne) = _swapTerminal.getPoolFor(_projectId, address(UNI));
+
+        assertEq(address(pool), newPool);
+        assertEq(zeroToOne, address(UNI) < address(WETH));
 
         vm.expectRevert(JBPermissioned.UNAUTHORIZED.selector);
         vm.prank(address(12_345));
