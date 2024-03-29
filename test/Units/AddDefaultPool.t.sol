@@ -34,7 +34,9 @@ contract AddDefaultPool is UnitFixture {
         swapTerminal.addDefaultPool(projectId, token, pool);
 
         // it should add the pool to the project
-        assertEq(swapTerminal.getPoolFor(projectId, token), pool);
+        (IUniswapV3Pool storedPool, bool zeroForOne) = swapTerminal.getPoolFor(projectId, token);
+        assertEq(storedPool, pool);
+        assertEq(zeroForOne, address(token) < address(mockWETH));
     }
 
     /// @notice Set the project owner
@@ -63,8 +65,9 @@ contract AddDefaultPool is UnitFixture {
         // Add the pool as permissioned caller
         swapTerminal.addDefaultPool(projectId, token, pool);
 
-        // it should add the pool to the project
-        assertEq(swapTerminal.getPoolFor(projectId, token), pool);
+        (IUniswapV3Pool storedPool, bool zeroForOne) = swapTerminal.getPoolFor(projectId, token);
+        assertEq(storedPool, pool);
+        assertEq(zeroForOne, address(token) < address(mockWETH));
     }
 
     modifier whenCalledByTerminalOwner() {
@@ -96,10 +99,15 @@ contract AddDefaultPool is UnitFixture {
         swapTerminal.addDefaultPool(projectId, token, otherPool);
 
         // it should add the pool to any project without a default pool
-        assertEq(swapTerminal.getPoolFor(_projectIdWithoutPool, token), pool);
+        (IUniswapV3Pool storedPool, bool zeroForOne) = swapTerminal.getPoolFor(_projectIdWithoutPool, token);
+        assertEq(storedPool, pool);
+        assertEq(zeroForOne, address(token) < address(mockWETH));
+
 
         // it should not override the project pool
-        assertEq(swapTerminal.getPoolFor(projectId, token), otherPool);
+        (storedPool, zeroForOne) = swapTerminal.getPoolFor(projectId, token);
+        assertEq(storedPool, otherPool);
+        assertEq(zeroForOne, address(token) < address(mockWETH));
     }
 
     /// @notice Test that other callers cannot add a default pool
