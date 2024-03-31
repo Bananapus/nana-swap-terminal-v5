@@ -278,7 +278,6 @@ contract TestSwapTerminal_Fork is Test {
 
         uint256 _initialTerminalBalance =
             _terminalStore.balanceOf(address(_projectTerminal), _projectId, JBConstants.NATIVE_TOKEN);
-        uint256 _initialBeneficiaryBalance = _tokens.totalBalanceOf(_beneficiary, _projectId);
 
         uint256 _minAmountOut = _uniswapV3ForgeQuoter.getAmountOut(POOL, _amountIn, address(UNI));
 
@@ -298,6 +297,8 @@ contract TestSwapTerminal_Fork is Test {
         vm.startPrank(_sender);
         UNI.approve(address(_swapTerminal), _amountIn);
 
+        uint256 _previousTotalSupply = _tokens.totalSupplyOf(_projectId);
+
         // Make a payment.
         _swapTerminal.addToBalanceOf({
             projectId: _projectId,
@@ -307,6 +308,9 @@ contract TestSwapTerminal_Fork is Test {
             memo: "Take my money!",
             metadata: _metadata
         });
+
+        // Make sure the project token total supply hasn't changed
+        assertEq(_previousTotalSupply, _tokens.totalSupplyOf(_projectId));
 
         // Make sure the native token balance in terminal is up to date.
         uint256 _terminalBalance = _minAmountOut + _initialTerminalBalance;
