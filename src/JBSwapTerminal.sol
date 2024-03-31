@@ -333,23 +333,6 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         override
         returns (uint256)
     {
-        SwapConfig memory swapConfig;
-        swapConfig.projectId = projectId;
-
-        if (token == JBConstants.NATIVE_TOKEN) {
-            // If the token being paid in is the native token, use `msg.value`.
-            swapConfig.tokenIn = address(WETH);
-            swapConfig.inIsNativeToken = true;
-            swapConfig.amountIn = msg.value;
-        } else {
-            // Otherwise, use `amount`.
-            swapConfig.tokenIn = token;
-            swapConfig.amountIn = amount;
-        }
-
-        (swapConfig.minAmountOut, swapConfig.pool, swapConfig.zeroForOne) =
-            _pickPoolAndQuote(metadata, projectId, swapConfig.tokenIn);
-
         // Get a reference to the project's primary terminal for `token`.
         IJBTerminal terminal =
             DIRECTORY.primaryTerminalOf(projectId, OUT_IS_NATIVE_TOKEN ? JBConstants.NATIVE_TOKEN : TOKEN_OUT);
@@ -357,25 +340,11 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         // Revert if the project does not have a primary terminal for `token`.
         if (address(terminal) == address(0)) revert TOKEN_NOT_ACCEPTED();
 
-        // Accept funds for the swap.
-        swapConfig.amountIn = _acceptFundsFor(swapConfig, metadata);
-
-        // Swap. The callback will ensure that we're within the intended slippage tolerance.
-        uint256 receivedFromSwap;
-
-        // If the token in is the same as the token out, don't swap, just call the next terminal
-        if ((swapConfig.inIsNativeToken && OUT_IS_NATIVE_TOKEN) || (swapConfig.tokenIn == TOKEN_OUT)) {
-            receivedFromSwap = swapConfig.amountIn;
-        } else {
-            receivedFromSwap = _swap(swapConfig);
-        }
-
-        // Trigger the `beforeTransferFor` hook.
-        _beforeTransferFor(address(terminal), TOKEN_OUT, receivedFromSwap);
+        uint256 receivedFromSwap = _handleTokenTransfersAndSwap(projectId, token, amount, address(terminal), metadata);
 
         // Pay the primary terminal, passing along the beneficiary and other arguments.
         terminal.pay{value: OUT_IS_NATIVE_TOKEN ? receivedFromSwap : 0}(
-            swapConfig.projectId,
+            projectId,
             OUT_IS_NATIVE_TOKEN ? JBConstants.NATIVE_TOKEN : TOKEN_OUT,
             receivedFromSwap,
             beneficiary,
@@ -385,6 +354,46 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         );
 
         return receivedFromSwap;
+    }
+
+    /// @notice Accepts funds for a given project, swaps them if necessary, and adds them to the project's balance in the specified terminal.
+    /// @dev This function handles the token in transfer, potentially swaps the tokens to the desired output token, and then adds the swapped tokens to the project's balance in the specified terminal.
+    /// @param projectId The ID of the project for which funds are being accepted and added to its balance.
+    /// @param token The address of the token being paid in.
+    /// @param amount The amount of tokens being paid in.
+    /// @param shouldReturnHeldFees A boolean to indicate whether held fees should be returned.
+    /// @param memo A memo to pass along to the emitted event.
+    /// @param metadata Bytes in `JBMetadataResolver`'s format which can contain additional data for the swap and adding to balance.
+    function addToBalanceOf(
+        uint256 projectId,
+        address token,
+        uint256 amount,
+        bool shouldReturnHeldFees,
+        string calldata memo,
+        bytes calldata metadata
+    )
+        external
+        payable
+        override
+    {
+        // Get a reference to the project's primary terminal for `token`.
+        IJBTerminal terminal =
+            DIRECTORY.primaryTerminalOf(projectId, OUT_IS_NATIVE_TOKEN ? JBConstants.NATIVE_TOKEN : TOKEN_OUT);
+
+        // Revert if the project does not have a primary terminal for `token`.
+        if (address(terminal) == address(0)) revert TOKEN_NOT_ACCEPTED();
+
+        uint256 receivedFromSwap = _handleTokenTransfersAndSwap(projectId, token, amount, address(terminal), metadata);
+
+        // Pay the primary terminal, passing along the beneficiary and other arguments.
+        terminal.addToBalanceOf{value: OUT_IS_NATIVE_TOKEN ? receivedFromSwap : 0}(
+            projectId,
+            OUT_IS_NATIVE_TOKEN ? JBConstants.NATIVE_TOKEN : TOKEN_OUT,
+            receivedFromSwap,
+            shouldReturnHeldFees,
+            memo,
+            metadata
+        );
     }
 
     /// @notice The Uniswap v3 pool callback where the token transfer is expected to happen.
@@ -413,23 +422,6 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// @dev Native tokens should only be sent to this terminal when being unwrapped from a swap.
     receive() external payable {
         if (msg.sender != address(WETH)) revert NO_MSG_VALUE_ALLOWED();
-    }
-
-    /// @notice This terminal does not support adding to balances.
-    function addToBalanceOf(
-        uint256,
-        address,
-        uint256,
-        bool,
-        string calldata,
-        bytes calldata
-    )
-        external
-        payable
-        virtual
-        override
-    {
-        revert UNSUPPORTED();
     }
 
     /// @notice Set a project's default pool and accounting context for the specified token. Only the project's owner,
@@ -495,6 +487,46 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     //*********************************************************************//
     // ---------------------- internal transactions ---------------------- //
     //*********************************************************************//
+
+    /// @notice Handles token transfers and swaps for a given project.
+    /// @dev This function is responsible for transferring tokens from the sender to this terminal and performing a swap.
+    /// @param projectId The ID of the project for which tokens are being transferred and possibly swapped.
+    /// @param token The address of the token coming to this terminal.
+    /// @param nextTerminal The address of the next terminal to which the swapped tokens will be sent.
+    /// @param metadata Additional data to be used in the swap.
+    /// @return amountToSend The amount of tokens to send after the swap, to the next terminal
+    function _handleTokenTransfersAndSwap(uint256 projectId, address token, uint256 amount, address nextTerminal, bytes calldata metadata) internal returns(uint256 amountToSend) {
+        SwapConfig memory swapConfig;
+        swapConfig.projectId = projectId;
+
+        if (token == JBConstants.NATIVE_TOKEN) {
+            // If the token being paid in is the native token, use `msg.value`.
+            swapConfig.tokenIn = address(WETH);
+            swapConfig.inIsNativeToken = true;
+            swapConfig.amountIn = msg.value;
+        } else {
+            // Otherwise, use `amount`.
+            swapConfig.tokenIn = token;
+            swapConfig.amountIn = amount;
+        }
+
+        (swapConfig.minAmountOut, swapConfig.pool, swapConfig.zeroForOne) =
+            _pickPoolAndQuote(metadata, projectId, swapConfig.tokenIn);
+
+        // Accept funds for the swap.
+        swapConfig.amountIn = _acceptFundsFor(swapConfig, metadata);
+
+        // Swap. The callback will ensure that we're within the intended slippage tolerance.
+        // If the token in is the same as the token out, don't swap, just call the next terminal
+        if ((swapConfig.inIsNativeToken && OUT_IS_NATIVE_TOKEN) || (swapConfig.tokenIn == TOKEN_OUT)) {
+            amountToSend = swapConfig.amountIn;
+        } else {
+            amountToSend = _swap(swapConfig);
+        }
+
+        // Trigger the `beforeTransferFor` hook.
+        _beforeTransferFor(nextTerminal, TOKEN_OUT, amountToSend);
+    }
 
     function _pickPoolAndQuote(
         bytes calldata metadata,
