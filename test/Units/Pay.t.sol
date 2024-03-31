@@ -26,9 +26,10 @@ contract Pay is UnitFixture {
         caller = makeAddr("caller");
         beneficiary = makeAddr("beneficiary");
         tokenIn = makeAddr("tokenIn");
-        tokenOut = makeAddr("tokenOut");
         pool = IUniswapV3Pool(makeAddr("pool"));
         nextTerminal = makeAddr("nextTerminal");
+
+        tokenOut = swapTerminal.tokenOut();
     }
 
     function test_PayWhenTokenInIsTheNativeToken(uint256 msgValue, uint256 amountIn, uint256 amountOut) public {
@@ -36,7 +37,7 @@ contract Pay is UnitFixture {
 
         tokenIn = JBConstants.NATIVE_TOKEN;
 
-        bytes memory quoteMetadata = _createMetadata("SWAP", abi.encode(amountOut, pool, tokenOut));
+        bytes memory quoteMetadata = _createMetadata("SWAP", abi.encode(amountOut, pool, tokenIn < tokenOut));
 
         // Mock the swap - this is where we make most of the tests
         mockExpectCall(
@@ -92,7 +93,6 @@ contract Pay is UnitFixture {
     }
 
     modifier whenTokenInIsAnErc20Token() {
-        tokenIn = makeAddr("tokenIn");
         _;
     }
 
@@ -100,7 +100,7 @@ contract Pay is UnitFixture {
         // Should transfer the token in from the caller to the swap terminal
         mockExpectTransferFrom(caller, address(swapTerminal), tokenIn, amountIn);
 
-        bytes memory quoteMetadata = _createMetadata("SWAP", abi.encode(amountOut, pool, tokenOut));
+        bytes memory quoteMetadata = _createMetadata("SWAP", abi.encode(amountOut, pool,  tokenIn < tokenOut));
 
         // Mock the swap - this is where we make most of the tests
         mockExpectCall(
@@ -164,7 +164,7 @@ contract Pay is UnitFixture {
         msgValue = bound(msgValue, 1, type(uint256).max);
         vm.deal(caller, msgValue);
 
-        bytes memory quoteMetadata = _createMetadata("SWAP", abi.encode(amountOut, pool, tokenOut));
+        bytes memory quoteMetadata = _createMetadata("SWAP", abi.encode(amountOut, pool,  tokenIn < tokenOut));
 
         mockExpectCall(
             address(mockJBDirectory),
@@ -214,7 +214,7 @@ contract Pay is UnitFixture {
         amountIn = bound(amountIn, 1, type(uint160).max);
 
         // add the permit2 data to the metadata
-        bytes memory payMetadata = _createMetadata("SWAP", abi.encode(amountOut, pool, tokenOut));
+        bytes memory payMetadata = _createMetadata("SWAP", abi.encode(amountOut, pool, tokenIn < tokenOut));
 
         JBSingleAllowanceContext memory context = JBSingleAllowanceContext({
             sigDeadline: 0,
@@ -328,7 +328,7 @@ contract Pay is UnitFixture {
         vm.assume(amountIn > 0);
 
         // add the permit2 data to the metadata
-        bytes memory payMetadata = _createMetadata("SWAP", abi.encode(amountOut, pool, tokenOut));
+        bytes memory payMetadata = _createMetadata("SWAP", abi.encode(amountOut, pool, tokenIn < tokenOut));
 
         JBSingleAllowanceContext memory context = JBSingleAllowanceContext({
             sigDeadline: 0,
@@ -381,7 +381,7 @@ contract Pay is UnitFixture {
     }
 
     function test_PayRevertWhen_TheAmountReceivedIsLessThanTheAmountOutMin(
-        uint256 msgValue,
+        uint256 amountIn,
         uint256 minAmountOut,
         uint256 amountReceived
     )
@@ -390,11 +390,13 @@ contract Pay is UnitFixture {
     {
         minAmountOut = bound(minAmountOut, 1, type(uint256).max);
         amountReceived = bound(amountReceived, 0, minAmountOut - 1);
-        vm.deal(caller, msgValue);
 
-        tokenIn = JBConstants.NATIVE_TOKEN;
+        vm.assume(amountIn > 0);
 
-        bytes memory quoteMetadata = _createMetadata("SWAP", abi.encode(minAmountOut, pool, tokenOut));
+
+        bytes memory quoteMetadata = _createMetadata("SWAP", abi.encode(minAmountOut, pool, tokenIn < tokenOut));
+
+        mockExpectTransferFrom(caller, address(swapTerminal), tokenIn, amountIn);
 
         // Mock the swap - this is where we make most of the tests
         mockExpectCall(
@@ -403,20 +405,20 @@ contract Pay is UnitFixture {
                 IUniswapV3PoolActions.swap,
                 (
                     address(swapTerminal),
-                    address(mockWETH) < tokenOut,
-                    // it should use msg value as amountIn
-                    int256(msgValue),
-                    address(mockWETH) < tokenOut ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1,
-                    // it should use weth as tokenIn
-                    // it should set inIsNativeToken to true
-                    abi.encode(mockWETH, true)
+                    tokenIn < address(mockWETH),
+                    // it should amountIn
+                    int256(amountIn),
+                    tokenIn < address(mockWETH) ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1,
+                    // it should use tokenIn
+                    // it should set inIsNativeToken to false
+                    abi.encode(tokenIn, false)
                 )
             ),
             // 0 for 1 => amount0 is the token in (positive), amount1 is the token out (negative/owed to the pool), and
             // vice versa
-            address(mockWETH) < tokenOut
-                ? abi.encode(msgValue, -int256(amountReceived))
-                : abi.encode(-int256(amountReceived), msgValue)
+            address(tokenIn) < address(mockWETH)
+                ? abi.encode(amountIn, -int256(amountReceived))
+                : abi.encode(-int256(amountReceived), amountIn)
         );
 
         mockExpectCall(
@@ -429,10 +431,10 @@ contract Pay is UnitFixture {
         vm.expectRevert(abi.encodeWithSelector(JBSwapTerminal.MAX_SLIPPAGE.selector, amountReceived, minAmountOut));
 
         vm.prank(caller);
-        swapTerminal.pay{value: msgValue}({
+        swapTerminal.pay({
             projectId: projectId,
             token: tokenIn,
-            amount: 0, // should be discarded
+            amount: amountIn, 
             beneficiary: beneficiary,
             minReturnedTokens: amountReceived,
             memo: "",
@@ -576,7 +578,7 @@ contract Pay is UnitFixture {
         // Should transfer the token in from the caller to the swap terminal
         mockExpectTransferFrom(caller, address(swapTerminal), tokenIn, amountIn);
 
-        bytes memory quoteMetadata = _createMetadata("SWAP", abi.encode(amountOut, pool, tokenOut));
+        bytes memory quoteMetadata = _createMetadata("SWAP", abi.encode(amountOut, pool, tokenIn < tokenOut));
 
         // Mock the swap - this is where we make most of the tests
         mockExpectCall(

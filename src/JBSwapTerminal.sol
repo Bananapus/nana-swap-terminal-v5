@@ -109,13 +109,6 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     // ---------------- public immutable stored properties --------------- //
     //*********************************************************************//
 
-    /// @notice The token which flows out of this terminal (JBConstants.NATIVE_TOKEN for the chain native token)
-    address public immutable TOKEN_OUT;
-
-    /// @notice A flag indicating if the token out is the chain native token (eth on mainnet for instance)
-    /// @dev    If so, the token out should be unwrapped before being sent to the next terminal
-    bool public immutable OUT_IS_NATIVE_TOKEN;
-
     /// @notice Mints ERC-721s that represent project ownership and transfers.
     IJBProjects public immutable PROJECTS;
 
@@ -133,8 +126,26 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     IWETH9 public immutable WETH;
 
     //*********************************************************************//
+    // --------------- internal immutable stored properties -------------- //
+    //*********************************************************************//
+
+    /// @notice The token which flows out of this terminal (JBConstants.NATIVE_TOKEN for the chain native token)
+    address internal immutable TOKEN_OUT;
+
+    /// @notice A flag indicating if the token out is the chain native token (eth on mainnet for instance)
+    /// @dev    If so, the token out should be unwrapped before being sent to the next terminal
+    bool internal immutable OUT_IS_NATIVE_TOKEN;
+
+    //*********************************************************************//
     // ------------------------- external views -------------------------- //
     //*********************************************************************//
+
+    /// @notice Returns the token that flows out of this terminal.
+    /// @dev If the token out is the chain native token (ETH on mainnet), JBConstants NATIVE_TOKEN is returned
+    /// @return The token that flows out of this terminal.
+    function tokenOut() external view returns (address) {
+        return OUT_IS_NATIVE_TOKEN ? JBConstants.NATIVE_TOKEN : TOKEN_OUT;
+    }
 
     /// @notice Returns the default pool for a given project and token or, if a project has no default pool for the
     ///         token, the overal default pool for the token
@@ -269,7 +280,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         IPermit2 permit2,
         address _owner,
         IWETH9 weth,
-        address tokenOut
+        address _tokenOut
     )
         JBPermissioned(permissions)
         Ownable(_owner)
@@ -279,11 +290,11 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         PERMIT2 = permit2;
         WETH = weth;
 
-        if (tokenOut == JBConstants.NATIVE_TOKEN) {
+        if (_tokenOut == JBConstants.NATIVE_TOKEN) {
             OUT_IS_NATIVE_TOKEN = true;
             TOKEN_OUT = address(weth);
         } else {
-            TOKEN_OUT = tokenOut;
+            TOKEN_OUT = _tokenOut;
         }
     }
 

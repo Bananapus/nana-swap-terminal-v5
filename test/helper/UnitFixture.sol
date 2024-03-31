@@ -30,7 +30,7 @@ contract UnitFixture is Test {
 
         // -- deploy the swap terminal --
         swapTerminal =
-            new JBSwapTerminal(mockJBProjects, mockJBPermissions, mockJBDirectory, mockPermit2, terminalOwner, mockWETH, address(mockWETH));
+            new JBSwapTerminal(mockJBProjects, mockJBPermissions, mockJBDirectory, mockPermit2, terminalOwner, mockWETH, JBConstants.NATIVE_TOKEN);
 
         
     }

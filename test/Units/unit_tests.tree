@@ -32,12 +32,12 @@ JBSwapTerminal::pay // branch coverage
 │   ├── it should get a twap and compute a min amount
 │   └── when the amount received is less than the twap amountOutMin
 │       └── it should revert
-├── when the other pool token is the native token
+├── when the token out is the native token
 │   ├── it should use weth as tokenOut
 │   ├── it should set outIsNativeToken to true
 │   ├── it should unwrap the tokenOut after swapping
 │   └── it should use the native token for the next terminal pay()
-├── when the tokenOut is an erc20 token
+├── when the token out is an erc20 token
 │   ├── it should use tokenOut as tokenOut
 │   ├── it should set outIsNativeToken to false
 │   ├── it should set the correct approval

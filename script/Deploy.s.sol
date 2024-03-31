@@ -96,7 +96,7 @@ contract DeployScript is Script, Sphinx {
             permit2: permit2,
             _owner: address(manager),
             weth: IWETH9(weth),
-            tokenOut: JBConstants.NATIVE_TOKEN
+            _tokenOut: JBConstants.NATIVE_TOKEN
         });
     }
 
