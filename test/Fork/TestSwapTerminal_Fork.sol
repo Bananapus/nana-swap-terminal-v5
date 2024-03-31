@@ -268,6 +268,53 @@ contract TestSwapTerminal_Fork is Test {
         );
     }
 
+    /// @notice Test paying a swap terminal in UNI to contribute to JuiceboxDAO project (in the eth terminal), using
+    /// metadata
+    /// @dev    Quote at the forked block 5022528 : 1 UNI = 1.33649 ETH with max slippage suggested (uni sdk): 0.5%
+    function testAddToBalanceOfUniSwapEthPayEth(uint256 _amountIn) external {
+        _amountIn = bound(_amountIn, 1 ether, 100 ether);
+
+        deal(address(UNI), address(_sender), _amountIn);
+
+        uint256 _initialTerminalBalance =
+            _terminalStore.balanceOf(address(_projectTerminal), _projectId, JBConstants.NATIVE_TOKEN);
+        uint256 _initialBeneficiaryBalance = _tokens.totalBalanceOf(_beneficiary, _projectId);
+
+        uint256 _minAmountOut = _uniswapV3ForgeQuoter.getAmountOut(POOL, _amountIn, address(UNI));
+
+        vm.prank(_projectOwner);
+        _swapTerminal.addDefaultPool(_projectId, address(UNI), POOL);
+
+        // Build the metadata using the minimum amount out, the pool address and if it's a zero to one swap
+        bytes[] memory _data = new bytes[](1);
+        _data[0] = abi.encode(_minAmountOut, address(POOL), address(UNI) < address(WETH));
+
+        bytes4[] memory _ids = new bytes4[](1);
+        _ids[0] = bytes4("SWAP");
+
+        bytes memory _metadata = _metadataResolver.createMetadata(_ids, _data);
+
+        // Approve the transfer
+        vm.startPrank(_sender);
+        UNI.approve(address(_swapTerminal), _amountIn);
+
+        // Make a payment.
+        _swapTerminal.addToBalanceOf({
+            projectId: _projectId,
+            amount: _amountIn,
+            token: address(UNI),
+            shouldReturnHeldFees: false,
+            memo: "Take my money!",
+            metadata: _metadata
+        });
+
+        // Make sure the native token balance in terminal is up to date.
+        uint256 _terminalBalance = _minAmountOut + _initialTerminalBalance;
+        assertEq(
+            _terminalStore.balanceOf(address(_projectTerminal), _projectId, JBConstants.NATIVE_TOKEN), _terminalBalance
+        );
+    }
+
     /// @notice Test setting a new pool for a project using the protocol owner address or the project owner address
     function testProtocolOwnerSetsNewPool() external {
         vm.prank(_swapTerminal.owner());
