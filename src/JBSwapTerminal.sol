@@ -356,14 +356,17 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         return receivedFromSwap;
     }
 
-    /// @notice Accepts funds for a given project, swaps them if necessary, and adds them to the project's balance in the specified terminal.
-    /// @dev This function handles the token in transfer, potentially swaps the tokens to the desired output token, and then adds the swapped tokens to the project's balance in the specified terminal.
+    /// @notice Accepts funds for a given project, swaps them if necessary, and adds them to the project's balance in
+    /// the specified terminal.
+    /// @dev This function handles the token in transfer, potentially swaps the tokens to the desired output token, and
+    /// then adds the swapped tokens to the project's balance in the specified terminal.
     /// @param projectId The ID of the project for which funds are being accepted and added to its balance.
     /// @param token The address of the token being paid in.
     /// @param amount The amount of tokens being paid in.
     /// @param shouldReturnHeldFees A boolean to indicate whether held fees should be returned.
     /// @param memo A memo to pass along to the emitted event.
-    /// @param metadata Bytes in `JBMetadataResolver`'s format which can contain additional data for the swap and adding to balance.
+    /// @param metadata Bytes in `JBMetadataResolver`'s format which can contain additional data for the swap and adding
+    /// to balance.
     function addToBalanceOf(
         uint256 projectId,
         address token,
@@ -489,13 +492,23 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     //*********************************************************************//
 
     /// @notice Handles token transfers and swaps for a given project.
-    /// @dev This function is responsible for transferring tokens from the sender to this terminal and performing a swap.
+    /// @dev This function is responsible for transferring tokens from the sender to this terminal and performing a
+    /// swap.
     /// @param projectId The ID of the project for which tokens are being transferred and possibly swapped.
     /// @param token The address of the token coming to this terminal.
     /// @param nextTerminal The address of the next terminal to which the swapped tokens will be sent.
     /// @param metadata Additional data to be used in the swap.
     /// @return amountToSend The amount of tokens to send after the swap, to the next terminal
-    function _handleTokenTransfersAndSwap(uint256 projectId, address token, uint256 amount, address nextTerminal, bytes calldata metadata) internal returns(uint256 amountToSend) {
+    function _handleTokenTransfersAndSwap(
+        uint256 projectId,
+        address token,
+        uint256 amount,
+        address nextTerminal,
+        bytes calldata metadata
+    )
+        internal
+        returns (uint256 amountToSend)
+    {
         SwapConfig memory swapConfig;
         swapConfig.projectId = projectId;
 
