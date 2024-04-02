@@ -6,5 +6,7 @@ import "forge-std/Test.sol";
 contract EmptyTest_Unit is Test {
     function setUp() public {}
 
-    function testTest() public {}
+    function testTest() public {
+        vm.skip(true);
+    }
 }
