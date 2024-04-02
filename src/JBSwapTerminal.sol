@@ -443,7 +443,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         // pool for its project.
         if (!(projectId == 0 && msg.sender == owner())) {
             _requirePermissionFrom(
-                PROJECTS.ownerOf(projectId), projectId, JBPermissionIds.MODIFY_DEFAULT_SWAP_TERMINAL_POOL
+                PROJECTS.ownerOf(projectId), projectId, JBPermissionIds.ADD_SWAP_TERMINAL_POOL
             );
         }
 
@@ -481,7 +481,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         // params for its project.
         if (!(projectId == 0 && msg.sender == owner())) {
             _requirePermissionFrom(
-                PROJECTS.ownerOf(projectId), projectId, JBPermissionIds.MODIFY_SWAP_TERMINAL_TWAP_PARAMS
+                PROJECTS.ownerOf(projectId), projectId, JBPermissionIds.ADD_SWAP_TERMINAL_TWAP_PARAMS
             );
         }
 

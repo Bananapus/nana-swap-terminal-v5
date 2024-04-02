@@ -6,6 +6,9 @@
     "type": "git",
     "url": "git+https://github.com/Bananapus/nana-swap-terminal"
   },
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "test": "forge test",
     "test:fork": "FOUNDRY_PROFILE=CI forge test",
@@ -15,8 +18,8 @@
     "artifacts": "source ./.env && npx sphinx artifacts --org-id 'cltepuu9u0003j58rjtbd0hvu' --project-name 'nana-swap-terminal'"
   },
   "dependencies": {
-    "@bananapus/core": "^0.0.7",
-    "@bananapus/permission-ids": "^0.0.2",
+    "@bananapus/core": "^0.0.8",
+    "@bananapus/permission-ids": "^0.0.5",
     "@exhausted-pigeon/uniswap-v3-foundry-pool": "github:exhausted-pigeon-srl/uniswap-v3-foundry-pool",
     "@exhausted-pigeon/uniswap-v3-foundry-quote": "github:exhausted-pigeon-srl/uniswap-v3-foundry-quote",
     "@openzeppelin/contracts": "^5.0.1",

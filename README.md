@@ -8,23 +8,25 @@ _If you're having trouble understanding this contract, take a look at the [core 
 
 ## Install
 
-For `npm` projects (recommended):
+How to install `nana-swap-terminal` in another project.
+
+For projects using `npm` to manage dependencies (recommended):
 
 ```bash
 npm install @bananapus/swap-terminal
 ```
 
-For `forge` projects (not recommended):
+For projects using `forge` to manage dependencies (not recommended):
 
 ```bash
 forge install Bananapus/nana-swap-terminal
 ```
 
-Add `@bananapus/swap-terminal/=lib/nana-swap-terminal/` to `remappings.txt`. You'll also need to install `nana-swap-terminal`'s dependencies and add similar remappings for them.
+If you're using `forge` to manage dependencies, add `@bananapus/swap-terminal/=lib/nana-swap-terminal/` to `remappings.txt`. You'll also need to install `nana-swap-terminal`'s dependencies and add similar remappings for them.
 
 ## Develop
 
-`nana-swap-terminal` uses [npm](https://www.npmjs.com/) for package management and the [Foundry](https://github.com/foundry-rs/foundry) development toolchain for builds, tests, and deployments. To get set up, [install Node.js](https://nodejs.org/en/download) and install [Foundry](https://github.com/foundry-rs/foundry):
+`nana-swap-terminal` uses [npm](https://www.npmjs.com/) (version >=20.0.0) for package management and the [Foundry](https://github.com/foundry-rs/foundry) development toolchain for builds, tests, and deployments. To get set up, [install Node.js](https://nodejs.org/en/download) and install [Foundry](https://github.com/foundry-rs/foundry):
 
 ```bash
 curl -L https://foundry.paradigm.xyz | sh
@@ -33,7 +35,7 @@ curl -L https://foundry.paradigm.xyz | sh
 You can download and install dependencies with:
 
 ```bash
-npm install && forge install
+npm ci && forge install
 ```
 
 If you run into trouble with `forge install`, try using `git submodule update --init --recursive` to ensure that nested submodules have been properly initialized.
@@ -70,6 +72,6 @@ For convenience, several utility commands are available in `package.json`.
 
 ## Terminals
 
-Juicebox projects can accept funds through one or more *terminals*, which can manage both inflows (via payments) and outflows (via redemptions). Terminals usually only accept one token for payments, but if a project has a swap terminal, the swap terminal can accept any token and swap it for tokens which the project *can* accept. After swapping, it redirects the payment to the primary terminal for the token it received.
+Juicebox projects can accept funds through one or more _terminals_, which can manage both inflows (via payments) and outflows (via redemptions). Terminals usually only accept one token for payments, but if a project has a swap terminal, the swap terminal can accept any token and swap it for tokens which the project _can_ accept. After swapping, it redirects the payment to the primary terminal for the token it received.
 
 A project can set its terminals (and primary terminals) in the `JBDirectory` contract.
