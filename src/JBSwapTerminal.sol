@@ -168,7 +168,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         (pool, zeroForOne) = (poolConfig.pool, poolConfig.zeroForOne);
 
         if (address(pool) == address(0)) {
-            poolConfig = _poolFor[0][tokenIn];
+            poolConfig = _poolFor[DEFAULT_PROJECT_ID][tokenIn];
             (pool, zeroForOne) = (poolConfig.pool, poolConfig.zeroForOne);
         }
     }
@@ -220,7 +220,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
             }
 
             if (!skip) {
-                contexts[actualLength] = _accountingContextFor[0][genericTokenContexts[i]];
+                contexts[actualLength] = _accountingContextFor[DEFAULT_PROJECT_ID][genericTokenContexts[i]];
                 actualLength++;
             }
         }
@@ -258,7 +258,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         uint256 twapParams = _twapParamsOf[projectId][pool];
 
         if (twapParams == 0) {
-            twapParams = _twapParamsOf[0][pool];
+            twapParams = _twapParamsOf[DEFAULT_PROJECT_ID][pool];
         }
 
         return (uint32(twapParams), uint160(twapParams >> 32));
@@ -569,7 +569,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
 
                 // If this project doesn't have a default pool specified for this token, try using a generic one.
                 if (address(pool) == address(0)) {
-                    poolConfig = _poolFor[0][token];
+                    poolConfig = _poolFor[DEFAULT_PROJECT_ID][token];
                     (pool, zeroForOne) = (poolConfig.pool, poolConfig.zeroForOne);
 
                     // If there's no default pool neither, revert.
