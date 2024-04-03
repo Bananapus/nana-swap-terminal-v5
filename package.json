@@ -1,10 +1,13 @@
 {
   "name": "@bananapus/swap-terminal",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Bananapus/nana-swap-terminal"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   },
   "scripts": {
     "test": "forge test",
@@ -15,14 +18,16 @@
     "artifacts": "source ./.env && npx sphinx artifacts --org-id 'cltepuu9u0003j58rjtbd0hvu' --project-name 'nana-swap-terminal'"
   },
   "dependencies": {
-    "@bananapus/core": "^0.0.7",
-    "@bananapus/permission-ids": "^0.0.2",
+    "@bananapus/core": "^0.0.8",
+    "@bananapus/permission-ids": "^0.0.5",
     "@exhausted-pigeon/uniswap-v3-foundry-pool": "github:exhausted-pigeon-srl/uniswap-v3-foundry-pool",
     "@exhausted-pigeon/uniswap-v3-foundry-quote": "github:exhausted-pigeon-srl/uniswap-v3-foundry-quote",
     "@openzeppelin/contracts": "^5.0.1",
-    "@sphinx-labs/plugins": "^0.30.6",
     "@uniswap/permit2": "github:Uniswap/permit2",
     "@uniswap/v3-core": "github:Uniswap/v3-core#0.8",
     "@uniswap/v3-periphery": "github:Uniswap/v3-periphery#0.8"
+  },
+  "devDependencies": {
+    "@sphinx-labs/plugins": "^0.30.6"
   }
 }
