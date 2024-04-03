@@ -11,8 +11,8 @@ import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Po
 import {OracleLibrary} from "@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol";
 import {TickMath} from "@uniswap/v3-core/contracts/libraries/TickMath.sol";
 import {IUniswapV3SwapCallback} from "@uniswap/v3-core/contracts/interfaces/callback/IUniswapV3SwapCallback.sol";
-import {IJBTerminal} from "@bananapus/core/src/interfaces/terminal/IJBTerminal.sol";
-import {IJBPermitTerminal} from "@bananapus/core/src/interfaces/terminal/IJBPermitTerminal.sol";
+import {IJBTerminal} from "@bananapus/core/src/interfaces/IJBTerminal.sol";
+import {IJBPermitTerminal} from "@bananapus/core/src/interfaces/IJBPermitTerminal.sol";
 import {IJBDirectory} from "@bananapus/core/src/interfaces/IJBDirectory.sol";
 import {IJBPermissions} from "@bananapus/core/src/interfaces/IJBPermissions.sol";
 import {IJBProjects} from "@bananapus/core/src/interfaces/IJBProjects.sol";
