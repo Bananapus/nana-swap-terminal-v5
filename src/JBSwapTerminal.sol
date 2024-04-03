@@ -441,9 +441,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         // Only the project owner can set the default pool for a token, only the project owner can set the
         // pool for its project.
         if (!(projectId == DEFAULT_PROJECT_ID && msg.sender == owner())) {
-            _requirePermissionFrom(
-                PROJECTS.ownerOf(projectId), projectId, JBPermissionIds.ADD_SWAP_TERMINAL_POOL
-            );
+            _requirePermissionFrom(PROJECTS.ownerOf(projectId), projectId, JBPermissionIds.ADD_SWAP_TERMINAL_POOL);
         }
 
         // Update the project's default pool for the token.
