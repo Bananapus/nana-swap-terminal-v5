@@ -554,7 +554,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     {
         {
             // Check for a quote passed in by the user/client.
-            (bool exists, bytes memory quote) = JBMetadataResolver.getDataFor(bytes4("SWAP"), metadata);
+            (bool exists, bytes memory quote) = JBMetadataResolver.getDataFor(bytes4(bytes20(address(this))) >> 1, metadata);
 
             if (exists) {
                 // If there is a quote, use it for the swap config.
@@ -615,7 +615,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
 
         // Unpack the `JBSingleAllowanceContext` to use given by the frontend.
         (bool exists, bytes memory rawAllowance) =
-            JBMetadataResolver.getDataFor(bytes4(uint32(uint160(address(this)))), metadata);
+            JBMetadataResolver.getDataFor(bytes4(bytes20(address(this))), metadata);
 
         // If the metadata contained permit data, use it to set the allowance.
         if (exists) {
