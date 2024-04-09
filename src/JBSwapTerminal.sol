@@ -33,6 +33,7 @@ import {IWETH9} from "./interfaces/IWETH9.sol";
 /// @dev To prevent excessive slippage, the user/client can specify a minimum quote and a pool to use in their payment's
 /// metadata using the `JBMetadataResolver` format. If they don't, a quote is calculated for them based on the TWAP
 /// oracle for the project's default pool for that token (set by the project's owner).
+/// @custom:metadata-id-used quoteForSwap and permit2
 /// @custom:benediction DEVS BENEDICAT ET PROTEGAT CONTRACTVS MEAM
 contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTerminal, IUniswapV3SwapCallback {
     // A library that adds default safety checks to ERC20 functionality.
@@ -554,7 +555,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     {
         {
             // Check for a quote passed in by the user/client.
-            (bool exists, bytes memory quote) = JBMetadataResolver.getDataFor(bytes4(bytes20(address(this))) >> 1, metadata);
+            (bool exists, bytes memory quote) = JBMetadataResolver.getDataFor(JBMetadataResolver.getId("quoteForSwap"), metadata);
 
             if (exists) {
                 // If there is a quote, use it for the swap config.
@@ -615,7 +616,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
 
         // Unpack the `JBSingleAllowanceContext` to use given by the frontend.
         (bool exists, bytes memory rawAllowance) =
-            JBMetadataResolver.getDataFor(bytes4(bytes20(address(this))), metadata);
+            JBMetadataResolver.getDataFor(JBMetadataResolver.getId("permit2"), metadata);
 
         // If the metadata contained permit data, use it to set the allowance.
         if (exists) {

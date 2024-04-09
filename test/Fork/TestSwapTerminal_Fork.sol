@@ -168,7 +168,7 @@ contract TestSwapTerminal_Fork is Test {
         _data[0] = abi.encode(_minAmountOut, address(POOL), address(UNI) < address(WETH));
 
         bytes4[] memory _ids = new bytes4[](1);
-        _ids[0] = bytes4(bytes20(address(_swapTerminal))) >> 1;
+        _ids[0] = _metadataResolver.getId("quoteForSwap", address(_swapTerminal));
 
         bytes memory _metadata = _metadataResolver.createMetadata(_ids, _data);
 
@@ -229,7 +229,7 @@ contract TestSwapTerminal_Fork is Test {
             abi.encode(_minAmountOut, address(_otherTokenPool), address(_otherTokenIn) < JBConstants.NATIVE_TOKEN);
 
         bytes4[] memory _ids = new bytes4[](1);
-        _ids[0] = bytes4(bytes20(address(_swapTerminal))) >> 1;
+        _ids[0] = _metadataResolver.getId("quoteForSwap", address(_swapTerminal));
 
         bytes memory _metadata = _metadataResolver.createMetadata(_ids, _data);
 
@@ -289,7 +289,7 @@ contract TestSwapTerminal_Fork is Test {
         _data[0] = abi.encode(_minAmountOut, address(POOL), address(UNI) < address(WETH));
 
         bytes4[] memory _ids = new bytes4[](1);
-        _ids[0] = bytes4(bytes20(address(_swapTerminal))) >> 1;
+        _ids[0] = _metadataResolver.getId("quoteForSwap", address(_swapTerminal));
 
         bytes memory _metadata = _metadataResolver.createMetadata(_ids, _data);
 
