@@ -555,7 +555,8 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     {
         {
             // Check for a quote passed in by the user/client.
-            (bool exists, bytes memory quote) = JBMetadataResolver.getDataFor(JBMetadataResolver.getId("quoteForSwap"), metadata);
+            (bool exists, bytes memory quote) =
+                JBMetadataResolver.getDataFor(JBMetadataResolver.getId("quoteForSwap"), metadata);
 
             if (exists) {
                 // If there is a quote, use it for the swap config.
