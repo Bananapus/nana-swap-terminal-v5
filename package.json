@@ -18,7 +18,7 @@
     "artifacts": "source ./.env && npx sphinx artifacts --org-id 'cltepuu9u0003j58rjtbd0hvu' --project-name 'nana-swap-terminal'"
   },
   "dependencies": {
-    "@bananapus/core": "^0.0.9",
+    "@bananapus/core": "^0.0.11",
     "@bananapus/permission-ids": "^0.0.5",
     "@exhausted-pigeon/uniswap-v3-foundry-pool": "github:exhausted-pigeon-srl/uniswap-v3-foundry-pool",
     "@exhausted-pigeon/uniswap-v3-foundry-quote": "github:exhausted-pigeon-srl/uniswap-v3-foundry-quote",
@@ -28,6 +28,6 @@
     "@uniswap/v3-periphery": "github:Uniswap/v3-periphery#0.8"
   },
   "devDependencies": {
-    "@sphinx-labs/plugins": "^0.30.12"
+    "@sphinx-labs/plugins": "^0.31.2"
   }
 }
