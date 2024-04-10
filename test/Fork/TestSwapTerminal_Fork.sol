@@ -129,7 +129,7 @@ contract TestSwapTerminal_Fork is Test {
         _poolTestHelper = new PoolTestHelper();
         vm.label(address(_poolTestHelper), "poolTestHelper");
 
-        deployCodeTo("MockERC20.sol", abi.encode("token", "token", uint8(18)), address(_otherTokenIn));
+        deployCodeTo("test/helper/MockERC20.sol:MockERC20", abi.encode("token", "token", uint8(18)), address(_otherTokenIn));
         vm.label(address(_otherTokenIn), "_otherTokenIn");
 
         _otherTokenPool = IUniswapV3Pool(

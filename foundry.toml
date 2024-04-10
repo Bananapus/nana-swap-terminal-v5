@@ -12,7 +12,6 @@ libs = ["node_modules", "lib"]
 build_info = true
 extra_output = ['storageLayout']
 fs_permissions = [{ access = "read-write", path = "./"}]
-unchecked_cheatcode_artifacts = true
 
 [rpc_endpoints]
 ethereum ="${RPC_ETHEREUM_MAINNET}"
