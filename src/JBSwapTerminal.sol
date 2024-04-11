@@ -501,7 +501,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         SwapConfig memory swapConfig;
         swapConfig.projectId = projectId;
 
-        if (OUT_IS_NATIVE_TOKEN) {
+        if (token == JBConstants.NATIVE_TOKEN) {
             // If the token being paid in is the native token, use `msg.value`.
             swapConfig.tokenIn = address(WETH);
             swapConfig.inIsNativeToken = true;
