@@ -134,6 +134,14 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     address public immutable TOKEN_OUT;
 
     //*********************************************************************//
+    // --------------- internal immutable stored properties -------------- //
+    //*********************************************************************//
+
+    /// @notice A flag indicating if the token out is the chain native token (eth on mainnet for instance)
+    /// @dev    If so, the token out should be unwrapped before being sent to the next terminal
+    bool internal immutable OUT_IS_NATIVE_TOKEN;
+
+    //*********************************************************************//
     // ------------------------- external views -------------------------- //
     //*********************************************************************//
 
@@ -280,6 +288,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         PERMIT2 = permit2;
         WETH = weth;
         TOKEN_OUT = tokenOut;
+        OUT_IS_NATIVE_TOKEN = tokenOut == JBConstants.NATIVE_TOKEN;
     }
 
     //*********************************************************************//
@@ -326,7 +335,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         uint256 receivedFromSwap = _handleTokenTransfersAndSwap(projectId, token, amount, address(terminal), metadata);
 
         // Pay the primary terminal, passing along the beneficiary and other arguments.
-        terminal.pay{value: TOKEN_OUT == JBConstants.NATIVE_TOKEN ? receivedFromSwap : 0}({
+        terminal.pay{value: OUT_IS_NATIVE_TOKEN ? receivedFromSwap : 0}({
             projectId: projectId,
             token: TOKEN_OUT,
             amount: receivedFromSwap,
@@ -371,9 +380,14 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         uint256 receivedFromSwap = _handleTokenTransfersAndSwap(projectId, token, amount, address(terminal), metadata);
 
         // Pay the primary terminal, passing along the beneficiary and other arguments.
-        terminal.addToBalanceOf{value: TOKEN_OUT == JBConstants.NATIVE_TOKEN ? receivedFromSwap : 0}(
-            projectId, TOKEN_OUT, receivedFromSwap, shouldReturnHeldFees, memo, metadata
-        );
+        terminal.addToBalanceOf{value: OUT_IS_NATIVE_TOKEN ? receivedFromSwap : 0}({
+            projectId: projectId,
+            token: TOKEN_OUT,
+            amount: receivedFromSwap,
+            shouldReturnHeldFees: shouldReturnHeldFees,
+            memo: memo,
+            metadata: metadata
+        });
     }
 
     /// @notice The Uniswap v3 pool callback where the token transfer is expected to happen.
@@ -487,7 +501,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         SwapConfig memory swapConfig;
         swapConfig.projectId = projectId;
 
-        if (token == JBConstants.NATIVE_TOKEN) {
+        if (OUT_IS_NATIVE_TOKEN) {
             // If the token being paid in is the native token, use `msg.value`.
             swapConfig.tokenIn = address(WETH);
             swapConfig.inIsNativeToken = true;
@@ -509,7 +523,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
 
         // Swap. The callback will ensure that we're within the intended slippage tolerance.
         // If the token in is the same as the token out, don't swap, just call the next terminal
-        if ((swapConfig.inIsNativeToken && TOKEN_OUT == JBConstants.NATIVE_TOKEN) || (swapConfig.tokenIn == tokenOut)) {
+        if ((swapConfig.inIsNativeToken && OUT_IS_NATIVE_TOKEN) || (swapConfig.tokenIn == tokenOut)) {
             amountToSend = swapConfig.amountIn;
         } else {
             amountToSend = _swap(swapConfig);
@@ -643,7 +657,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         if (amountReceived < swapConfig.minAmountOut) revert MAX_SLIPPAGE(amountReceived, swapConfig.minAmountOut);
 
         // If the output token is a native token, unwrap it from its wrapped form.
-        if (TOKEN_OUT == JBConstants.NATIVE_TOKEN) WETH.withdraw(amountReceived);
+        if (OUT_IS_NATIVE_TOKEN) WETH.withdraw(amountReceived);
     }
 
     /// @notice Transfers tokens.
@@ -655,7 +669,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     function _transferFor(address from, address payable to, address token, uint256 amount) internal virtual {
         if (from == address(this)) {
             // If the token is native token, assume the `sendValue` standard.
-            if (TOKEN_OUT == JBConstants.NATIVE_TOKEN) return Address.sendValue(to, amount);
+            if (OUT_IS_NATIVE_TOKEN) return Address.sendValue(to, amount);
 
             // If the transfer is from this terminal, use `safeTransfer`.
             return IERC20(token).safeTransfer(to, amount);
@@ -677,7 +691,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// token.
     function _beforeTransferFor(address to, address token, uint256 amount) internal virtual {
         // If the token is the native token, return early.
-        if (token == JBConstants.NATIVE_TOKEN) return;
+        if (OUT_IS_NATIVE_TOKEN) return;
 
         // Otherwise, set the appropriate allowance for the recipient.
         IERC20(token).safeIncreaseAllowance(to, amount);
@@ -707,6 +721,6 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// @dev If the token out is the chain native token (ETH on mainnet), wrapped ETH is returned
     /// @return The token that flows out of this terminal.
     function formattedTokenOut() internal view returns (address) {
-        return TOKEN_OUT == JBConstants.NATIVE_TOKEN ? address(WETH) : TOKEN_OUT;
+        return OUT_IS_NATIVE_TOKEN ? address(WETH) : TOKEN_OUT;
     }
 }
