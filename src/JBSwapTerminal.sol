@@ -318,8 +318,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         returns (uint256)
     {
         // Get a reference to the project's primary terminal for `token`.
-        IJBTerminal terminal =
-            DIRECTORY.primaryTerminalOf(projectId, TOKEN_OUT);
+        IJBTerminal terminal = DIRECTORY.primaryTerminalOf(projectId, TOKEN_OUT);
 
         // Revert if the project does not have a primary terminal for `token`.
         if (address(terminal) == address(0)) revert TOKEN_NOT_ACCEPTED();
@@ -330,7 +329,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         terminal.pay{value: TOKEN_OUT == JBConstants.NATIVE_TOKEN ? receivedFromSwap : 0}({
             projectId: projectId,
             token: TOKEN_OUT,
-            amount:receivedFromSwap,
+            amount: receivedFromSwap,
             beneficiary: beneficiary,
             minReturnedTokens: minReturnedTokens,
             memo: memo,
@@ -364,8 +363,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         override
     {
         // Get a reference to the project's primary terminal for `token`.
-        IJBTerminal terminal =
-            DIRECTORY.primaryTerminalOf(projectId, TOKEN_OUT);
+        IJBTerminal terminal = DIRECTORY.primaryTerminalOf(projectId, TOKEN_OUT);
 
         // Revert if the project does not have a primary terminal for `token`.
         if (address(terminal) == address(0)) revert TOKEN_NOT_ACCEPTED();
@@ -374,12 +372,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
 
         // Pay the primary terminal, passing along the beneficiary and other arguments.
         terminal.addToBalanceOf{value: TOKEN_OUT == JBConstants.NATIVE_TOKEN ? receivedFromSwap : 0}(
-            projectId,
-            TOKEN_OUT,
-            receivedFromSwap,
-            shouldReturnHeldFees,
-            memo,
-            metadata
+            projectId, TOKEN_OUT, receivedFromSwap, shouldReturnHeldFees, memo, metadata
         );
     }
 
