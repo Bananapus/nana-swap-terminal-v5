@@ -130,9 +130,8 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// @dev "wETH" is used as a generic term throughout, but any native token wrapper can be used.
     IWETH9 public immutable WETH;
 
-
     /// @notice The token which flows out of this terminal (JBConstants.NATIVE_TOKEN for the chain native token)
-    address internal immutable TOKEN_OUT;
+    address public immutable TOKEN_OUT;
 
     //*********************************************************************//
     // ------------------------- external views -------------------------- //
