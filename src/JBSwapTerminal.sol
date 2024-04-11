@@ -691,7 +691,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// token.
     function _beforeTransferFor(address to, address token, uint256 amount) internal virtual {
         // If the token is the native token, return early.
-        if (OUT_IS_NATIVE_TOKEN) return;
+        if (token == JBConstants.NATIVE_TOKEN) return;
 
         // Otherwise, set the appropriate allowance for the recipient.
         IERC20(token).safeIncreaseAllowance(to, amount);
