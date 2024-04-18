@@ -33,6 +33,7 @@ import {IWETH9} from "./interfaces/IWETH9.sol";
 /// @dev To prevent excessive slippage, the user/client can specify a minimum quote and a pool to use in their payment's
 /// metadata using the `JBMetadataResolver` format. If they don't, a quote is calculated for them based on the TWAP
 /// oracle for the project's default pool for that token (set by the project's owner).
+/// @custom:metadata-id-used quoteForSwap and permit2
 /// @custom:benediction DEVS BENEDICAT ET PROTEGAT CONTRACTVS MEAM
 contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTerminal, IUniswapV3SwapCallback {
     // A library that adds default safety checks to ERC20 functionality.
@@ -129,12 +130,12 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// @dev "wETH" is used as a generic term throughout, but any native token wrapper can be used.
     IWETH9 public immutable WETH;
 
+    /// @notice The token which flows out of this terminal (JBConstants.NATIVE_TOKEN for the chain native token)
+    address public immutable TOKEN_OUT;
+
     //*********************************************************************//
     // --------------- internal immutable stored properties -------------- //
     //*********************************************************************//
-
-    /// @notice The token which flows out of this terminal (JBConstants.NATIVE_TOKEN for the chain native token)
-    address internal immutable TOKEN_OUT;
 
     /// @notice A flag indicating if the token out is the chain native token (eth on mainnet for instance)
     /// @dev    If so, the token out should be unwrapped before being sent to the next terminal
@@ -143,13 +144,6 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     //*********************************************************************//
     // ------------------------- external views -------------------------- //
     //*********************************************************************//
-
-    /// @notice Returns the token that flows out of this terminal.
-    /// @dev If the token out is the chain native token (ETH on mainnet), JBConstants NATIVE_TOKEN is returned
-    /// @return The token that flows out of this terminal.
-    function tokenOut() external view returns (address) {
-        return OUT_IS_NATIVE_TOKEN ? JBConstants.NATIVE_TOKEN : TOKEN_OUT;
-    }
 
     /// @notice Returns the default pool for a given project and token or, if a project has no default pool for the
     ///         token, the overal default pool for the token
@@ -282,24 +276,19 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         IJBPermissions permissions,
         IJBDirectory directory,
         IPermit2 permit2,
-        address _owner,
+        address owner,
         IWETH9 weth,
-        address _tokenOut
+        address tokenOut
     )
         JBPermissioned(permissions)
-        Ownable(_owner)
+        Ownable(owner)
     {
         PROJECTS = projects;
         DIRECTORY = directory;
         PERMIT2 = permit2;
         WETH = weth;
-
-        if (_tokenOut == JBConstants.NATIVE_TOKEN) {
-            OUT_IS_NATIVE_TOKEN = true;
-            TOKEN_OUT = address(weth);
-        } else {
-            TOKEN_OUT = _tokenOut;
-        }
+        TOKEN_OUT = tokenOut;
+        OUT_IS_NATIVE_TOKEN = tokenOut == JBConstants.NATIVE_TOKEN;
     }
 
     //*********************************************************************//
@@ -338,8 +327,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         returns (uint256)
     {
         // Get a reference to the project's primary terminal for `token`.
-        IJBTerminal terminal =
-            DIRECTORY.primaryTerminalOf(projectId, OUT_IS_NATIVE_TOKEN ? JBConstants.NATIVE_TOKEN : TOKEN_OUT);
+        IJBTerminal terminal = DIRECTORY.primaryTerminalOf(projectId, TOKEN_OUT);
 
         // Revert if the project does not have a primary terminal for `token`.
         if (address(terminal) == address(0)) revert TOKEN_NOT_ACCEPTED();
@@ -347,15 +335,15 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         uint256 receivedFromSwap = _handleTokenTransfersAndSwap(projectId, token, amount, address(terminal), metadata);
 
         // Pay the primary terminal, passing along the beneficiary and other arguments.
-        terminal.pay{value: OUT_IS_NATIVE_TOKEN ? receivedFromSwap : 0}(
-            projectId,
-            OUT_IS_NATIVE_TOKEN ? JBConstants.NATIVE_TOKEN : TOKEN_OUT,
-            receivedFromSwap,
-            beneficiary,
-            minReturnedTokens,
-            memo,
-            metadata
-        );
+        terminal.pay{value: OUT_IS_NATIVE_TOKEN ? receivedFromSwap : 0}({
+            projectId: projectId,
+            token: TOKEN_OUT,
+            amount: receivedFromSwap,
+            beneficiary: beneficiary,
+            minReturnedTokens: minReturnedTokens,
+            memo: memo,
+            metadata: metadata
+        });
 
         return receivedFromSwap;
     }
@@ -384,8 +372,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         override
     {
         // Get a reference to the project's primary terminal for `token`.
-        IJBTerminal terminal =
-            DIRECTORY.primaryTerminalOf(projectId, OUT_IS_NATIVE_TOKEN ? JBConstants.NATIVE_TOKEN : TOKEN_OUT);
+        IJBTerminal terminal = DIRECTORY.primaryTerminalOf(projectId, TOKEN_OUT);
 
         // Revert if the project does not have a primary terminal for `token`.
         if (address(terminal) == address(0)) revert TOKEN_NOT_ACCEPTED();
@@ -393,14 +380,14 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         uint256 receivedFromSwap = _handleTokenTransfersAndSwap(projectId, token, amount, address(terminal), metadata);
 
         // Pay the primary terminal, passing along the beneficiary and other arguments.
-        terminal.addToBalanceOf{value: OUT_IS_NATIVE_TOKEN ? receivedFromSwap : 0}(
-            projectId,
-            OUT_IS_NATIVE_TOKEN ? JBConstants.NATIVE_TOKEN : TOKEN_OUT,
-            receivedFromSwap,
-            shouldReturnHeldFees,
-            memo,
-            metadata
-        );
+        terminal.addToBalanceOf{value: OUT_IS_NATIVE_TOKEN ? receivedFromSwap : 0}({
+            projectId: projectId,
+            token: TOKEN_OUT,
+            amount: receivedFromSwap,
+            shouldReturnHeldFees: shouldReturnHeldFees,
+            memo: memo,
+            metadata: metadata
+        });
     }
 
     /// @notice The Uniswap v3 pool callback where the token transfer is expected to happen.
@@ -445,7 +432,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         }
 
         // Update the project's default pool for the token.
-        _poolFor[projectId][token] = PoolConfig({pool: pool, zeroForOne: token < TOKEN_OUT});
+        _poolFor[projectId][token] = PoolConfig({pool: pool, zeroForOne: token < formattedTokenOut()});
 
         // Update the project's accounting context for the token.
         _accountingContextFor[projectId][token] = JBAccountingContext({
@@ -531,16 +518,19 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         // Accept funds for the swap.
         swapConfig.amountIn = _acceptFundsFor(swapConfig, metadata);
 
+        // Keep a reference to the formatted token out.
+        address tokenOut = formattedTokenOut();
+
         // Swap. The callback will ensure that we're within the intended slippage tolerance.
         // If the token in is the same as the token out, don't swap, just call the next terminal
-        if ((swapConfig.inIsNativeToken && OUT_IS_NATIVE_TOKEN) || (swapConfig.tokenIn == TOKEN_OUT)) {
+        if ((swapConfig.inIsNativeToken && OUT_IS_NATIVE_TOKEN) || (swapConfig.tokenIn == tokenOut)) {
             amountToSend = swapConfig.amountIn;
         } else {
             amountToSend = _swap(swapConfig);
         }
 
         // Trigger the `beforeTransferFor` hook.
-        _beforeTransferFor(nextTerminal, TOKEN_OUT, amountToSend);
+        _beforeTransferFor(nextTerminal, tokenOut, amountToSend);
     }
 
     function _pickPoolAndQuote(
@@ -554,7 +544,8 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     {
         {
             // Check for a quote passed in by the user/client.
-            (bool exists, bytes memory quote) = JBMetadataResolver.getDataFor(bytes4("SWAP"), metadata);
+            (bool exists, bytes memory quote) =
+                JBMetadataResolver.getDataFor(JBMetadataResolver.getId("quoteForSwap"), metadata);
 
             if (exists) {
                 // If there is a quote, use it for the swap config.
@@ -615,7 +606,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
 
         // Unpack the `JBSingleAllowanceContext` to use given by the frontend.
         (bool exists, bytes memory rawAllowance) =
-            JBMetadataResolver.getDataFor(bytes4(uint32(uint160(address(this)))), metadata);
+            JBMetadataResolver.getDataFor(JBMetadataResolver.getId("permit2"), metadata);
 
         // If the metadata contained permit data, use it to set the allowance.
         if (exists) {
@@ -646,7 +637,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         address tokenIn = swapConfig.tokenIn;
 
         // Determine the direction of the swap based on the token addresses.
-        bool zeroForOne = tokenIn < TOKEN_OUT;
+        bool zeroForOne = tokenIn < formattedTokenOut();
 
         // Perform the swap in the specified pool, passing in parameters from the swap configuration.
         (int256 amount0, int256 amount1) = swapConfig.pool.swap({
@@ -724,5 +715,12 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
             }),
             signature: allowance.signature
         });
+    }
+
+    /// @notice Returns the token that flows out of this terminal, wrapped as an ERC-20 if needed.
+    /// @dev If the token out is the chain native token (ETH on mainnet), wrapped ETH is returned
+    /// @return The token that flows out of this terminal.
+    function formattedTokenOut() internal view returns (address) {
+        return OUT_IS_NATIVE_TOKEN ? address(WETH) : TOKEN_OUT;
     }
 }

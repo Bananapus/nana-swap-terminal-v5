@@ -129,7 +129,9 @@ contract TestSwapTerminal_Fork is Test {
         _poolTestHelper = new PoolTestHelper();
         vm.label(address(_poolTestHelper), "poolTestHelper");
 
-        deployCodeTo("MockERC20.sol", abi.encode("token", "token", uint8(18)), address(_otherTokenIn));
+        deployCodeTo(
+            "test/helper/MockERC20.sol:MockERC20", abi.encode("token", "token", uint8(18)), address(_otherTokenIn)
+        );
         vm.label(address(_otherTokenIn), "_otherTokenIn");
 
         _otherTokenPool = IUniswapV3Pool(
@@ -168,7 +170,7 @@ contract TestSwapTerminal_Fork is Test {
         _data[0] = abi.encode(_minAmountOut, address(POOL), address(UNI) < address(WETH));
 
         bytes4[] memory _ids = new bytes4[](1);
-        _ids[0] = bytes4("SWAP");
+        _ids[0] = _metadataResolver.getId("quoteForSwap", address(_swapTerminal));
 
         bytes memory _metadata = _metadataResolver.createMetadata(_ids, _data);
 
@@ -229,7 +231,7 @@ contract TestSwapTerminal_Fork is Test {
             abi.encode(_minAmountOut, address(_otherTokenPool), address(_otherTokenIn) < JBConstants.NATIVE_TOKEN);
 
         bytes4[] memory _ids = new bytes4[](1);
-        _ids[0] = bytes4("SWAP");
+        _ids[0] = _metadataResolver.getId("quoteForSwap", address(_swapTerminal));
 
         bytes memory _metadata = _metadataResolver.createMetadata(_ids, _data);
 
@@ -289,7 +291,7 @@ contract TestSwapTerminal_Fork is Test {
         _data[0] = abi.encode(_minAmountOut, address(POOL), address(UNI) < address(WETH));
 
         bytes4[] memory _ids = new bytes4[](1);
-        _ids[0] = bytes4("SWAP");
+        _ids[0] = _metadataResolver.getId("quoteForSwap", address(_swapTerminal));
 
         bytes memory _metadata = _metadataResolver.createMetadata(_ids, _data);
 
