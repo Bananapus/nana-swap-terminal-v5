@@ -53,7 +53,7 @@ contract AddTwapParamsFor is UnitFixture {
             address(mockJBPermissions),
             abi.encodeCall(
                 IJBPermissions.hasPermission,
-                (caller, projectOwner, projectId, JBPermissionIds.MODIFY_SWAP_TERMINAL_TWAP_PARAMS)
+                (caller, projectOwner, projectId, JBPermissionIds.ADD_SWAP_TERMINAL_TWAP_PARAMS)
             ),
             abi.encode(true)
         );
@@ -120,7 +120,7 @@ contract AddTwapParamsFor is UnitFixture {
             address(mockJBPermissions),
             abi.encodeCall(
                 IJBPermissions.hasPermission,
-                (caller, projectOwner, projectId, JBPermissionIds.MODIFY_SWAP_TERMINAL_TWAP_PARAMS)
+                (caller, projectOwner, projectId, JBPermissionIds.ADD_SWAP_TERMINAL_TWAP_PARAMS)
             ),
             abi.encode(false)
         );
@@ -129,7 +129,7 @@ contract AddTwapParamsFor is UnitFixture {
             address(mockJBPermissions),
             abi.encodeCall(
                 IJBPermissions.hasPermission,
-                (caller, projectOwner, 0, JBPermissionIds.MODIFY_SWAP_TERMINAL_TWAP_PARAMS)
+                (caller, projectOwner, 0, JBPermissionIds.ADD_SWAP_TERMINAL_TWAP_PARAMS)
             ),
             abi.encode(false)
         );

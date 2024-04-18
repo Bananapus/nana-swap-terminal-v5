@@ -29,7 +29,7 @@ contract Pay is UnitFixture {
         pool = IUniswapV3Pool(makeAddr("pool"));
         nextTerminal = makeAddr("nextTerminal");
 
-        tokenOut = swapTerminal.tokenOut();
+        tokenOut = swapTerminal.TOKEN_OUT();
     }
 
     function test_PayWhenTokenInIsTheNativeToken(uint256 msgValue, uint256 amountIn, uint256 amountOut) public {

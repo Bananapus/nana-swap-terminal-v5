@@ -54,7 +54,7 @@ contract AddDefaultPool is UnitFixture {
             address(mockJBPermissions),
             abi.encodeCall(
                 IJBPermissions.hasPermission,
-                (caller, projectOwner, projectId, JBPermissionIds.MODIFY_DEFAULT_SWAP_TERMINAL_POOL)
+                (caller, projectOwner, projectId, JBPermissionIds.ADD_SWAP_TERMINAL_POOL)
             ),
             abi.encode(true)
         );
@@ -120,7 +120,7 @@ contract AddDefaultPool is UnitFixture {
             address(mockJBPermissions),
             abi.encodeCall(
                 IJBPermissions.hasPermission,
-                (caller, projectOwner, projectId, JBPermissionIds.MODIFY_DEFAULT_SWAP_TERMINAL_POOL)
+                (caller, projectOwner, projectId, JBPermissionIds.ADD_SWAP_TERMINAL_POOL)
             ),
             abi.encode(false)
         );
@@ -129,7 +129,7 @@ contract AddDefaultPool is UnitFixture {
             address(mockJBPermissions),
             abi.encodeCall(
                 IJBPermissions.hasPermission,
-                (caller, projectOwner, 0, JBPermissionIds.MODIFY_DEFAULT_SWAP_TERMINAL_POOL)
+                (caller, projectOwner, 0, JBPermissionIds.ADD_SWAP_TERMINAL_POOL)
             ),
             abi.encode(false)
         );
