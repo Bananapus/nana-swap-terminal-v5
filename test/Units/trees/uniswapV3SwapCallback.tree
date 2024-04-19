@@ -1,0 +1,13 @@
+JBSwapTerminal::uniswapV3SwapCallback // path coverage + boundary
+├── when amount0 is positive
+│   ├── when shouldWrap is true - token0
+│   │   └── it should wrap and send the token0 to the pool
+│   └── when shouldWrap is false - token0
+│       └── it should send the token0 to the pool
+├── when amount1 is positive
+│   ├── when shouldWrap is true - token1
+│   │   └── it should wrap and send the token1 to the pool
+│   └── when shouldWrap is false - token1
+│       └── it should send the token1 to the pool
+└── when both amounts are 0
+    └── it should not transfer anything

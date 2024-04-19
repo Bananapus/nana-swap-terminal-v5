@@ -1,0 +1,16 @@
+JBSwapTerminal::addTwapParamsFor // path coverage
+├── given the caller is a project owner
+│   ├── when setting twap params of its project
+│   │   └── it should the params
+│   └── when setting twap params to another project
+│       └── it should revert
+├── given the caller is not a project owner
+│   ├── when the caller has the role
+│   │   └── it should set the params
+│   └── when the caller has no role
+│       └── it should revert
+└── given the caller is the terminal owner
+    ├── when adding default params for a pool
+    │   └── it should set the default params
+    └── when setting the params of a project
+        └── it should revert

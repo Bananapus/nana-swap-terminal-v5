@@ -1,0 +1,8 @@
+JBSwapTerminal::accountingContextsOf // paths coverage
+├── when called for a project with some contexts
+│   ├── it should return the accounting contexts of the project
+│   ├── it should include generic accounting contexts
+│   └── it shouldn't return empty values at the end of the array
+└── when called for a project with no contexts
+    ├── it should return the generic accounting contexts
+    └── it shouldn't return empty values at the end of the array
