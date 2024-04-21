@@ -28,8 +28,8 @@ contract DeployScript is Script, Sphinx {
         sphinxConfig.orgId = "cltepuu9u0003j58rjtbd0hvu";
         sphinxConfig.projectName = "nana-swap-terminal";
         sphinxConfig.threshold = 1;
-        sphinxConfig.mainnets = ["ethereum", "optimism", "polygon"];
-        sphinxConfig.testnets = ["ethereum_sepolia", "optimism_sepolia", "polygon_mumbai"];
+        sphinxConfig.mainnets = ["ethereum", "optimism", "base", "arbitrum"];
+        sphinxConfig.testnets = ["ethereum_sepolia", "optimism_sepolia", "base_sepolia", "arbitrum_sepolia"];
         sphinxConfig.saltNonce = 8;
     }
 
@@ -49,18 +49,18 @@ contract DeployScript is Script, Sphinx {
             // Ethereum Sepolia
         } else if (block.chainid == 11_155_111) {
             weth = 0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9;
-            // Optimism Mainnet
-        } else if (block.chainid == 420) {
+            // Optimism & BASE Mainnet
+        } else if (block.chainid == 420 || block.chainid == 8453) {
             weth = 0x4200000000000000000000000000000000000006;
-            // Optimism Sepolia
-        } else if (block.chainid == 11_155_420) {
+            // Optimism & BASE Sepolia
+        } else if (block.chainid == 11_155_420 || block.chainid == 84532) {
             weth = 0x4200000000000000000000000000000000000006;
-            // Polygon Mainnet
-        } else if (block.chainid == 137) {
-            weth = 0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619;
-            // Polygon Mumbai
-        } else if (block.chainid == 80_001) {
-            weth = 0xA6FA4fB5f76172d178d61B04b0ecd319C5d1C0aa;
+            // Arbitrum Mainnet
+        } else if (block.chainid == 42161) {
+            weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
+            // Arbitrum Sepolia
+        } else if (block.chainid == 421614) {
+            weth = 0x980B62Da83eFf3D4576C647993b0c1D7faf17c73;
         } else {
             revert("Invalid RPC / no juice contracts deployed on this network");
         }
