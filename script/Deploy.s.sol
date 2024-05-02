@@ -53,13 +53,13 @@ contract DeployScript is Script, Sphinx {
         } else if (block.chainid == 420 || block.chainid == 8453) {
             weth = 0x4200000000000000000000000000000000000006;
             // Optimism & BASE Sepolia
-        } else if (block.chainid == 11_155_420 || block.chainid == 84532) {
+        } else if (block.chainid == 11_155_420 || block.chainid == 84_532) {
             weth = 0x4200000000000000000000000000000000000006;
             // Arbitrum Mainnet
-        } else if (block.chainid == 42161) {
+        } else if (block.chainid == 42_161) {
             weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
             // Arbitrum Sepolia
-        } else if (block.chainid == 421614) {
+        } else if (block.chainid == 421_614) {
             weth = 0x980B62Da83eFf3D4576C647993b0c1D7faf17c73;
         } else {
             revert("Invalid RPC / no juice contracts deployed on this network");
