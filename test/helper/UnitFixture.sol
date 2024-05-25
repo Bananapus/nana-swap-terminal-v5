@@ -63,6 +63,33 @@ contract UnitFixture is Test {
         assertEq(address(a), address(b), "pool addresses are not equal");
     }
 
+    // compare 2 arrays of accounting contexts
+    function assertEq(JBAccountingContext[] memory a, JBAccountingContext[] memory b) internal {
+        assertEq(a.length, b.length, "lengths are not equal");
+
+        for (uint256 i; i < a.length; i++) {
+            assertEq(a[i].token, b[i].token, "tokens are not equal");
+            assertEq(a[i].decimals, b[i].decimals, "decimals are not equal");
+            assertEq(a[i].currency, b[i].currency, "currencies are not equal");
+        }
+    }
+    
+    // check if a is included in b
+    function assertIsIncluded(JBAccountingContext[] memory a, JBAccountingContext[] memory b) internal {
+        for(uint256 i; i < a.length; i++) {
+
+            bool _elementIsIncluded;
+            for (uint256 j; j < b.length; j++) {
+                if (a[i].token == b[j].token && a[i].decimals == b[j].decimals && a[i].currency == b[j].currency) {
+                    _elementIsIncluded = true;
+                    break;
+                }
+            }
+
+            assertTrue(_elementIsIncluded, "left not included in right");
+        }
+    }
+
     // create a metadata based on a single entry (abstracting the arrays away)
     function _createMetadata(bytes4 id, bytes memory data) internal pure returns (bytes memory) {
         bytes4[] memory idArray = new bytes4[](1);
