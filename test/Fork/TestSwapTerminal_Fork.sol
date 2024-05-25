@@ -209,6 +209,111 @@ contract TestSwapTerminal_Fork is Test {
         );
     }
 
+    /// @notice Test paying a swap terminal in UNI to contribute to JuiceboxDAO project (in the eth terminal), using
+    /// a twap
+    /// @dev    Quote at the forked block 5022528 : 1 UNI = 1.33649 ETH with max slippage suggested (uni sdk): 0.5%
+    function testPayUniSwapEthPayEthTwap(uint256 _amountIn) external {
+        _amountIn = bound(_amountIn, 0.01 ether, 1 ether);
+
+        deal(address(UNI), address(_sender), _amountIn);
+
+        uint256 _initialTerminalBalance =
+            _terminalStore.balanceOf(address(_projectTerminal), _projectId, JBConstants.NATIVE_TOKEN);
+        uint256 _initialBeneficiaryBalance = _tokens.totalBalanceOf(_beneficiary, _projectId);
+
+        uint256 _minAmountOut = _uniswapV3ForgeQuoter.getAmountOut(POOL, _amountIn, address(UNI));
+
+        vm.prank(_projectOwner);
+        _swapTerminal.addDefaultPool(_projectId, address(UNI), POOL);
+
+        vm.prank(_projectOwner);
+        _swapTerminal.addTwapParamsFor({
+            projectId: _projectId,
+            pool: POOL,
+            secondsAgo: 60,
+            slippageTolerance: 500
+        });
+        
+        bytes memory _metadata = '';
+
+        // Approve the transfer
+        vm.startPrank(_sender);
+        UNI.approve(address(_swapTerminal), _amountIn);
+
+        // Make a payment.
+        _swapTerminal.pay({
+            projectId: _projectId,
+            amount: _amountIn,
+            token: address(UNI),
+            beneficiary: _beneficiary,
+            minReturnedTokens: 1,
+            memo: "Take my money!",
+            metadata: _metadata
+        });
+
+        // Make sure the beneficiary has a balance of project tokens
+        uint256 _weight = _terminalStore.RULESETS().currentOf(_projectId).weight;
+        uint256 _reservedRate = _terminalStore.RULESETS().currentOf(_projectId).reservedRate();
+        uint256 _totalMinted = _weight * _minAmountOut / 1 ether;
+        uint256 _reservedToken = _totalMinted * _reservedRate / JBConstants.MAX_RESERVED_RATE;
+
+        // 1 wei delta for rounding
+        assertApproxEqAbs(
+            _tokens.totalBalanceOf(_beneficiary, _projectId),
+            _initialBeneficiaryBalance + _totalMinted - _reservedToken,
+            1
+        );
+
+        // Make sure the native token balance in terminal is up to date.
+        uint256 _terminalBalance = _minAmountOut + _initialTerminalBalance;
+        assertEq(
+            _terminalStore.balanceOf(address(_projectTerminal), _projectId, JBConstants.NATIVE_TOKEN), _terminalBalance
+        );
+    }
+
+
+    /// @notice Test paying a swap terminal in UNI to contribute to JuiceboxDAO project (in the eth terminal), using
+    /// a twap
+    /// @dev    Quote at the forked block 5022528 : 1 UNI = 1.33649 ETH with max slippage suggested (uni sdk): 0.5%
+    function testPayUniSwapEthPayEthTwapRevert() external {
+        uint256 _amountIn = 100 ether; // hyper inflate the price to create a high slippage
+
+        deal(address(UNI), address(_sender), _amountIn);
+
+        uint256 _amountOut = _uniswapV3ForgeQuoter.getAmountOut(POOL, _amountIn, address(UNI));
+
+        vm.prank(_projectOwner);
+        _swapTerminal.addDefaultPool(_projectId, address(UNI), POOL);
+
+        vm.prank(_projectOwner);
+        _swapTerminal.addTwapParamsFor({
+            projectId: _projectId,
+            pool: POOL,
+            secondsAgo: 60,
+            slippageTolerance: 500 // max slippage allowed is 5%
+        });
+        
+        bytes memory _metadata = '';
+
+        // Approve the transfer
+        vm.startPrank(_sender);
+        UNI.approve(address(_swapTerminal), _amountIn);
+
+        // Funny value
+        vm.expectRevert(abi.encodeWithSelector(JBSwapTerminal.MAX_SLIPPAGE.selector, _amountOut, 126148869380486231752));
+
+        // Make a payment.
+        _swapTerminal.pay({
+            projectId: _projectId,
+            amount: _amountIn,
+            token: address(UNI),
+            beneficiary: _beneficiary,
+            minReturnedTokens: 1,
+            memo: "Take my money!",
+            metadata: _metadata
+        });
+    }
+
     /// @notice Test paying a swap terminal in another token, which has an address either bigger or smaller than UNI
     ///         to test the opposite pool token ordering
     function testPayAndSwapOtherTokenOrder(uint256 _amountIn) external {
