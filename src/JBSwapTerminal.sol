@@ -335,7 +335,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         uint256 receivedFromSwap = _handleTokenTransfersAndSwap(projectId, token, amount, address(terminal), metadata);
 
         // Pay the primary terminal, passing along the beneficiary and other arguments.
-        terminal.pay{value: OUT_IS_NATIVE_TOKEN ? receivedFromSwap : 0}({
+        return terminal.pay{value: OUT_IS_NATIVE_TOKEN ? receivedFromSwap : 0}({
             projectId: projectId,
             token: TOKEN_OUT,
             amount: receivedFromSwap,
@@ -344,8 +344,6 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
             memo: memo,
             metadata: metadata
         });
-
-        return receivedFromSwap;
     }
 
     /// @notice Accepts funds for a given project, swaps them if necessary, and adds them to the project's balance in
