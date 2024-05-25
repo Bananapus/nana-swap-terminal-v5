@@ -227,14 +227,9 @@ contract TestSwapTerminal_Fork is Test {
         _swapTerminal.addDefaultPool(_projectId, address(UNI), POOL);
 
         vm.prank(_projectOwner);
-        _swapTerminal.addTwapParamsFor({
-            projectId: _projectId,
-            pool: POOL,
-            secondsAgo: 60,
-            slippageTolerance: 500
-        });
-        
-        bytes memory _metadata = '';
+        _swapTerminal.addTwapParamsFor({projectId: _projectId, pool: POOL, secondsAgo: 60, slippageTolerance: 500});
+
+        bytes memory _metadata = "";
 
         // Approve the transfer
         vm.startPrank(_sender);
@@ -271,7 +266,6 @@ contract TestSwapTerminal_Fork is Test {
         );
     }
 
-
     /// @notice Test paying a swap terminal in UNI to contribute to JuiceboxDAO project (in the eth terminal), using
     /// a twap
     /// @dev    Quote at the forked block 5022528 : 1 UNI = 1.33649 ETH with max slippage suggested (uni sdk): 0.5%
@@ -292,15 +286,17 @@ contract TestSwapTerminal_Fork is Test {
             secondsAgo: 60,
             slippageTolerance: 500 // max slippage allowed is 5%
         });
-        
-        bytes memory _metadata = '';
+
+        bytes memory _metadata = "";
 
         // Approve the transfer
         vm.startPrank(_sender);
         UNI.approve(address(_swapTerminal), _amountIn);
 
         // Funny value
-        vm.expectRevert(abi.encodeWithSelector(JBSwapTerminal.MAX_SLIPPAGE.selector, _amountOut, 126148869380486231752));
+        vm.expectRevert(
+            abi.encodeWithSelector(JBSwapTerminal.MAX_SLIPPAGE.selector, _amountOut, 126_148_869_380_486_231_752)
+        );
 
         // Make a payment.
         _swapTerminal.pay({

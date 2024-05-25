@@ -418,7 +418,8 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
 
     /// @notice Set a project's default pool and accounting context for the specified token. Only the project's owner,
     /// an address with `MODIFY_DEFAULT_POOL` permission from the owner or the terminal owner can call this function.
-    /// @dev This does not set the twap parameters, they *must* be set using `addTwapParamsFor` (if not, the twap duration will be 0
+    /// @dev This does not set the twap parameters, they *must* be set using `addTwapParamsFor` (if not, the twap
+    /// duration will be 0
     /// which will cause the swap to revert).
     /// @param projectId The ID of the project to set the default pool for. The project 0 acts as a catch-all, where
     /// non-set pools are defaulted to.
