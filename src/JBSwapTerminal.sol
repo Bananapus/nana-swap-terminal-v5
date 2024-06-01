@@ -68,6 +68,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
 
+    error CALLER_NOT_POOL();
     error PERMIT_ALLOWANCE_NOT_ENOUGH();
     error NO_DEFAULT_POOL_DEFINED();
     error NO_MSG_VALUE_ALLOWED();
@@ -391,15 +392,16 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     }
 
     /// @notice The Uniswap v3 pool callback where the token transfer is expected to happen.
-    /// @dev This function has no access control, care should be taken to ensure that:
-    ///      - terminal balance is always be 0 between tx (this callback can only be used to sweep accidental leftovers)
-    ///      - callback cannot pull user funds via a preexisting allowance
+    /// @dev Only an uniswap v3 pool can call this function
     /// @param amount0Delta The amount of token 0 being used for the swap.
     /// @param amount1Delta The amount of token 1 being used for the swap.
     /// @param data Data passed in by the swap operation.
-    function uniswapV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata data) external override {
+    function uniswapV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata data) external override {        
         // Unpack the data from the original swap config (forwarded through `_swap(...)`).
-        (address tokenIn, bool shouldWrap) = abi.decode(data, (address, bool));
+        (address tokenIn, bool shouldWrap, uint256 projectId) = abi.decode(data, (address, bool, uint256));
+
+        // Validate the caller
+        if(msg.sender != address(_poolFor[projectId][tokenIn].pool) || msg.sender != address(_poolFor[0][tokenIn].pool)) revert CALLER_NOT_POOL();
 
         // Keep a reference to the amount of tokens that should be sent to fulfill the swap (the positive delta).
         uint256 amountToSendToPool = amount0Delta < 0 ? uint256(amount1Delta) : uint256(amount0Delta);
@@ -646,7 +648,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
             amountSpecified: int256(swapConfig.amountIn), // The amount of input tokens to swap.
             sqrtPriceLimitX96: zeroForOne ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1, // The price
                 // limit for the swap.
-            data: abi.encode(tokenIn, swapConfig.inIsNativeToken) // Additional data which will be forwarded to the
+            data: abi.encode(tokenIn, swapConfig.inIsNativeToken, swapConfig.projectId) // Additional data which will be forwarded to the
                 // callback.
         });
 
