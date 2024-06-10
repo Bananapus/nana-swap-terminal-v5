@@ -54,8 +54,8 @@ contract DeployScript is Script, Sphinx {
             // Ethereum Sepolia
         } else if (block.chainid == 11_155_111) {
             weth = 0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9;
-            factory = 0x0227628f3F023bb0B980b67D528571c95c6DaC1c; 
-        // Optimism Mainnet
+            factory = 0x0227628f3F023bb0B980b67D528571c95c6DaC1c;
+            // Optimism Mainnet
         } else if (block.chainid == 420) {
             weth = 0x4200000000000000000000000000000000000006;
             factory = 0x1F98431c8aD98523631AE4a59f267346ea31F984;

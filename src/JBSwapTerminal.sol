@@ -404,7 +404,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// @param amount0Delta The amount of token 0 being used for the swap.
     /// @param amount1Delta The amount of token 1 being used for the swap.
     /// @param data Data passed in by the swap operation.
-    function uniswapV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata data) external override {        
+    function uniswapV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata data) external override {
         // Unpack the data from the original swap config (forwarded through `_swap(...)`).
         (address tokenIn, bool shouldWrap, uint256 projectId) = abi.decode(data, (address, bool, uint256));
 
@@ -412,8 +412,9 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         address correctedTokenIn = shouldWrap ? address(WETH) : tokenIn;
         address storedPool = address(_poolFor[projectId][correctedTokenIn].pool);
 
-        if(storedPool == address(0)) storedPool = address(_poolFor[0][correctedTokenIn].pool); // Will constraint sender==address(0) if not set
-        if(msg.sender != storedPool) revert CALLER_NOT_POOL();
+        if (storedPool == address(0)) storedPool = address(_poolFor[0][correctedTokenIn].pool); // Will constraint
+            // sender==address(0) if not set
+        if (msg.sender != storedPool) revert CALLER_NOT_POOL();
 
         // Keep a reference to the amount of tokens that should be sent to fulfill the swap (the positive delta).
         uint256 amountToSendToPool = amount0Delta < 0 ? uint256(amount1Delta) : uint256(amount0Delta);
@@ -434,8 +435,10 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
 
     /// @notice Set a project's default pool and accounting context for the specified token. Only the project's owner,
     /// an address with `MODIFY_DEFAULT_POOL` permission from the owner or the terminal owner can call this function.
-    /// @dev The pool should have been deployed by the factory associated to this contract. We don't rely on create2 address
-    /// as this terminal might be used on other chain, where the factory bytecode might differ or the main dex be a fork.
+    /// @dev The pool should have been deployed by the factory associated to this contract. We don't rely on create2
+    /// address
+    /// as this terminal might be used on other chain, where the factory bytecode might differ or the main dex be a
+    /// fork.
     /// @param projectId The ID of the project to set the default pool for. The project 0 acts as a catch-all, where
     /// non-set pools are defaulted to.
     /// @param token The address of the token to set the default pool for.
@@ -451,7 +454,10 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
 
         // Check if the pool has beed deployed by the factory
         uint24 fee = pool.fee();
-        if(FACTORY.getPool(zeroForOne ? token : formattedTokenOut(), zeroForOne ? formattedTokenOut() : token, fee) != address(pool)) revert WRONG_POOL(); // Factory stores both directions, future proofing
+        if (
+            FACTORY.getPool(zeroForOne ? token : formattedTokenOut(), zeroForOne ? formattedTokenOut() : token, fee)
+                != address(pool)
+        ) revert WRONG_POOL(); // Factory stores both directions, future proofing
 
         // Update the project's default pool for the token.
         _poolFor[projectId][token] = PoolConfig({pool: pool, zeroForOne: zeroForOne});
@@ -668,7 +674,8 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
             amountSpecified: int256(swapConfig.amountIn), // The amount of input tokens to swap.
             sqrtPriceLimitX96: zeroForOne ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1, // The price
                 // limit for the swap.
-            data: abi.encode(tokenIn, swapConfig.inIsNativeToken, swapConfig.projectId) // Additional data which will be forwarded to the
+            data: abi.encode(tokenIn, swapConfig.inIsNativeToken, swapConfig.projectId) // Additional data which will be
+                // forwarded to the
                 // callback.
         });
 

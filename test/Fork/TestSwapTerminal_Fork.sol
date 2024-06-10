@@ -118,8 +118,9 @@ contract TestSwapTerminal_Fork is Test {
         _projectOwner = _projects.ownerOf(_projectId);
         vm.label(_projectOwner, "projectOwner");
 
-        _swapTerminal =
-            new JBSwapTerminal(_projects, _permissions, _directory, _permit2, _owner, WETH, JBConstants.NATIVE_TOKEN, factory);
+        _swapTerminal = new JBSwapTerminal(
+            _projects, _permissions, _directory, _permit2, _owner, WETH, JBConstants.NATIVE_TOKEN, factory
+        );
         vm.label(address(_swapTerminal), "swapTerminal");
 
         _metadataResolver = new MetadataResolverHelper();
@@ -136,11 +137,7 @@ contract TestSwapTerminal_Fork is Test {
         );
         vm.label(address(_otherTokenIn), "_otherTokenIn");
 
-        _otherTokenPool = IUniswapV3Pool(
-            factory.createPool(
-                address(_otherTokenIn), address(WETH), 3000
-            )
-        );
+        _otherTokenPool = IUniswapV3Pool(factory.createPool(address(_otherTokenIn), address(WETH), 3000));
         vm.label(address(_otherTokenPool), "_otherTokenPool");
 
         // Copying UNI sqrt price to hjave a realistic value
