@@ -557,6 +557,14 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
             amountToSend = _swap(swapConfig);
         }
 
+        // Send back any leftover tokens to the payer
+        uint256 leftover = IERC20(swapConfig.tokenIn).balanceOf(address(this));
+        if(leftover != 0) {
+            if(token == JBConstants.NATIVE_TOKEN)
+                WETH.withdraw(IERC20(swapConfig.tokenIn).balanceOf(address(this)));
+            _transferFor(address(this), payable(msg.sender), token, IERC20(swapConfig.tokenIn).balanceOf(address(this)));
+        }
+
         // Trigger the `beforeTransferFor` hook.
         _beforeTransferFor(nextTerminal, tokenOut, amountToSend);
     }
@@ -698,7 +706,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     function _transferFor(address from, address payable to, address token, uint256 amount) internal virtual {
         if (from == address(this)) {
             // If the token is native token, assume the `sendValue` standard.
-            if (OUT_IS_NATIVE_TOKEN) return Address.sendValue(to, amount);
+            if (token == JBConstants.NATIVE_TOKEN) return Address.sendValue(to, amount);
 
             // If the transfer is from this terminal, use `safeTransfer`.
             return IERC20(token).safeTransfer(to, amount);
