@@ -424,7 +424,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
 
         // Transfer the tokens to the pool.
         // This terminal should NEVER keep a token balance.
-        IERC20(tokenIn).transfer(msg.sender, amountToSendToPool);
+        IERC20(tokenIn).safeTransfer(msg.sender, amountToSendToPool);
     }
 
     /// @notice Fallback to prevent native tokens being sent to this terminal.
