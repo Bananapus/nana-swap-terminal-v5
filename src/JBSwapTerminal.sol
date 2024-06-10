@@ -8,6 +8,7 @@ import {IERC20, IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extens
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IPermit2, IAllowanceTransfer} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import {OracleLibrary} from "@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol";
 import {TickMath} from "@uniswap/v3-core/contracts/libraries/TickMath.sol";
 import {IUniswapV3SwapCallback} from "@uniswap/v3-core/contracts/interfaces/callback/IUniswapV3SwapCallback.sol";
@@ -75,6 +76,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     error TOKEN_NOT_ACCEPTED();
     error UNSUPPORTED();
     error MAX_SLIPPAGE(uint256, uint256);
+    error WRONG_POOL();
 
     //*********************************************************************//
     // --------------------- internal stored properties ------------------ //
@@ -133,6 +135,10 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
 
     /// @notice The token which flows out of this terminal (JBConstants.NATIVE_TOKEN for the chain native token)
     address public immutable TOKEN_OUT;
+
+    /// @notice The factory to use for creating new pools
+    /// @dev We rely on "a" factory, vanilla uniswap v3 or potential fork
+    IUniswapV3Factory public immutable FACTORY;
 
     //*********************************************************************//
     // --------------- internal immutable stored properties -------------- //
@@ -279,7 +285,8 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         IPermit2 permit2,
         address owner,
         IWETH9 weth,
-        address tokenOut
+        address tokenOut,
+        IUniswapV3Factory factory
     )
         JBPermissioned(permissions)
         Ownable(owner)
@@ -290,6 +297,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         WETH = weth;
         TOKEN_OUT = tokenOut;
         OUT_IS_NATIVE_TOKEN = tokenOut == JBConstants.NATIVE_TOKEN;
+        FACTORY = factory;
     }
 
     //*********************************************************************//
@@ -400,8 +408,12 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         // Unpack the data from the original swap config (forwarded through `_swap(...)`).
         (address tokenIn, bool shouldWrap, uint256 projectId) = abi.decode(data, (address, bool, uint256));
 
-        // Validate the caller
-        if(msg.sender != address(_poolFor[projectId][tokenIn].pool) || msg.sender != address(_poolFor[0][tokenIn].pool)) revert CALLER_NOT_POOL();
+        // Validate the caller is a pool (set by the project or default one)
+        address correctedTokenIn = shouldWrap ? address(WETH) : tokenIn;
+        address storedPool = address(_poolFor[projectId][correctedTokenIn].pool);
+
+        if(storedPool == address(0)) storedPool = address(_poolFor[0][correctedTokenIn].pool); // Will constraint sender==address(0) if not set
+        if(msg.sender != storedPool) revert CALLER_NOT_POOL();
 
         // Keep a reference to the amount of tokens that should be sent to fulfill the swap (the positive delta).
         uint256 amountToSendToPool = amount0Delta < 0 ? uint256(amount1Delta) : uint256(amount0Delta);
@@ -422,6 +434,8 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
 
     /// @notice Set a project's default pool and accounting context for the specified token. Only the project's owner,
     /// an address with `MODIFY_DEFAULT_POOL` permission from the owner or the terminal owner can call this function.
+    /// @dev The pool should have been deployed by the factory associated to this contract. We don't rely on create2 address
+    /// as this terminal might be used on other chain, where the factory bytecode might differ or the main dex be a fork.
     /// @param projectId The ID of the project to set the default pool for. The project 0 acts as a catch-all, where
     /// non-set pools are defaulted to.
     /// @param token The address of the token to set the default pool for.
@@ -433,8 +447,14 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
             _requirePermissionFrom(PROJECTS.ownerOf(projectId), projectId, JBPermissionIds.ADD_SWAP_TERMINAL_POOL);
         }
 
+        bool zeroForOne = token < formattedTokenOut();
+
+        // Check if the pool has beed deployed by the factory
+        uint24 fee = pool.fee();
+        if(FACTORY.getPool(zeroForOne ? token : formattedTokenOut(), zeroForOne ? formattedTokenOut() : token, fee) != address(pool)) revert WRONG_POOL(); // Factory stores both directions, future proofing
+
         // Update the project's default pool for the token.
-        _poolFor[projectId][token] = PoolConfig({pool: pool, zeroForOne: token < formattedTokenOut()});
+        _poolFor[projectId][token] = PoolConfig({pool: pool, zeroForOne: zeroForOne});
 
         // Update the project's accounting context for the token.
         _accountingContextFor[projectId][token] = JBAccountingContext({

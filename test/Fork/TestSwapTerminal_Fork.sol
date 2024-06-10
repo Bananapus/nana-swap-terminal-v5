@@ -49,6 +49,8 @@ contract TestSwapTerminal_Fork is Test {
     IWETH9 constant WETH = IWETH9(0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14);
     IUniswapV3Pool constant POOL = IUniswapV3Pool(0x287B0e934ed0439E2a7b1d5F0FC25eA2c24b64f7);
 
+    IUniswapV3Factory constant factory = IUniswapV3Factory(0x0227628f3F023bb0B980b67D528571c95c6DaC1c);
+
     // Other token which is either token0 (if UNI is token1) or token1 of the pool
     IERC20Metadata internal _otherTokenIn = address(UNI) < address(WETH)
         ? IERC20Metadata(address(uint160(address(WETH)) - 1))
@@ -117,7 +119,7 @@ contract TestSwapTerminal_Fork is Test {
         vm.label(_projectOwner, "projectOwner");
 
         _swapTerminal =
-            new JBSwapTerminal(_projects, _permissions, _directory, _permit2, _owner, WETH, JBConstants.NATIVE_TOKEN);
+            new JBSwapTerminal(_projects, _permissions, _directory, _permit2, _owner, WETH, JBConstants.NATIVE_TOKEN, factory);
         vm.label(address(_swapTerminal), "swapTerminal");
 
         _metadataResolver = new MetadataResolverHelper();
@@ -135,7 +137,7 @@ contract TestSwapTerminal_Fork is Test {
         vm.label(address(_otherTokenIn), "_otherTokenIn");
 
         _otherTokenPool = IUniswapV3Pool(
-            IUniswapV3Factory(0x0227628f3F023bb0B980b67D528571c95c6DaC1c).createPool(
+            factory.createPool(
                 address(_otherTokenIn), address(WETH), 3000
             )
         );
@@ -331,7 +333,8 @@ contract TestSwapTerminal_Fork is Test {
         assertEq(address(pool), address(POOL));
         assertEq(zeroToOne, address(UNI) < address(WETH));
 
-        address newPool = makeAddr("newPool");
+        // Use another fee tier
+        address newPool = factory.createPool(address(UNI), address(WETH), 100);
         vm.prank(_projects.ownerOf(_projectId));
         _swapTerminal.addDefaultPool(_projectId, address(UNI), IUniswapV3Pool(newPool));
 
