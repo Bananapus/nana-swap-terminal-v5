@@ -665,7 +665,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         address tokenIn = swapConfig.tokenIn;
 
         // Determine the direction of the swap based on the token addresses.
-        bool zeroForOne = tokenIn < formattedTokenOut();
+        bool zeroForOne = swapConfig.zeroForOne;
 
         // Perform the swap in the specified pool, passing in parameters from the swap configuration.
         (int256 amount0, int256 amount1) = swapConfig.pool.swap({
