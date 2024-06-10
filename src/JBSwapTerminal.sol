@@ -697,11 +697,11 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         IERC20(token).safeIncreaseAllowance(to, amount);
     }
 
-    /// @notice Sets the `permit2` allowance for a token.
+    /// @notice Attempts to set the `permit2` allowance for a token.
     /// @param allowance The allowance to set using `permit2`.
     /// @param token The token to set the allowance for.
     function _permitAllowance(JBSingleAllowanceContext memory allowance, address token) internal {
-        PERMIT2.permit({
+        try PERMIT2.permit({
             owner: msg.sender,
             permitSingle: IAllowanceTransfer.PermitSingle({
                 details: IAllowanceTransfer.PermitDetails({
@@ -714,7 +714,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
                 sigDeadline: allowance.sigDeadline
             }),
             signature: allowance.signature
-        });
+        }) {} catch {}
     }
 
     /// @notice Returns the token that flows out of this terminal, wrapped as an ERC-20 if needed.
