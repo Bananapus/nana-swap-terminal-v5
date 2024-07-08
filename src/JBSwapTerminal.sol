@@ -476,7 +476,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         // Update the project's accounting context for the token.
         _accountingContextFor[projectId][token] = JBAccountingContext({
             token: token,
-            decimals: token == JBConstants.NATIVE_TOKEN ? 18 : IERC20Metadata(token).decimals(),
+            decimals: IERC20Metadata(token).decimals(),
             currency: uint32(uint160(token))
         });
 
@@ -577,7 +577,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
             _transferFor(address(this), payable(msg.sender), token, leftover);
         }
     }
-    
+
     /// @notice Picks the pool and quote for the swap.
     /// @param metadata The metadata in which `quoteForSwap` context is provided.
     /// @param projectId The ID of the project for which the swap is being performed.
