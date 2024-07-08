@@ -344,7 +344,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         uint256 receivedFromSwap = _handleTokenTransfersAndSwap(projectId, token, amount, address(terminal), metadata);
 
         // Pay the primary terminal, passing along the beneficiary and other arguments.
-        terminal.pay{value: OUT_IS_NATIVE_TOKEN ? receivedFromSwap : 0}({
+        return terminal.pay{value: OUT_IS_NATIVE_TOKEN ? receivedFromSwap : 0}({
             projectId: projectId,
             token: TOKEN_OUT,
             amount: receivedFromSwap,
@@ -353,8 +353,6 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
             memo: memo,
             metadata: metadata
         });
-
-        return receivedFromSwap;
     }
 
     /// @notice Accepts funds for a given project, swaps them if necessary, and adds them to the project's balance in
@@ -541,7 +539,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         }
 
         (swapConfig.minAmountOut, swapConfig.pool, swapConfig.zeroForOne) =
-            _pickPoolAndQuote(metadata, projectId, swapConfig.tokenIn);
+            _pickPoolAndQuote(metadata, projectId, swapConfig.tokenIn, amount);
 
         // Accept funds for the swap.
         swapConfig.amountIn = _acceptFundsFor(swapConfig, metadata);
@@ -572,58 +570,52 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     function _pickPoolAndQuote(
         bytes calldata metadata,
         uint256 projectId,
-        address token
+        address token,
+        uint256 amountIn
     )
         internal
         view
         returns (uint256 minAmountOut, IUniswapV3Pool pool, bool zeroForOne)
     {
-        {
-            // Check for a quote passed in by the user/client.
-            (bool exists, bytes memory quote) =
-                JBMetadataResolver.getDataFor(JBMetadataResolver.getId("quoteForSwap"), metadata);
+        // Check for a quote passed in by the user/client.
+        (bool exists, bytes memory quote) =
+            JBMetadataResolver.getDataFor(JBMetadataResolver.getId("quoteForSwap"), metadata);
 
-            if (exists) {
-                // If there is a quote, use it for the swap config.
-                (minAmountOut, pool, zeroForOne) = abi.decode(quote, (uint256, IUniswapV3Pool, bool));
-            } else {
-                // If there is no quote, check for this project's default pool for the token and get a quote based on
-                // its TWAP.
-                PoolConfig storage poolConfig = _poolFor[projectId][token];
+        if (exists) {
+            // If there is a quote, use it for the swap config.
+            (minAmountOut, pool, zeroForOne) = abi.decode(quote, (uint256, IUniswapV3Pool, bool));
+        } else {
+            // If there is no quote, check for this project's default pool for the token and get a quote based on
+            // its TWAP.
+            PoolConfig storage poolConfig = _poolFor[projectId][token];
+            (pool, zeroForOne) = (poolConfig.pool, poolConfig.zeroForOne);
+
+            // If this project doesn't have a default pool specified for this token, try using a generic one.
+            if (address(pool) == address(0)) {
+                poolConfig = _poolFor[DEFAULT_PROJECT_ID][token];
                 (pool, zeroForOne) = (poolConfig.pool, poolConfig.zeroForOne);
 
-                // If this project doesn't have a default pool specified for this token, try using a generic one.
-                if (address(pool) == address(0)) {
-                    poolConfig = _poolFor[DEFAULT_PROJECT_ID][token];
-                    (pool, zeroForOne) = (poolConfig.pool, poolConfig.zeroForOne);
-
-                    // If there's no default pool neither, revert.
-                    if (address(pool) == address(0)) revert NO_DEFAULT_POOL_DEFINED();
-                }
-
-                // Get a quote based on the pool's TWAP, including a default slippage maximum.
-                minAmountOut = _getTwapFrom(pool, projectId, zeroForOne);
+                // If there's no default pool neither, revert.
+                if (address(pool) == address(0)) revert NO_DEFAULT_POOL_DEFINED();
             }
+
+            // Get a quote based on the pool's TWAP, including a default slippage maximum.
+            (uint32 secondsAgo, uint160 slippageTolerance) = twapParamsOf(projectId, pool);
+
+            // Keep a reference to the TWAP tick.
+            (int24 arithmeticMeanTick,) = OracleLibrary.consult(address(pool), secondsAgo);
+
+            // Get a quote based on this TWAP tick.
+            minAmountOut = OracleLibrary.getQuoteAtTick({
+                tick: arithmeticMeanTick,
+                baseAmount: uint128(amountIn),
+                baseToken: token,
+                quoteToken: TOKEN_OUT == JBConstants.NATIVE_TOKEN ? address(WETH) : address(TOKEN_OUT)
+            });
+
+            // Return the lowest acceptable return based on the TWAP and its parameters.
+            minAmountOut -= (minAmountOut * slippageTolerance) / SLIPPAGE_DENOMINATOR;
         }
-    }
-
-    /// @notice Get a quote based on the TWAP.
-    /// @dev The TWAP is calculated over `secondsAgo` seconds, and the quote cannot unfavourably deviate from the TWAP
-    /// by more than `slippageTolerance` (as a fraction out of `SLIPPAGE_DENOMINATOR`).
-    function _getTwapFrom(IUniswapV3Pool pool, uint256 projectId, bool zeroForOne) internal view returns (uint160) {
-        // Unpack the project's TWAP params and get a reference to the period and slippage.
-        (uint32 secondsAgo, uint160 slippageTolerance) = twapParamsOf(projectId, pool);
-
-        // Keep a reference to the TWAP tick.
-        (int24 arithmeticMeanTick,) = OracleLibrary.consult(address(pool), secondsAgo);
-
-        // Get a quote based on that TWAP tick.
-        uint160 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(arithmeticMeanTick);
-
-        // Return the lowest acceptable price for the swap based on the TWAP and slippage tolerance.
-        return zeroForOne
-            ? sqrtPriceX96 - (sqrtPriceX96 * slippageTolerance) / SLIPPAGE_DENOMINATOR
-            : sqrtPriceX96 + (sqrtPriceX96 * slippageTolerance) / SLIPPAGE_DENOMINATOR;
     }
 
     /// @notice Accepts a token being paid in.
@@ -734,12 +726,11 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         IERC20(token).safeIncreaseAllowance(to, amount);
     }
 
-    /// @notice Sets the `permit2` allowance for a token.
+    /// @notice Attempts to set the `permit2` allowance for a token.
     /// @param allowance The allowance to set using `permit2`.
     /// @param token The token to set the allowance for.
     function _permitAllowance(JBSingleAllowanceContext memory allowance, address token) internal {
-        try
-        PERMIT2.permit({
+        try PERMIT2.permit({
             owner: msg.sender,
             permitSingle: IAllowanceTransfer.PermitSingle({
                 details: IAllowanceTransfer.PermitDetails({

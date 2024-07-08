@@ -43,8 +43,9 @@ library SwapTerminalDeploymentLib {
         view
         returns (SwapTerminalDeployment memory deployment)
     {
-        deployment.swap_terminal =
-            JBSwapTerminal(payable(_getDeploymentAddress(path, "nana-swap-terminal", network_name, "JBSwapTerminal")));
+        deployment.swap_terminal = JBSwapTerminal(
+            payable(_getDeploymentAddress(path, "nana-swap-terminal-testnet", network_name, "JBSwapTerminal"))
+        );
     }
 
     /// @notice Get the address of a contract that was deployed by the Deploy script.
