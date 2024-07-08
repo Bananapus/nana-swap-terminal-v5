@@ -327,8 +327,7 @@ contract TestSwapTerminal_Fork is Test {
 
         // Build the metadata using the minimum amount out, the pool address and the token out address
         bytes[] memory _data = new bytes[](1);
-        _data[0] =
-            abi.encode(_minAmountOut, address(_otherTokenPool), address(_otherTokenIn) < address(WETH));
+        _data[0] = abi.encode(_minAmountOut, address(_otherTokenPool), address(_otherTokenIn) < address(WETH));
 
         bytes4[] memory _ids = new bytes4[](1);
         _ids[0] = _metadataResolver.getId("quoteForSwap", address(_swapTerminal));
