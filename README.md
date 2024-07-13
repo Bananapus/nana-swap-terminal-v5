@@ -172,7 +172,7 @@ sequenceDiagram
     - The project does not have another terminal as their primary USDC terminal, AND
     - Either the project's owner has set up a Uniswap USDC/ETH pool for the swap terminal to use (by calling [`JBSwapTerminal.addDefaultPool(…)`](https://github.com/Bananapus/nana-swap-terminal/blob/main/src/JBSwapTerminal.sol#L428)), or the swap terminal's owner has set up a default USDC/ETH pool for the swap terminal to use.
 2. Optionally, if no terminal was found, the frontend may call [`JBDirectory.isTerminalOf(…)`](https://github.com/Bananapus/nana-core/blob/main/src/JBDirectory.sol#L117) to check if the project has a swap terminal but no pool set. If this is the case, the frontend can still use the swap terminal by passing in a Uniswap pool in the payment metadata.
-3. The client calls the swap terminal's [`pay(…)`](https://github.com/Bananapus/nana-swap-terminal/blob/main/src/JBSwapTerminal.sol#L314) function. In the payment metadata, the client may pass in a quote containing a Uniswap pool to use and the minimum number of project tokens to receive in exchange from payment. These should be encoded using the [`JBMetadataResolver`](https://github.com/Bananapus/nana-core/blob/main/src/libraries/JBMetadataResolver.sol).
+3. The client calls the swap terminal's [`pay(…)`](https://github.com/Bananapus/nana-swap-terminal/blob/main/src/JBSwapTerminal.sol#L314) function. In the payment metadata, the client may pass in a quote containing a Uniswap pool to use and the minimum number of project tokens to receive in exchange from payment. These should be encoded using the [`JBMetadataResolver`](https://github.com/Bananapus/nana-core/blob/main/src/libraries/JBMetadataResolver.sol) format. Frontend clients can use [`juice-sdk-v4`](https://github.com/Bananapus/juice-sdk-v4/blob/e2119e5ee6caeea3f05a095d82724c7266339e9f/packages/core/src/utils/hook.ts#L10) to encode metadata in this format.
     - If no quote is provided, the swap terminal use the pool set by the project's owner.
     - If the project's owner hasn't set a pool, the swap terminal will use a default pool set by the swap terminal's owner.
     - If it still can't find a pool, the swap terminal will revert.
@@ -217,3 +217,4 @@ What's happening here:
     - `quote`: A bytes array containing the `minAmountOut` and the Uniswap `pool` to use.
 4. If the data exists, the swap terminal decodes the quote and uses the `minAmountOut` and `pool` for the payment.
 
+Frontend clients can use [`juice-sdk-v4`](https://github.com/Bananapus/juice-sdk-v4/blob/e2119e5ee6caeea3f05a095d82724c7266339e9f/packages/core/src/utils/hook.ts#L10) to encode metadata in this format.
