@@ -155,7 +155,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// @dev Accounting contexts are set up in `addDefaultPool(...)`.
     /// @param projectId The ID of the project to get the accounting context for.
     /// @param token The address of the token to get the accounting context for.
-    /// @return A `JBAccountingContext` containing the accounting context for the project ID and token.
+    /// @return context A `JBAccountingContext` containing the accounting context for the project ID and token.
     function accountingContextForTokenOf(
         uint256 projectId,
         address token
@@ -163,34 +163,49 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         external
         view
         override
-        returns (JBAccountingContext memory)
+        returns (JBAccountingContext memory context)
     {
-        return _accountingContextFor[projectId][token];
+        // Get a reference to the context for the given projectId.
+        context = _accountingContextFor[projectId][token];
+
+        // If one wasn't found, check for a default.
+        if (context.token == address(0)) {
+            context = _accountingContextFor[DEFAULT_PROJECT_ID][token];
+        }
     }
 
     /// @notice Return all the accounting contexts for a specified project ID.
     /// @dev    This includes both project-specific and generic accounting contexts, with the project-specific contexts
     ///         taking precedence.
     /// @param projectId The ID of the project to get the accounting contexts for.
-    /// @return An array of `JBAccountingContext` containing the accounting contexts for the project ID.
-    function accountingContextsOf(uint256 projectId) external view override returns (JBAccountingContext[] memory) {
+    /// @return contexts An array of `JBAccountingContext` containing the accounting contexts for the project ID.
+    function accountingContextsOf(uint256 projectId) external view override returns (JBAccountingContext[] memory contexts) {
+        // Keep a reference to the tokens that have a known context for the project.
         address[] memory projectTokenContexts = _tokensWithAContext[projectId];
+
+        // Keep a reference to the default tokens that have a known context.
         address[] memory genericTokenContexts = _tokensWithAContext[DEFAULT_PROJECT_ID];
 
-        JBAccountingContext[] memory contexts =
+        // Combine the two.
+        contexts =
             new JBAccountingContext[](projectTokenContexts.length + genericTokenContexts.length);
-        uint256 actualLength = projectTokenContexts.length;
+
+        // Keep a reference to the number of project-specific contexts.
+        uint256 numberOfProjectTokenContexts = projectTokenContexts.length;
 
         // include all the project specific contexts
-        for (uint256 i = 0; i < projectTokenContexts.length; i++) {
+        for (uint256 i; i < numberOfProjectTokenContexts; i++) {
             contexts[i] = _accountingContextFor[projectId][projectTokenContexts[i]];
         }
 
+        // Keep a reference to the number of generic contexts.
+        uint256 numberOfGenericTokenContexts = genericTokenContexts.length;
+
         // add the generic contexts, iff they are not defined for the project (ie do not include duplicates)
-        for (uint256 i = 0; i < genericTokenContexts.length; i++) {
+        for (uint256 i; i < numberOfGenericTokenContexts; i++) {
             bool skip;
 
-            for (uint256 j = 0; j < projectTokenContexts.length; j++) {
+            for (uint256 j; j < numberOfProjectTokenContexts; j++) {
                 if (projectTokenContexts[j] == genericTokenContexts[i]) {
                     skip = true;
                     break;
@@ -198,19 +213,9 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
             }
 
             if (!skip) {
-                contexts[actualLength] = _accountingContextFor[DEFAULT_PROJECT_ID][genericTokenContexts[i]];
-                actualLength++;
+                contexts[numberOfProjectTokenContexts + i] = _accountingContextFor[DEFAULT_PROJECT_ID][genericTokenContexts[i]];
             }
         }
-
-        // Downsize the array to the actual length, if needed
-        if (actualLength < contexts.length) {
-            assembly {
-                mstore(contexts, actualLength)
-            }
-        }
-
-        return contexts;
     }
 
     /// @notice Empty implementation to satisfy the interface. This terminal has no surplus.
