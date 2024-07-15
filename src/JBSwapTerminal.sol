@@ -181,49 +181,51 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// @return contexts An array of `JBAccountingContext` containing the accounting contexts for the project ID.
     function accountingContextsOf(uint256 projectId) external view override returns (JBAccountingContext[] memory contexts) {
         // Keep a reference to the tokens that have a known context for the project.
-        address[] memory projectTokenContexts = _tokensWithAContext[projectId];
+        address[] memory projectContextTokens = _tokensWithAContext[projectId];
 
         // Keep a reference to the default tokens that have a known context.
-        address[] memory genericTokenContexts = _tokensWithAContext[DEFAULT_PROJECT_ID];
+        address[] memory genericContextTokens = _tokensWithAContext[DEFAULT_PROJECT_ID];
 
         // Combine the two.
         contexts =
-            new JBAccountingContext[](projectTokenContexts.length + genericTokenContexts.length);
+            new JBAccountingContext[](projectContextTokens.length + genericContextTokens.length);
 
         // Keep a reference to the number of project-specific contexts.
-        uint256 numberOfProjectTokenContexts = projectTokenContexts.length;
+        uint256 numberOfProjectContextTokens = projectContextTokens.length;
 
         // include all the project specific contexts
-        for (uint256 i; i < numberOfProjectTokenContexts; i++) {
-            contexts[i] = _accountingContextFor[projectId][projectTokenContexts[i]];
+        for (uint256 i; i < numberOfProjectContextTokens; i++) {
+            contexts[i] = _accountingContextFor[projectId][projectContextTokens[i]];
         }
 
         // Keep a reference to the number of generic contexts.
-        uint256 numberOfGenericTokenContexts = genericTokenContexts.length;
+        uint256 numberOfGenericContextTokens = genericContextTokens.length;
 
         // Keep a reference to the number of combined token contexts.
-        uint256 numberOfCombinedTokenContexts = numberOfProjectTokenContexts;
+        uint256 numberOfCombinedContextTokens = numberOfProjectContextTokens;
 
         // add the generic contexts, iff they are not defined for the project (ie do not include duplicates)
-        for (uint256 i; i < numberOfGenericTokenContexts; i++) {
+        for (uint256 i; i < numberOfGenericContextTokens; i++) {
+
+            // Skip if there is already a project context for the token.
             bool skip;
 
-            for (uint256 j; j < numberOfProjectTokenContexts; j++) {
-                if (projectTokenContexts[j] == genericTokenContexts[i]) {
+            for (uint256 j; j < numberOfProjectContextTokens; j++) {
+                if (projectContextTokens[j] == genericContextTokens[i]) {
                     skip = true;
                     break;
                 }
             }
 
             if (!skip) {
-                contexts[numberOfCombinedTokenContexts++] = _accountingContextFor[DEFAULT_PROJECT_ID][genericTokenContexts[i]];
+                contexts[numberOfCombinedContextTokens++] = _accountingContextFor[DEFAULT_PROJECT_ID][genericContextTokens[i]];
             }
         }
 
         // Downsize the array to the actual length, if needed
-        if (numberOfCombinedTokenContexts < contexts.length) {
+        if (numberOfCombinedContextTokens < contexts.length) {
             assembly {
-                mstore(contexts, numberOfCombinedTokenContexts)
+                mstore(contexts, numberOfCombinedContextTokens)
             }
         }
 
