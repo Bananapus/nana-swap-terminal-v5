@@ -201,6 +201,9 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         // Keep a reference to the number of generic contexts.
         uint256 numberOfGenericTokenContexts = genericTokenContexts.length;
 
+        // Keep a reference to the number of combined token contexts.
+        uint256 numberOfCombinedTokenContexts = numberOfProjectTokenContexts;
+
         // add the generic contexts, iff they are not defined for the project (ie do not include duplicates)
         for (uint256 i; i < numberOfGenericTokenContexts; i++) {
             bool skip;
@@ -213,9 +216,18 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
             }
 
             if (!skip) {
-                contexts[numberOfProjectTokenContexts + i] = _accountingContextFor[DEFAULT_PROJECT_ID][genericTokenContexts[i]];
+                contexts[numberOfCombinedTokenContexts++] = _accountingContextFor[DEFAULT_PROJECT_ID][genericTokenContexts[i]];
             }
         }
+
+        // Downsize the array to the actual length, if needed
+        if (numberOfCombinedTokenContexts < contexts.length) {
+            assembly {
+                mstore(contexts, numberOfCombinedTokenContexts)
+            }
+        }
+
+        return contexts;
     }
 
     /// @notice Empty implementation to satisfy the interface. This terminal has no surplus.
