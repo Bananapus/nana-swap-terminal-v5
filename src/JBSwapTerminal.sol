@@ -563,9 +563,9 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         (uint256 minAmountOut, IUniswapV3Pool pool) = _pickPoolAndQuote({
             metadata: metadata,
             projectId: projectId,
-            tokenIn: normalizedTokenIn,
+            normalizedTokenIn: normalizedTokenIn,
             amount: amount,
-            tokenOut: normalizedTokenOut
+            normalizedTokenOut: normalizedTokenOut
         });
 
         // Swap if needed. The callback will ensure that we're within the intended slippage tolerance.
@@ -600,17 +600,17 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// @notice Picks the pool and quote for the swap.
     /// @param metadata The metadata in which `quoteForSwap` context is provided.
     /// @param projectId The ID of the project for which the swap is being performed.
-    /// @param tokenIn The address of the token being swapped.
+    /// @param normalizedTokenIn The address of the token being swapped, normalized to the wrapped native token.
     /// @param amount The amount of tokens to swap.
-    /// @param tokenOut The address of the token to receive from the swap.
+    /// @param normalizedTokenOut The address of the token to receive from the swap, normalized to the wrapped native token.
     /// @return minAmountOut The minimum amount of tokens to receive from the swap.
     /// @return pool The pool to perform the swap in.
     function _pickPoolAndQuote(
         bytes calldata metadata,
         uint256 projectId,
-        address tokenIn,
+        address normalizedTokenIn,
         uint256 amount,
-        address tokenOut
+        address normalizedTokenOut
     )
         internal
         view
@@ -627,11 +627,11 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         } else {
             // If there is no quote, check for this project's default pool for the token and get a quote based on
             // its TWAP.
-            pool = _poolFor[projectId][tokenIn];
+            pool = _poolFor[projectId][normalizedTokenIn];
 
             // If this project doesn't have a default pool specified for this token, try using a generic one.
             if (address(pool) == address(0)) {
-                pool = _poolFor[DEFAULT_PROJECT_ID][tokenIn];
+                pool = _poolFor[DEFAULT_PROJECT_ID][normalizedTokenIn];
 
                 // If there's no default pool neither, revert.
                 if (address(pool) == address(0)) revert NO_DEFAULT_POOL_DEFINED();
@@ -647,8 +647,8 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
             minAmountOut = OracleLibrary.getQuoteAtTick({
                 tick: arithmeticMeanTick,
                 baseAmount: uint128(amount),
-                baseToken: tokenIn,
-                quoteToken: tokenOut
+                baseToken: normalizedTokenIn,
+                quoteToken: normalizedTokenOut
             });
 
             // Return the lowest acceptable return based on the TWAP and its parameters.
