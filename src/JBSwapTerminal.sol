@@ -557,9 +557,10 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
 
         // Send back any leftover tokens to the payer
         uint256 leftover = IERC20(swapConfig.tokenIn).balanceOf(address(this));
-        if(leftover != 0) {
-            if(token == JBConstants.NATIVE_TOKEN)
+        if (leftover != 0) {
+            if (token == JBConstants.NATIVE_TOKEN) {
                 WETH.withdraw(IERC20(swapConfig.tokenIn).balanceOf(address(this)));
+            }
             _transferFor(address(this), payable(msg.sender), token, IERC20(swapConfig.tokenIn).balanceOf(address(this)));
         }
 
@@ -746,7 +747,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         }) {} catch {
             // Allowance already previously set?
             (uint160 amount, uint48 expiration, uint48 nonce) = PERMIT2.allowance(msg.sender, token, address(this));
-            if(amount < allowance.amount || expiration < allowance.expiration || nonce < allowance.nonce) {
+            if (amount < allowance.amount || expiration < allowance.expiration || nonce < allowance.nonce) {
                 revert PERMIT_ALLOWANCE_NOT_ENOUGH();
             }
         }
