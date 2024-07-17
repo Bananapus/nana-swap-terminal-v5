@@ -744,13 +744,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
                 sigDeadline: allowance.sigDeadline
             }),
             signature: allowance.signature
-        }) {} catch {
-            // Allowance already previously set?
-            (uint160 amount, uint48 expiration, uint48 nonce) = PERMIT2.allowance(msg.sender, token, address(this));
-            if (amount < allowance.amount || expiration < allowance.expiration || nonce < allowance.nonce) {
-                revert PERMIT_ALLOWANCE_NOT_ENOUGH();
-            }
-        }
+        }) {} catch {}
     }
 
     /// @notice Returns the token that flows out of this terminal, wrapped as an ERC-20 if needed.
