@@ -733,7 +733,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         amountOut = uint256(-(zeroForOne ? amount1 : amount0));
 
         // Ensure the amount received is not less than the minimum amount specified in the swap configuration.
-        if (amountOut < minAmountOut) revert MAX_SLIPPAGE(amountOut, minAmountOut);
+        if (amountOut < minAmountOut) revert MAX_SLIPPAGE();
 
         // If the output token is a native token, unwrap it from its wrapped form.
         if (OUT_IS_NATIVE_TOKEN) WETH.withdraw(amountOut);
