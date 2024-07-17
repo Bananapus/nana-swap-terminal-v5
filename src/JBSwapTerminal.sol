@@ -41,31 +41,6 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     using SafeERC20 for IERC20;
 
     //*********************************************************************//
-    // ------------------------------ structs ---------------------------- //
-    //*********************************************************************//
-
-    /// @notice A struct representing the parameters of a swap.
-    /// @dev This struct is only used in memory (no packing).
-    struct SwapConfig {
-        uint256 projectId;
-        IUniswapV3Pool pool;
-        address tokenIn;
-        bool inIsNativeToken; // `tokenIn` is wETH if true.
-        uint256 amountIn;
-        uint256 minAmountOut;
-        bool zeroForOne;
-    }
-
-    /// @notice A struct representing the configuration of a pool.
-    /// @dev This struct is only used in storage (packed).
-    /// @member pool The Uniswap V3 pool to use for the swap.
-    /// @member tokenOutIsToken0 True if tokenIn==token0 of the pool
-    struct PoolConfig {
-        IUniswapV3Pool pool;
-        bool zeroForOne;
-    }
-
-    //*********************************************************************//
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
 
@@ -74,7 +49,6 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     error NO_DEFAULT_POOL_DEFINED();
     error NO_MSG_VALUE_ALLOWED();
     error TOKEN_NOT_ACCEPTED();
-    error UNSUPPORTED();
     error MAX_SLIPPAGE();
     error WRONG_POOL();
 
@@ -92,7 +66,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// @dev Default pools are used when a payer doesn't specify a pool in their payment's metadata.
     /// @custom:param projectId The ID of the project to get the pool for.
     /// @custom:param tokenIn The address of the token to get the pool for.
-    mapping(uint256 projectId => mapping(address tokenIn => PoolConfig)) internal _poolFor;
+    mapping(uint256 projectId => mapping(address tokenIn => IUniswapV3Pool)) internal _poolFor;
 
     /// @notice A mapping which stores accounting contexts to use for a given project ID and token.
     /// @dev Accounting contexts are set up for a project ID and token when the project's owner uses
@@ -165,20 +139,23 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         view
         returns (IUniswapV3Pool pool, bool zeroForOne)
     {
-        PoolConfig storage poolConfig = _poolFor[projectId][tokenIn];
-        (pool, zeroForOne) = (poolConfig.pool, poolConfig.zeroForOne);
+        // Get the pool for the project ID and token.
+        pool = _poolFor[projectId][tokenIn];
 
+        // If the pool is not set, get the pool for the default project ID and token.
         if (address(pool) == address(0)) {
-            poolConfig = _poolFor[DEFAULT_PROJECT_ID][tokenIn];
-            (pool, zeroForOne) = (poolConfig.pool, poolConfig.zeroForOne);
+            pool = _poolFor[DEFAULT_PROJECT_ID][tokenIn];
         }
+
+        // Keep a reference to whether the token is being swapped into or out of the pool.
+        zeroForOne = tokenIn < _normalizedTokenOut();
     }
 
     /// @notice Get the accounting context for the specified project ID and token.
     /// @dev Accounting contexts are set up in `addDefaultPool(...)`.
     /// @param projectId The ID of the project to get the accounting context for.
     /// @param token The address of the token to get the accounting context for.
-    /// @return A `JBAccountingContext` containing the accounting context for the project ID and token.
+    /// @return context A `JBAccountingContext` containing the accounting context for the project ID and token.
     function accountingContextForTokenOf(
         uint256 projectId,
         address token
@@ -186,50 +163,73 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         external
         view
         override
-        returns (JBAccountingContext memory)
+        returns (JBAccountingContext memory context)
     {
-        return _accountingContextFor[projectId][token];
+        // Get a reference to the context for the given projectId.
+        context = _accountingContextFor[projectId][token];
+
+        // If one wasn't found, check for a default.
+        if (context.token == address(0)) {
+            context = _accountingContextFor[DEFAULT_PROJECT_ID][token];
+        }
     }
 
     /// @notice Return all the accounting contexts for a specified project ID.
     /// @dev    This includes both project-specific and generic accounting contexts, with the project-specific contexts
     ///         taking precedence.
     /// @param projectId The ID of the project to get the accounting contexts for.
-    /// @return An array of `JBAccountingContext` containing the accounting contexts for the project ID.
-    function accountingContextsOf(uint256 projectId) external view override returns (JBAccountingContext[] memory) {
-        address[] memory projectTokenContexts = _tokensWithAContext[projectId];
-        address[] memory genericTokenContexts = _tokensWithAContext[DEFAULT_PROJECT_ID];
+    /// @return contexts An array of `JBAccountingContext` containing the accounting contexts for the project ID.
+    function accountingContextsOf(uint256 projectId)
+        external
+        view
+        override
+        returns (JBAccountingContext[] memory contexts)
+    {
+        // Keep a reference to the tokens that have a known context for the project.
+        address[] memory projectContextTokens = _tokensWithAContext[projectId];
 
-        JBAccountingContext[] memory contexts =
-            new JBAccountingContext[](projectTokenContexts.length + genericTokenContexts.length);
-        uint256 actualLength = projectTokenContexts.length;
+        // Keep a reference to the default tokens that have a known context.
+        address[] memory genericContextTokens = _tokensWithAContext[DEFAULT_PROJECT_ID];
+
+        // Combine the two.
+        contexts = new JBAccountingContext[](projectContextTokens.length + genericContextTokens.length);
+
+        // Keep a reference to the number of project-specific contexts.
+        uint256 numberOfProjectContextTokens = projectContextTokens.length;
 
         // include all the project specific contexts
-        for (uint256 i = 0; i < projectTokenContexts.length; i++) {
-            contexts[i] = _accountingContextFor[projectId][projectTokenContexts[i]];
+        for (uint256 i; i < numberOfProjectContextTokens; i++) {
+            contexts[i] = _accountingContextFor[projectId][projectContextTokens[i]];
         }
 
+        // Keep a reference to the number of generic contexts.
+        uint256 numberOfGenericContextTokens = genericContextTokens.length;
+
+        // Keep a reference to the number of combined token contexts.
+        uint256 numberOfCombinedContextTokens = numberOfProjectContextTokens;
+
         // add the generic contexts, iff they are not defined for the project (ie do not include duplicates)
-        for (uint256 i = 0; i < genericTokenContexts.length; i++) {
+        for (uint256 i; i < numberOfGenericContextTokens; i++) {
+            // Skip if there is already a project context for the token.
             bool skip;
 
-            for (uint256 j = 0; j < projectTokenContexts.length; j++) {
-                if (projectTokenContexts[j] == genericTokenContexts[i]) {
+            for (uint256 j; j < numberOfProjectContextTokens; j++) {
+                if (projectContextTokens[j] == genericContextTokens[i]) {
                     skip = true;
                     break;
                 }
             }
 
             if (!skip) {
-                contexts[actualLength] = _accountingContextFor[DEFAULT_PROJECT_ID][genericTokenContexts[i]];
-                actualLength++;
+                contexts[numberOfCombinedContextTokens++] =
+                    _accountingContextFor[DEFAULT_PROJECT_ID][genericContextTokens[i]];
             }
         }
 
         // Downsize the array to the actual length, if needed
-        if (actualLength < contexts.length) {
+        if (numberOfCombinedContextTokens < contexts.length) {
             assembly {
-                mstore(contexts, actualLength)
+                mstore(contexts, numberOfCombinedContextTokens)
             }
         }
 
@@ -291,6 +291,8 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         JBPermissioned(permissions)
         Ownable(owner)
     {
+        if (tokenOut == address(0)) revert TOKEN_NOT_ACCEPTED();
+
         PROJECTS = projects;
         DIRECTORY = directory;
         PERMIT2 = permit2;
@@ -335,16 +337,28 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         override
         returns (uint256)
     {
-        // Get a reference to the project's primary terminal for `token`.
+        // Get a reference to the project's primary terminal for the destination token that is being swapped into.
         IJBTerminal terminal = DIRECTORY.primaryTerminalOf(projectId, TOKEN_OUT);
 
-        // Revert if the project does not have a primary terminal for `token`.
+        // Revert if the project does not have a primary terminal for the destination token.
         if (address(terminal) == address(0)) revert TOKEN_NOT_ACCEPTED();
 
-        uint256 receivedFromSwap = _handleTokenTransfersAndSwap(projectId, token, amount, address(terminal), metadata);
+        // Execute the swap.
+        uint256 receivedFromSwap = _handleTokenTransfersAndSwap({
+            projectId: projectId,
+            tokenIn: token,
+            amount: _acceptFundsFor({token: token, amount: amount, metadata: metadata}),
+            metadata: metadata
+        });
 
-        // Pay the primary terminal, passing along the beneficiary and other arguments.
-        return terminal.pay{value: OUT_IS_NATIVE_TOKEN ? receivedFromSwap : 0}({
+        // Trigger any pre-transfer logic.
+        _beforeTransferFor(address(terminal), TOKEN_OUT, receivedFromSwap);
+
+        // Keep a reference to the amount that'll be paid as a `msg.value`.
+        uint256 payValue = OUT_IS_NATIVE_TOKEN ? receivedFromSwap : 0;
+
+        // Pay the primary terminal in the resulting token, forwarding along the beneficiary and other arguments.
+        return terminal.pay{value: payValue}({
             projectId: projectId,
             token: TOKEN_OUT,
             amount: receivedFromSwap,
@@ -378,16 +392,29 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         payable
         override
     {
-        // Get a reference to the project's primary terminal for `token`.
+        // Get a reference to the project's primary terminal for the destination token that is being swapped into.
         IJBTerminal terminal = DIRECTORY.primaryTerminalOf(projectId, TOKEN_OUT);
 
-        // Revert if the project does not have a primary terminal for `token`.
+        // Revert if the project does not have a primary terminal for the destination token.
         if (address(terminal) == address(0)) revert TOKEN_NOT_ACCEPTED();
 
-        uint256 receivedFromSwap = _handleTokenTransfersAndSwap(projectId, token, amount, address(terminal), metadata);
+        // Execute the swap.
+        uint256 receivedFromSwap = _handleTokenTransfersAndSwap({
+            projectId: projectId,
+            tokenIn: token,
+            amount: _acceptFundsFor({token: token, amount: amount, metadata: metadata}),
+            metadata: metadata
+        });
 
-        // Pay the primary terminal, passing along the beneficiary and other arguments.
-        terminal.addToBalanceOf{value: OUT_IS_NATIVE_TOKEN ? receivedFromSwap : 0}({
+        // Trigger any pre-transfer logic.
+        _beforeTransferFor(address(terminal), TOKEN_OUT, receivedFromSwap);
+
+        // Keep a reference to the amount that'll be paid as a `msg.value`.
+        uint256 payValue = OUT_IS_NATIVE_TOKEN ? receivedFromSwap : 0;
+
+        // Add to the primary terminal's balance in the resulting token, forwarding along the beneficiary and other
+        // arguments.
+        terminal.addToBalanceOf{value: payValue}({
             projectId: projectId,
             token: TOKEN_OUT,
             amount: receivedFromSwap,
@@ -404,25 +431,29 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// @param data Data passed in by the swap operation.
     function uniswapV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata data) external override {
         // Unpack the data from the original swap config (forwarded through `_swap(...)`).
-        (address tokenIn, bool shouldWrap, uint256 projectId) = abi.decode(data, (address, bool, uint256));
+        (uint256 projectId, address tokenIn) = abi.decode(data, (uint256, address));
 
-        // Validate the caller is a pool (set by the project or default one)
-        address correctedTokenIn = shouldWrap ? address(WETH) : tokenIn;
-        address storedPool = address(_poolFor[projectId][correctedTokenIn].pool);
+        // Keep a reference to the normalized token, wrapping the native token if needed.
+        address normalizedTokenIn = tokenIn == JBConstants.NATIVE_TOKEN ? address(WETH) : tokenIn;
 
-        if (storedPool == address(0)) storedPool = address(_poolFor[0][correctedTokenIn].pool); // Will constraint
-            // sender==address(0) if not set
-        if (msg.sender != storedPool) revert CALLER_NOT_POOL();
+        // Keep a reference to the pool that'll be used to perform the swap.
+        IUniswapV3Pool storedPool = _poolFor[projectId][normalizedTokenIn];
+
+        // If there's no pool, look for a default pool.
+        if (address(storedPool) == address(0)) storedPool = _poolFor[DEFAULT_PROJECT_ID][normalizedTokenIn];
+
+        // Make sure the address making this call is the expected pool.
+        if (msg.sender != address(storedPool)) revert CALLER_NOT_POOL();
 
         // Keep a reference to the amount of tokens that should be sent to fulfill the swap (the positive delta).
         uint256 amountToSendToPool = amount0Delta < 0 ? uint256(amount1Delta) : uint256(amount0Delta);
 
         // Wrap native tokens if needed.
-        if (shouldWrap) WETH.deposit{value: amountToSendToPool}();
+        if (tokenIn == JBConstants.NATIVE_TOKEN) WETH.deposit{value: amountToSendToPool}();
 
-        // Transfer the tokens to the pool.
+        // Transfer the tokens being swapped to the pool.
         // This terminal should NEVER keep a token balance.
-        IERC20(tokenIn).safeTransfer(msg.sender, amountToSendToPool);
+        IERC20(normalizedTokenIn).safeTransfer(msg.sender, amountToSendToPool);
     }
 
     /// @notice Fallback to prevent native tokens being sent to this terminal.
@@ -442,23 +473,30 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// @param token The address of the token to set the default pool for.
     /// @param pool The Uniswap V3 pool to set as the default for the specified token.
     function addDefaultPool(uint256 projectId, address token, IUniswapV3Pool pool) external {
-        // Only the project owner can set the default pool for a token, only the project owner can set the
-        // pool for its project.
-        if (!(projectId == DEFAULT_PROJECT_ID && msg.sender == owner())) {
-            _requirePermissionFrom(PROJECTS.ownerOf(projectId), projectId, JBPermissionIds.ADD_SWAP_TERMINAL_POOL);
-        }
+        // Only the project owner can set the default pool for a token, and only project owners can set the pool for
+        // their project.
+        projectId == DEFAULT_PROJECT_ID
+            ? _checkOwner()
+            : _requirePermissionFrom(PROJECTS.ownerOf(projectId), projectId, JBPermissionIds.ADD_SWAP_TERMINAL_POOL);
 
-        bool zeroForOne = token < formattedTokenOut();
+        // Keep a reference to the normalized token out, which wraps the native token if needed.
+        address normalizedTokenOut = _normalizedTokenOut();
+
+        // Keep a reference to whether the token is being swapped into or out of the pool.
+        bool zeroForOne = token < normalizedTokenOut;
 
         // Check if the pool has beed deployed by the factory
-        uint24 fee = pool.fee();
+        // Factory stores both directions, future proofing
         if (
-            FACTORY.getPool(zeroForOne ? token : formattedTokenOut(), zeroForOne ? formattedTokenOut() : token, fee)
-                != address(pool)
-        ) revert WRONG_POOL(); // Factory stores both directions, future proofing
+            FACTORY.getPool({
+                tokenA: zeroForOne ? token : normalizedTokenOut,
+                tokenB: zeroForOne ? normalizedTokenOut : token,
+                fee: pool.fee()
+            }) != address(pool)
+        ) revert WRONG_POOL();
 
-        // Update the project's default pool for the token.
-        _poolFor[projectId][token] = PoolConfig({pool: pool, zeroForOne: zeroForOne});
+        // Update the project's pool for the token.
+        _poolFor[projectId][token] = pool;
 
         // Update the project's accounting context for the token.
         _accountingContextFor[projectId][token] = JBAccountingContext({
@@ -467,6 +505,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
             currency: uint32(uint160(token))
         });
 
+        // Store the token as having an accounting context.
         _tokensWithAContext[projectId].push(token);
     }
 
@@ -487,13 +526,11 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     )
         external
     {
-        // Only the project owner can set the default twap params for a pool, only the project owner can set the
-        // params for its project.
-        if (!(projectId == DEFAULT_PROJECT_ID && msg.sender == owner())) {
-            _requirePermissionFrom(
-                PROJECTS.ownerOf(projectId), projectId, JBPermissionIds.ADD_SWAP_TERMINAL_TWAP_PARAMS
-            );
-        }
+        // Only the project owner can set the default twap params for a pool, and only project owners can set the
+        // params for their projects.
+        projectId == DEFAULT_PROJECT_ID
+            ? _checkOwner()
+            : _requirePermissionFrom(PROJECTS.ownerOf(projectId), projectId, JBPermissionIds.ADD_SWAP_TERMINAL_TWAP_PARAMS);
 
         // Set the TWAP params for the project.
         _twapParamsOf[projectId][pool] = uint256(secondsAgo | uint256(slippageTolerance) << 32);
@@ -510,91 +547,98 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// @dev This function is responsible for transferring tokens from the sender to this terminal and performing a
     /// swap.
     /// @param projectId The ID of the project for which tokens are being transferred and possibly swapped.
-    /// @param token The address of the token coming to this terminal.
-    /// @param nextTerminal The address of the next terminal to which the swapped tokens will be sent.
+    /// @param tokenIn The address of the token coming to this terminal.
     /// @param metadata Additional data to be used in the swap.
     /// @return amountToSend The amount of tokens to send after the swap, to the next terminal
     function _handleTokenTransfersAndSwap(
         uint256 projectId,
-        address token,
+        address tokenIn,
         uint256 amount,
-        address nextTerminal,
         bytes calldata metadata
     )
         internal
         returns (uint256 amountToSend)
     {
-        SwapConfig memory swapConfig;
-        swapConfig.projectId = projectId;
+        // Keep a reference to the normalized token, which wraps the native token if needed.
+        address normalizedTokenIn = tokenIn == JBConstants.NATIVE_TOKEN ? address(WETH) : tokenIn;
 
-        if (token == JBConstants.NATIVE_TOKEN) {
-            // If the token being paid in is the native token, use `msg.value`.
-            swapConfig.tokenIn = address(WETH);
-            swapConfig.inIsNativeToken = true;
-            swapConfig.amountIn = msg.value;
-        } else {
-            // Otherwise, use `amount`.
-            swapConfig.tokenIn = token;
-            swapConfig.amountIn = amount;
-        }
+        // Keep a reference to the normalized token out, which wraps the native token if needed.
+        address normalizedTokenOut = _normalizedTokenOut();
 
-        (swapConfig.minAmountOut, swapConfig.pool, swapConfig.zeroForOne) =
-            _pickPoolAndQuote(metadata, projectId, swapConfig.tokenIn, amount);
+        // Get the quote that should be used for the swap, and the pool where the swap will take place.
+        (uint256 minAmountOut, IUniswapV3Pool pool) = _pickPoolAndQuote({
+            metadata: metadata,
+            projectId: projectId,
+            normalizedTokenIn: normalizedTokenIn,
+            amount: amount,
+            normalizedTokenOut: normalizedTokenOut
+        });
 
-        // Accept funds for the swap.
-        swapConfig.amountIn = _acceptFundsFor(swapConfig, metadata);
-
-        // Keep a reference to the formatted token out.
-        address tokenOut = formattedTokenOut();
-
-        // Swap. The callback will ensure that we're within the intended slippage tolerance.
+        // Swap if needed. The callback will ensure that we're within the intended slippage tolerance.
         // If the token in is the same as the token out, don't swap, just call the next terminal
-        if ((swapConfig.inIsNativeToken && OUT_IS_NATIVE_TOKEN) || (swapConfig.tokenIn == tokenOut)) {
-            amountToSend = swapConfig.amountIn;
+        if ((tokenIn == JBConstants.NATIVE_TOKEN && OUT_IS_NATIVE_TOKEN) || (normalizedTokenIn == normalizedTokenOut)) {
+            amountToSend = amount;
         } else {
-            amountToSend = _swap(swapConfig);
+            bool zeroForOne = normalizedTokenIn < normalizedTokenOut;
+            amountToSend = _swap({
+                tokenIn: tokenIn,
+                amountIn: amount,
+                minAmountOut: minAmountOut,
+                zeroForOne: zeroForOne,
+                projectId: projectId,
+                pool: pool
+            });
         }
 
         // Send back any leftover tokens to the payer
-        uint256 leftover = IERC20(swapConfig.tokenIn).balanceOf(address(this));
-        if (leftover != 0) {
-            if (token == JBConstants.NATIVE_TOKEN) {
-                WETH.withdraw(IERC20(swapConfig.tokenIn).balanceOf(address(this)));
-            }
-            _transferFor(address(this), payable(msg.sender), token, IERC20(swapConfig.tokenIn).balanceOf(address(this)));
-        }
+        uint256 leftover = IERC20(normalizedTokenIn).balanceOf(address(this));
 
-        // Trigger the `beforeTransferFor` hook.
-        _beforeTransferFor(nextTerminal, tokenOut, amountToSend);
+        if (leftover != 0) {
+            // If the token in is the native token, unwrap it from the WETH contract and send it to the payer.
+            if (tokenIn == JBConstants.NATIVE_TOKEN) {
+                WETH.withdraw(leftover);
+            }
+
+            _transferFor(address(this), payable(msg.sender), tokenIn, leftover);
+        }
     }
 
+    /// @notice Picks the pool and quote for the swap.
+    /// @param metadata The metadata in which `quoteForSwap` context is provided.
+    /// @param projectId The ID of the project for which the swap is being performed.
+    /// @param normalizedTokenIn The address of the token being swapped, normalized to the wrapped native token.
+    /// @param amount The amount of tokens to swap.
+    /// @param normalizedTokenOut The address of the token to receive from the swap, normalized to the wrapped native
+    /// token.
+    /// @return minAmountOut The minimum amount of tokens to receive from the swap.
+    /// @return pool The pool to perform the swap in.
     function _pickPoolAndQuote(
         bytes calldata metadata,
         uint256 projectId,
-        address token,
-        uint256 amountIn
+        address normalizedTokenIn,
+        uint256 amount,
+        address normalizedTokenOut
     )
         internal
         view
-        returns (uint256 minAmountOut, IUniswapV3Pool pool, bool zeroForOne)
+        returns (uint256 minAmountOut, IUniswapV3Pool pool)
     {
         // Check for a quote passed in by the user/client.
         (bool exists, bytes memory quote) =
             JBMetadataResolver.getDataFor(JBMetadataResolver.getId("quoteForSwap"), metadata);
 
+        // If there's a quote, use it.
         if (exists) {
             // If there is a quote, use it for the swap config.
-            (minAmountOut, pool, zeroForOne) = abi.decode(quote, (uint256, IUniswapV3Pool, bool));
+            (minAmountOut, pool) = abi.decode(quote, (uint256, IUniswapV3Pool));
         } else {
             // If there is no quote, check for this project's default pool for the token and get a quote based on
             // its TWAP.
-            PoolConfig storage poolConfig = _poolFor[projectId][token];
-            (pool, zeroForOne) = (poolConfig.pool, poolConfig.zeroForOne);
+            pool = _poolFor[projectId][normalizedTokenIn];
 
             // If this project doesn't have a default pool specified for this token, try using a generic one.
             if (address(pool) == address(0)) {
-                poolConfig = _poolFor[DEFAULT_PROJECT_ID][token];
-                (pool, zeroForOne) = (poolConfig.pool, poolConfig.zeroForOne);
+                pool = _poolFor[DEFAULT_PROJECT_ID][normalizedTokenIn];
 
                 // If there's no default pool neither, revert.
                 if (address(pool) == address(0)) revert NO_DEFAULT_POOL_DEFINED();
@@ -604,14 +648,15 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
             (uint32 secondsAgo, uint160 slippageTolerance) = twapParamsOf(projectId, pool);
 
             // Keep a reference to the TWAP tick.
+            //slither-disable-next-line unused-return
             (int24 arithmeticMeanTick,) = OracleLibrary.consult(address(pool), secondsAgo);
 
             // Get a quote based on this TWAP tick.
             minAmountOut = OracleLibrary.getQuoteAtTick({
                 tick: arithmeticMeanTick,
-                baseAmount: uint128(amountIn),
-                baseToken: token,
-                quoteToken: TOKEN_OUT == JBConstants.NATIVE_TOKEN ? address(WETH) : address(TOKEN_OUT)
+                baseAmount: uint128(amount),
+                baseToken: normalizedTokenIn,
+                quoteToken: normalizedTokenOut
             });
 
             // Return the lowest acceptable return based on the TWAP and its parameters.
@@ -620,30 +665,28 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     }
 
     /// @notice Accepts a token being paid in.
-    /// @param swapConfig The swap config which tokens are being accepted for.
+    /// @param token The address of the token being paid in.
+    /// @param amount The amount of tokens being paid in.
     /// @param metadata The metadata in which `permit2` context is provided.
     /// @return amount The amount of tokens that have been accepted.
-    function _acceptFundsFor(SwapConfig memory swapConfig, bytes calldata metadata) internal returns (uint256) {
-        // Get a reference to address of the token being paid in.
-        address token = swapConfig.tokenIn;
-
+    function _acceptFundsFor(address token, uint256 amount, bytes calldata metadata) internal returns (uint256) {
         // If native tokens are being paid in, return the `msg.value`.
-        if (swapConfig.inIsNativeToken) return msg.value;
+        if (token == JBConstants.NATIVE_TOKEN) return msg.value;
 
         // Otherwise, the `msg.value` should be 0.
         if (msg.value != 0) revert NO_MSG_VALUE_ALLOWED();
 
         // Unpack the `JBSingleAllowanceContext` to use given by the frontend.
-        (bool exists, bytes memory rawAllowance) =
+        (bool exists, bytes memory parsedMetadata) =
             JBMetadataResolver.getDataFor(JBMetadataResolver.getId("permit2"), metadata);
 
         // If the metadata contained permit data, use it to set the allowance.
         if (exists) {
             // Keep a reference to the allowance context parsed from the metadata.
-            (JBSingleAllowanceContext memory allowance) = abi.decode(rawAllowance, (JBSingleAllowanceContext));
+            (JBSingleAllowanceContext memory allowance) = abi.decode(parsedMetadata, (JBSingleAllowanceContext));
 
             // Make sure the permit allowance is enough for this payment. If not, revert early.
-            if (allowance.amount < swapConfig.amountIn) {
+            if (allowance.amount < amount) {
                 revert PERMIT_ALLOWANCE_NOT_ENOUGH();
             }
 
@@ -652,42 +695,51 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         }
 
         // Transfer the tokens from the `msg.sender` to this terminal.
-        _transferFor(msg.sender, payable(address(this)), token, swapConfig.amountIn);
+        _transferFor({from: msg.sender, to: payable(address(this)), token: token, amount: amount});
 
         // The amount actually received.
         return IERC20(token).balanceOf(address(this));
     }
 
     /// @notice Swaps tokens based on the provided swap configuration.
-    /// @param swapConfig The configuration for the swap, including the tokens and amounts involved.
-    /// @return amountReceived The amount of tokens received from the swap.
-    function _swap(SwapConfig memory swapConfig) internal returns (uint256 amountReceived) {
-        // Keep references to the input and output tokens.
-        address tokenIn = swapConfig.tokenIn;
-
-        // Determine the direction of the swap based on the token addresses.
-        bool zeroForOne = swapConfig.zeroForOne;
-
+    /// @param tokenIn The address of the token being swapped.
+    /// @param amountIn The amount of tokens to swap.
+    /// @param minAmountOut The minimum amount of tokens to receive from the swap.
+    /// @param zeroForOne The order of the token values being passed into the swap.
+    /// @param projectId The ID of the project for which the swap is being performed.
+    /// @param pool The pool to perform the swap in.
+    /// @return amountOut The amount of tokens received from the swap.
+    function _swap(
+        address tokenIn,
+        uint256 amountIn,
+        uint256 minAmountOut,
+        bool zeroForOne,
+        uint256 projectId,
+        IUniswapV3Pool pool
+    )
+        internal
+        returns (uint256 amountOut)
+    {
         // Perform the swap in the specified pool, passing in parameters from the swap configuration.
-        (int256 amount0, int256 amount1) = swapConfig.pool.swap({
+        (int256 amount0, int256 amount1) = pool.swap({
             recipient: address(this), // Send output tokens to this terminal.
             zeroForOne: zeroForOne, // The direction of the swap.
-            amountSpecified: int256(swapConfig.amountIn), // The amount of input tokens to swap.
+            amountSpecified: int256(amountIn), // The amount of input tokens to swap.
             sqrtPriceLimitX96: zeroForOne ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1, // The price
                 // limit for the swap.
-            data: abi.encode(tokenIn, swapConfig.inIsNativeToken, swapConfig.projectId) // Additional data which will be
+            data: abi.encode(projectId, tokenIn) // Additional data which will be
                 // forwarded to the
                 // callback.
         });
 
         // Calculate the amount of tokens received from the swap.
-        amountReceived = uint256(-(zeroForOne ? amount1 : amount0));
+        amountOut = uint256(-(zeroForOne ? amount1 : amount0));
 
         // Ensure the amount received is not less than the minimum amount specified in the swap configuration.
-        if (amountReceived < swapConfig.minAmountOut) revert MAX_SLIPPAGE();
+        if (amountOut < minAmountOut) revert MAX_SLIPPAGE();
 
         // If the output token is a native token, unwrap it from its wrapped form.
-        if (OUT_IS_NATIVE_TOKEN) WETH.withdraw(amountReceived);
+        if (OUT_IS_NATIVE_TOKEN) WETH.withdraw(amountOut);
     }
 
     /// @notice Transfers tokens.
@@ -731,26 +783,25 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// @param allowance The allowance to set using `permit2`.
     /// @param token The token to set the allowance for.
     function _permitAllowance(JBSingleAllowanceContext memory allowance, address token) internal {
-        try PERMIT2.permit({
-            owner: msg.sender,
-            permitSingle: IAllowanceTransfer.PermitSingle({
-                details: IAllowanceTransfer.PermitDetails({
-                    token: token,
-                    amount: allowance.amount,
-                    expiration: allowance.expiration,
-                    nonce: allowance.nonce
-                }),
-                spender: address(this),
-                sigDeadline: allowance.sigDeadline
+        // Keep a reference to the permit rules.
+        IAllowanceTransfer.PermitSingle memory permitSingle = IAllowanceTransfer.PermitSingle({
+            details: IAllowanceTransfer.PermitDetails({
+                token: token,
+                amount: allowance.amount,
+                expiration: allowance.expiration,
+                nonce: allowance.nonce
             }),
-            signature: allowance.signature
-        }) {} catch {}
+            spender: address(this),
+            sigDeadline: allowance.sigDeadline
+        });
+
+        try PERMIT2.permit({owner: msg.sender, permitSingle: permitSingle, signature: allowance.signature}) {} catch {}
     }
 
     /// @notice Returns the token that flows out of this terminal, wrapped as an ERC-20 if needed.
     /// @dev If the token out is the chain native token (ETH on mainnet), wrapped ETH is returned
     /// @return The token that flows out of this terminal.
-    function formattedTokenOut() internal view returns (address) {
+    function _normalizedTokenOut() internal view returns (address) {
         return OUT_IS_NATIVE_TOKEN ? address(WETH) : TOKEN_OUT;
     }
 }
