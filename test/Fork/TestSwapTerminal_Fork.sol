@@ -303,9 +303,7 @@ contract TestSwapTerminal_Fork is Test {
         UNI.approve(address(_swapTerminal), _amountIn);
 
         // Funny value
-        vm.expectRevert(
-            abi.encodeWithSelector(JBSwapTerminal.MAX_SLIPPAGE.selector)
-        );
+        vm.expectRevert(abi.encodeWithSelector(JBSwapTerminal.MAX_SLIPPAGE.selector));
 
         // Make a payment.
         _swapTerminal.pay({
