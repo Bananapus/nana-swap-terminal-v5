@@ -49,7 +49,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     error NO_DEFAULT_POOL_DEFINED();
     error NO_MSG_VALUE_ALLOWED();
     error TOKEN_NOT_ACCEPTED();
-    error MAX_SLIPPAGE(uint256, uint256);
+    error MAX_SLIPPAGE();
     error WRONG_POOL();
 
     //*********************************************************************//
@@ -179,7 +179,12 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     ///         taking precedence.
     /// @param projectId The ID of the project to get the accounting contexts for.
     /// @return contexts An array of `JBAccountingContext` containing the accounting contexts for the project ID.
-    function accountingContextsOf(uint256 projectId) external view override returns (JBAccountingContext[] memory contexts) {
+    function accountingContextsOf(uint256 projectId)
+        external
+        view
+        override
+        returns (JBAccountingContext[] memory contexts)
+    {
         // Keep a reference to the tokens that have a known context for the project.
         address[] memory projectContextTokens = _tokensWithAContext[projectId];
 
@@ -187,8 +192,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         address[] memory genericContextTokens = _tokensWithAContext[DEFAULT_PROJECT_ID];
 
         // Combine the two.
-        contexts =
-            new JBAccountingContext[](projectContextTokens.length + genericContextTokens.length);
+        contexts = new JBAccountingContext[](projectContextTokens.length + genericContextTokens.length);
 
         // Keep a reference to the number of project-specific contexts.
         uint256 numberOfProjectContextTokens = projectContextTokens.length;
@@ -206,7 +210,6 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
 
         // add the generic contexts, iff they are not defined for the project (ie do not include duplicates)
         for (uint256 i; i < numberOfGenericContextTokens; i++) {
-
             // Skip if there is already a project context for the token.
             bool skip;
 
@@ -218,7 +221,8 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
             }
 
             if (!skip) {
-                contexts[numberOfCombinedContextTokens++] = _accountingContextFor[DEFAULT_PROJECT_ID][genericContextTokens[i]];
+                contexts[numberOfCombinedContextTokens++] =
+                    _accountingContextFor[DEFAULT_PROJECT_ID][genericContextTokens[i]];
             }
         }
 
@@ -602,7 +606,8 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// @param projectId The ID of the project for which the swap is being performed.
     /// @param normalizedTokenIn The address of the token being swapped, normalized to the wrapped native token.
     /// @param amount The amount of tokens to swap.
-    /// @param normalizedTokenOut The address of the token to receive from the swap, normalized to the wrapped native token.
+    /// @param normalizedTokenOut The address of the token to receive from the swap, normalized to the wrapped native
+    /// token.
     /// @return minAmountOut The minimum amount of tokens to receive from the swap.
     /// @return pool The pool to perform the swap in.
     function _pickPoolAndQuote(
@@ -787,14 +792,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
             sigDeadline: allowance.sigDeadline
         });
 
-        try PERMIT2.permit({owner: msg.sender, permitSingle: permitSingle, signature: allowance.signature}) {}
-        catch {
-            // Allowance already previously set?
-            (uint160 amount, uint48 expiration, uint48 nonce) = PERMIT2.allowance(msg.sender, token, address(this));
-            if (amount < allowance.amount || expiration < allowance.expiration || nonce < allowance.nonce) {
-                revert PERMIT_ALLOWANCE_NOT_ENOUGH();
-            }
-        }
+        try PERMIT2.permit({owner: msg.sender, permitSingle: permitSingle, signature: allowance.signature}) {} catch {}
     }
 
     /// @notice Returns the token that flows out of this terminal, wrapped as an ERC-20 if needed.

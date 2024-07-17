@@ -283,7 +283,7 @@ contract TestSwapTerminal_Fork is Test {
 
         deal(address(UNI), address(_sender), _amountIn);
 
-        uint256 _amountOut = _uniswapV3ForgeQuoter.getAmountOut(POOL, _amountIn, address(UNI));
+        _uniswapV3ForgeQuoter.getAmountOut(POOL, _amountIn, address(UNI));
 
         vm.prank(_projectOwner);
         _swapTerminal.addDefaultPool(_projectId, address(UNI), POOL);
@@ -303,9 +303,7 @@ contract TestSwapTerminal_Fork is Test {
         UNI.approve(address(_swapTerminal), _amountIn);
 
         // Funny value
-        vm.expectRevert(
-            abi.encodeWithSelector(JBSwapTerminal.MAX_SLIPPAGE.selector, _amountOut, 126_148_869_380_486_231_752)
-        );
+        vm.expectRevert(abi.encodeWithSelector(JBSwapTerminal.MAX_SLIPPAGE.selector));
 
         // Make a payment.
         _swapTerminal.pay({
@@ -452,7 +450,7 @@ contract TestSwapTerminal_Fork is Test {
 
         emit log_address(address(_permissions));
 
-        // Old deploy is used so we'll just allow this 
+        // Old deploy is used so we'll just allow this
         vm.expectRevert(JBPermissioned.UNAUTHORIZED.selector);
         vm.prank(address(12_345));
         _swapTerminal.addDefaultPool(_projectId, address(UNI), IUniswapV3Pool(address(5432)));
