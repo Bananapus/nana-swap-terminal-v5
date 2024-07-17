@@ -291,6 +291,8 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         JBPermissioned(permissions)
         Ownable(owner)
     {
+        if (tokenOut == address(0)) revert TOKEN_NOT_ACCEPTED();
+
         PROJECTS = projects;
         DIRECTORY = directory;
         PERMIT2 = permit2;
@@ -646,6 +648,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
             (uint32 secondsAgo, uint160 slippageTolerance) = twapParamsOf(projectId, pool);
 
             // Keep a reference to the TWAP tick.
+            //slither-disable-next-line unused-return
             (int24 arithmeticMeanTick,) = OracleLibrary.consult(address(pool), secondsAgo);
 
             // Get a quote based on this TWAP tick.
