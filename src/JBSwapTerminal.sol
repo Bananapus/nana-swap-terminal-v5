@@ -75,7 +75,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     error NO_MSG_VALUE_ALLOWED();
     error TOKEN_NOT_ACCEPTED();
     error UNSUPPORTED();
-    error MAX_SLIPPAGE(uint256, uint256);
+    error MAX_SLIPPAGE();
     error WRONG_POOL();
 
     //*********************************************************************//
@@ -684,7 +684,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         amountReceived = uint256(-(zeroForOne ? amount1 : amount0));
 
         // Ensure the amount received is not less than the minimum amount specified in the swap configuration.
-        if (amountReceived < swapConfig.minAmountOut) revert MAX_SLIPPAGE(amountReceived, swapConfig.minAmountOut);
+        if (amountReceived < swapConfig.minAmountOut) revert MAX_SLIPPAGE();
 
         // If the output token is a native token, unwrap it from its wrapped form.
         if (OUT_IS_NATIVE_TOKEN) WETH.withdraw(amountReceived);
