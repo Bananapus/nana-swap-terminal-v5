@@ -8,6 +8,7 @@ import {IERC20, IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extens
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IPermit2, IAllowanceTransfer} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import {OracleLibrary} from "@uniswap/v3-periphery/contracts/libraries/OracleLibrary.sol";
 import {TickMath} from "@uniswap/v3-core/contracts/libraries/TickMath.sol";
 import {IUniswapV3SwapCallback} from "@uniswap/v3-core/contracts/interfaces/callback/IUniswapV3SwapCallback.sol";
@@ -68,12 +69,14 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
 
+    error CALLER_NOT_POOL();
     error PERMIT_ALLOWANCE_NOT_ENOUGH();
     error NO_DEFAULT_POOL_DEFINED();
     error NO_MSG_VALUE_ALLOWED();
     error TOKEN_NOT_ACCEPTED();
     error UNSUPPORTED();
-    error MAX_SLIPPAGE(uint256, uint256);
+    error MAX_SLIPPAGE();
+    error WRONG_POOL();
 
     //*********************************************************************//
     // --------------------- internal stored properties ------------------ //
@@ -132,6 +135,10 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
 
     /// @notice The token which flows out of this terminal (JBConstants.NATIVE_TOKEN for the chain native token)
     address public immutable TOKEN_OUT;
+
+    /// @notice The factory to use for creating new pools
+    /// @dev We rely on "a" factory, vanilla uniswap v3 or potential fork
+    IUniswapV3Factory public immutable FACTORY;
 
     //*********************************************************************//
     // --------------- internal immutable stored properties -------------- //
@@ -278,7 +285,8 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         IPermit2 permit2,
         address owner,
         IWETH9 weth,
-        address tokenOut
+        address tokenOut,
+        IUniswapV3Factory factory
     )
         JBPermissioned(permissions)
         Ownable(owner)
@@ -289,6 +297,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         WETH = weth;
         TOKEN_OUT = tokenOut;
         OUT_IS_NATIVE_TOKEN = tokenOut == JBConstants.NATIVE_TOKEN;
+        FACTORY = factory;
     }
 
     //*********************************************************************//
@@ -389,15 +398,21 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     }
 
     /// @notice The Uniswap v3 pool callback where the token transfer is expected to happen.
-    /// @dev This function has no access control, care should be taken to ensure that:
-    ///      - terminal balance is always be 0 between tx (this callback can only be used to sweep accidental leftovers)
-    ///      - callback cannot pull user funds via a preexisting allowance
+    /// @dev Only an uniswap v3 pool can call this function
     /// @param amount0Delta The amount of token 0 being used for the swap.
     /// @param amount1Delta The amount of token 1 being used for the swap.
     /// @param data Data passed in by the swap operation.
     function uniswapV3SwapCallback(int256 amount0Delta, int256 amount1Delta, bytes calldata data) external override {
         // Unpack the data from the original swap config (forwarded through `_swap(...)`).
-        (address tokenIn, bool shouldWrap) = abi.decode(data, (address, bool));
+        (address tokenIn, bool shouldWrap, uint256 projectId) = abi.decode(data, (address, bool, uint256));
+
+        // Validate the caller is a pool (set by the project or default one)
+        address correctedTokenIn = shouldWrap ? address(WETH) : tokenIn;
+        address storedPool = address(_poolFor[projectId][correctedTokenIn].pool);
+
+        if (storedPool == address(0)) storedPool = address(_poolFor[0][correctedTokenIn].pool); // Will constraint
+            // sender==address(0) if not set
+        if (msg.sender != storedPool) revert CALLER_NOT_POOL();
 
         // Keep a reference to the amount of tokens that should be sent to fulfill the swap (the positive delta).
         uint256 amountToSendToPool = amount0Delta < 0 ? uint256(amount1Delta) : uint256(amount0Delta);
@@ -407,7 +422,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
 
         // Transfer the tokens to the pool.
         // This terminal should NEVER keep a token balance.
-        IERC20(tokenIn).transfer(msg.sender, amountToSendToPool);
+        IERC20(tokenIn).safeTransfer(msg.sender, amountToSendToPool);
     }
 
     /// @notice Fallback to prevent native tokens being sent to this terminal.
@@ -418,9 +433,10 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
 
     /// @notice Set a project's default pool and accounting context for the specified token. Only the project's owner,
     /// an address with `MODIFY_DEFAULT_POOL` permission from the owner or the terminal owner can call this function.
-    /// @dev This does not set the twap parameters, they *must* be set using `addTwapParamsFor` (if not, the twap
-    /// duration will be 0
-    /// which will cause the swap to revert).
+    /// @dev The pool should have been deployed by the factory associated to this contract. We don't rely on create2
+    /// address
+    /// as this terminal might be used on other chain, where the factory bytecode might differ or the main dex be a
+    /// fork.
     /// @param projectId The ID of the project to set the default pool for. The project 0 acts as a catch-all, where
     /// non-set pools are defaulted to.
     /// @param token The address of the token to set the default pool for.
@@ -432,8 +448,17 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
             _requirePermissionFrom(PROJECTS.ownerOf(projectId), projectId, JBPermissionIds.ADD_SWAP_TERMINAL_POOL);
         }
 
+        bool zeroForOne = token < formattedTokenOut();
+
+        // Check if the pool has beed deployed by the factory
+        uint24 fee = pool.fee();
+        if (
+            FACTORY.getPool(zeroForOne ? token : formattedTokenOut(), zeroForOne ? formattedTokenOut() : token, fee)
+                != address(pool)
+        ) revert WRONG_POOL(); // Factory stores both directions, future proofing
+
         // Update the project's default pool for the token.
-        _poolFor[projectId][token] = PoolConfig({pool: pool, zeroForOne: token < formattedTokenOut()});
+        _poolFor[projectId][token] = PoolConfig({pool: pool, zeroForOne: zeroForOne});
 
         // Update the project's accounting context for the token.
         _accountingContextFor[projectId][token] = JBAccountingContext({
@@ -528,6 +553,15 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
             amountToSend = swapConfig.amountIn;
         } else {
             amountToSend = _swap(swapConfig);
+        }
+
+        // Send back any leftover tokens to the payer
+        uint256 leftover = IERC20(swapConfig.tokenIn).balanceOf(address(this));
+        if (leftover != 0) {
+            if (token == JBConstants.NATIVE_TOKEN) {
+                WETH.withdraw(IERC20(swapConfig.tokenIn).balanceOf(address(this)));
+            }
+            _transferFor(address(this), payable(msg.sender), token, IERC20(swapConfig.tokenIn).balanceOf(address(this)));
         }
 
         // Trigger the `beforeTransferFor` hook.
@@ -632,7 +666,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         address tokenIn = swapConfig.tokenIn;
 
         // Determine the direction of the swap based on the token addresses.
-        bool zeroForOne = tokenIn < formattedTokenOut();
+        bool zeroForOne = swapConfig.zeroForOne;
 
         // Perform the swap in the specified pool, passing in parameters from the swap configuration.
         (int256 amount0, int256 amount1) = swapConfig.pool.swap({
@@ -641,7 +675,8 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
             amountSpecified: int256(swapConfig.amountIn), // The amount of input tokens to swap.
             sqrtPriceLimitX96: zeroForOne ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1, // The price
                 // limit for the swap.
-            data: abi.encode(tokenIn, swapConfig.inIsNativeToken) // Additional data which will be forwarded to the
+            data: abi.encode(tokenIn, swapConfig.inIsNativeToken, swapConfig.projectId) // Additional data which will be
+                // forwarded to the
                 // callback.
         });
 
@@ -649,7 +684,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         amountReceived = uint256(-(zeroForOne ? amount1 : amount0));
 
         // Ensure the amount received is not less than the minimum amount specified in the swap configuration.
-        if (amountReceived < swapConfig.minAmountOut) revert MAX_SLIPPAGE(amountReceived, swapConfig.minAmountOut);
+        if (amountReceived < swapConfig.minAmountOut) revert MAX_SLIPPAGE();
 
         // If the output token is a native token, unwrap it from its wrapped form.
         if (OUT_IS_NATIVE_TOKEN) WETH.withdraw(amountReceived);
@@ -664,7 +699,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     function _transferFor(address from, address payable to, address token, uint256 amount) internal virtual {
         if (from == address(this)) {
             // If the token is native token, assume the `sendValue` standard.
-            if (OUT_IS_NATIVE_TOKEN) return Address.sendValue(to, amount);
+            if (token == JBConstants.NATIVE_TOKEN) return Address.sendValue(to, amount);
 
             // If the transfer is from this terminal, use `safeTransfer`.
             return IERC20(token).safeTransfer(to, amount);
@@ -686,7 +721,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// token.
     function _beforeTransferFor(address to, address token, uint256 amount) internal virtual {
         // If the token is the native token, return early.
-        if (token == JBConstants.NATIVE_TOKEN) return;
+        if (OUT_IS_NATIVE_TOKEN) return;
 
         // Otherwise, set the appropriate allowance for the recipient.
         IERC20(token).safeIncreaseAllowance(to, amount);

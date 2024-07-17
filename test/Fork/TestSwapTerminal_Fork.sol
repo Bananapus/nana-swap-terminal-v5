@@ -39,15 +39,22 @@ import {IJBRulesetApprovalHook} from "@bananapus/core/src/interfaces/IJBRulesetA
 
 import {MockERC20} from "../helper/MockERC20.sol";
 
+import "@bananapus/core/script/helpers/CoreDeploymentLib.sol";
+
 import "forge-std/Test.sol";
 
 /// @notice Swap terminal test on a Sepolia fork
 contract TestSwapTerminal_Fork is Test {
     using JBRulesetMetadataResolver for JBRuleset;
 
+    /// @notice tracks the deployment of the core contracts for the chain.
+    CoreDeployment core;
+
     IERC20Metadata constant UNI = IERC20Metadata(0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984);
     IWETH9 constant WETH = IWETH9(0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14);
     IUniswapV3Pool constant POOL = IUniswapV3Pool(0x287B0e934ed0439E2a7b1d5F0FC25eA2c24b64f7);
+
+    IUniswapV3Factory constant factory = IUniswapV3Factory(0x0227628f3F023bb0B980b67D528571c95c6DaC1c);
 
     // Other token which is either token0 (if UNI is token1) or token1 of the pool
     IERC20Metadata internal _otherTokenIn = address(UNI) < address(WETH)
@@ -75,49 +82,55 @@ contract TestSwapTerminal_Fork is Test {
     address internal _beneficiary = makeAddr("beneficiary");
     address internal _projectOwner;
 
-    uint256 internal _projectId = 4;
+    uint256 internal _projectId = 1;
 
     function setUp() public {
-        vm.createSelectFork("https://rpc.ankr.com/eth_sepolia", 5_022_528);
+        vm.createSelectFork("https://rpc.ankr.com/eth_sepolia");
 
         vm.label(address(UNI), "UNI");
         vm.label(address(WETH), "WETH");
         vm.label(address(POOL), "POOL");
+
+        // Fetch the latest core deployments on this network
+        core = CoreDeploymentLib.getDeployment(
+            vm.envOr("NANA_CORE_DEPLOYMENT_PATH", string("node_modules/@bananapus/core/deployments/"))
+        );
 
         // TODO: find a new way to parse broadcast json
         // _controller = IJBController(stdJson.readAddress(
         //         vm.readFile("broadcast/Deploy.s.sol/11155420/run-latest.json"), ".address"
         //     ));
 
-        _controller = IJBController(0x15e9030Dd25b27d7e6763598B87445daf222C115);
+        _controller = core.controller;
         vm.label(address(_controller), "controller");
 
-        _projects = IJBProjects(0x95df60b57Ee581680F5c243554E16BD4F3A6a192);
+        _projects = core.projects;
         vm.label(address(_projects), "projects");
 
-        _permissions = IJBPermissions(0x607763b1458419Edb09f56CE795057A2958e2001);
+        _permissions = core.permissions;
         vm.label(address(_permissions), "permissions");
 
-        _directory = IJBDirectory(0x862ea57d0C473a5c7c8330d92C7824dbd60269EC);
+        _directory = core.directory;
         vm.label(address(_directory), "directory");
 
         _permit2 = IPermit2(0x000000000022D473030F116dDEE9F6B43aC78BA3);
         vm.label(address(_permit2), "permit2");
 
-        _tokens = JBTokens(0xdb42B6D08755c3f09AdB8C35A19A558bc1b40C9b);
+        _tokens = core.tokens;
         vm.label(address(_tokens), "tokens");
 
-        _terminalStore = IJBTerminalStore(0x6b2c93da6Af4061Eb6dAe4aCFc15632b54c37DE5);
+        _terminalStore = core.terminalStore;
         vm.label(address(_terminalStore), "terminalStore");
 
-        _projectTerminal = JBMultiTerminal(0x4319cb152D46Db72857AfE368B19A4483c0Bff0D);
+        _projectTerminal = core.terminal;
         vm.label(address(_projectTerminal), "projectTerminal");
 
-        _projectOwner = _projects.ownerOf(_projectId);
+        _projectOwner = _projects.ownerOf(1);
         vm.label(_projectOwner, "projectOwner");
 
-        _swapTerminal =
-            new JBSwapTerminal(_projects, _permissions, _directory, _permit2, _owner, WETH, JBConstants.NATIVE_TOKEN);
+        _swapTerminal = new JBSwapTerminal(
+            _projects, _permissions, _directory, _permit2, _owner, WETH, JBConstants.NATIVE_TOKEN, factory
+        );
         vm.label(address(_swapTerminal), "swapTerminal");
 
         _metadataResolver = new MetadataResolverHelper();
@@ -134,11 +147,7 @@ contract TestSwapTerminal_Fork is Test {
         );
         vm.label(address(_otherTokenIn), "_otherTokenIn");
 
-        _otherTokenPool = IUniswapV3Pool(
-            IUniswapV3Factory(0x0227628f3F023bb0B980b67D528571c95c6DaC1c).createPool(
-                address(_otherTokenIn), address(WETH), 3000
-            )
-        );
+        _otherTokenPool = IUniswapV3Pool(factory.createPool(address(_otherTokenIn), address(WETH), 3000));
         vm.label(address(_otherTokenPool), "_otherTokenPool");
 
         // Copying UNI sqrt price to hjave a realistic value
@@ -274,7 +283,7 @@ contract TestSwapTerminal_Fork is Test {
 
         deal(address(UNI), address(_sender), _amountIn);
 
-        uint256 _amountOut = _uniswapV3ForgeQuoter.getAmountOut(POOL, _amountIn, address(UNI));
+        _uniswapV3ForgeQuoter.getAmountOut(POOL, _amountIn, address(UNI));
 
         vm.prank(_projectOwner);
         _swapTerminal.addDefaultPool(_projectId, address(UNI), POOL);
@@ -294,9 +303,7 @@ contract TestSwapTerminal_Fork is Test {
         UNI.approve(address(_swapTerminal), _amountIn);
 
         // Funny value
-        vm.expectRevert(
-            abi.encodeWithSelector(JBSwapTerminal.MAX_SLIPPAGE.selector, _amountOut, 126_148_869_380_486_231_752)
-        );
+        vm.expectRevert(abi.encodeWithSelector(JBSwapTerminal.MAX_SLIPPAGE.selector));
 
         // Make a payment.
         _swapTerminal.pay({
@@ -328,8 +335,7 @@ contract TestSwapTerminal_Fork is Test {
 
         // Build the metadata using the minimum amount out, the pool address and the token out address
         bytes[] memory _data = new bytes[](1);
-        _data[0] =
-            abi.encode(_minAmountOut, address(_otherTokenPool), address(_otherTokenIn) < JBConstants.NATIVE_TOKEN);
+        _data[0] = abi.encode(_minAmountOut, address(_otherTokenPool), address(_otherTokenIn) < address(WETH));
 
         bytes4[] memory _ids = new bytes4[](1);
         _ids[0] = _metadataResolver.getId("quoteForSwap", address(_swapTerminal));
@@ -432,7 +438,8 @@ contract TestSwapTerminal_Fork is Test {
         assertEq(address(pool), address(POOL));
         assertEq(zeroToOne, address(UNI) < address(WETH));
 
-        address newPool = makeAddr("newPool");
+        // Use another fee tier
+        address newPool = factory.getPool(address(UNI), address(WETH), 500);
         vm.prank(_projects.ownerOf(_projectId));
         _swapTerminal.addDefaultPool(_projectId, address(UNI), IUniswapV3Pool(newPool));
 
@@ -441,6 +448,9 @@ contract TestSwapTerminal_Fork is Test {
         assertEq(address(pool), newPool);
         assertEq(zeroToOne, address(UNI) < address(WETH));
 
+        emit log_address(address(_permissions));
+
+        // Old deploy is used so we'll just allow this
         vm.expectRevert(JBPermissioned.UNAUTHORIZED.selector);
         vm.prank(address(12_345));
         _swapTerminal.addDefaultPool(_projectId, address(UNI), IUniswapV3Pool(address(5432)));
