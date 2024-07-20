@@ -1,6 +1,6 @@
 {
   "name": "@bananapus/swap-terminal",
-  "version": "0.0.15",
+  "version": "0.0.16",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -15,10 +15,10 @@
     "coverage": "forge coverage --match-path \"./src/*.sol\" --report lcov --report summary",
     "deploy:mainnets": "source ./.env && npx sphinx propose ./script/Deploy.s.sol --networks mainnets",
     "deploy:testnets": "source ./.env && npx sphinx propose ./script/Deploy.s.sol --networks testnets",
-    "artifacts": "source ./.env && npx sphinx artifacts --org-id 'cltepuu9u0003j58rjtbd0hvu' --project-name 'nana-swap-terminal-testnet'"
+    "artifacts": "source ./.env && npx sphinx artifacts --org-id 'my-org-id' --project-name 'nana-swap-terminal-testnet'"
   },
   "dependencies": {
-    "@bananapus/core": "^0.0.22",
+    "@bananapus/core": "^0.0.23",
     "@bananapus/permission-ids": "^0.0.11",
     "@exhausted-pigeon/uniswap-v3-foundry-pool": "^1.0.9",
     "@exhausted-pigeon/uniswap-v3-foundry-quote": "^1.0.0",
