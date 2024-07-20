@@ -1,6 +1,6 @@
 {
   "name": "@bananapus/swap-terminal",
-  "version": "0.0.15",
+  "version": "0.0.16",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -15,17 +15,17 @@
     "coverage": "forge coverage --match-path \"./src/*.sol\" --report lcov --report summary",
     "deploy:mainnets": "source ./.env && npx sphinx propose ./script/Deploy.s.sol --networks mainnets",
     "deploy:testnets": "source ./.env && npx sphinx propose ./script/Deploy.s.sol --networks testnets",
-    "artifacts": "source ./.env && npx sphinx artifacts --org-id 'cltepuu9u0003j58rjtbd0hvu' --project-name 'nana-swap-terminal-testnet'"
+    "artifacts": "source ./.env && npx sphinx artifacts --org-id 'my-org-id' --project-name 'nana-swap-terminal-testnet'"
   },
   "dependencies": {
-    "@bananapus/core": "^0.0.22",
+    "@bananapus/core": "^0.0.23",
     "@bananapus/permission-ids": "^0.0.11",
     "@exhausted-pigeon/uniswap-v3-foundry-pool": "^1.0.9",
     "@exhausted-pigeon/uniswap-v3-foundry-quote": "^1.0.0",
     "@openzeppelin/contracts": "^5.0.2",
     "@uniswap/permit2": "github:Uniswap/permit2",
-    "@uniswap/v3-core": "github:Uniswap/v3-core#0.8",
-    "@uniswap/v3-periphery": "github:Uniswap/v3-periphery#0.8"
+    "@uniswap/v3-core": "github:Uniswap/v3-core#1.0",
+    "@uniswap/v3-periphery": "github:Uniswap/v3-periphery#1.3"
   },
   "devDependencies": {
     "@sphinx-labs/plugins": "^0.33.0"
