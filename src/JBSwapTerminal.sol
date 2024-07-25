@@ -19,7 +19,7 @@ import {IJBPermissions} from "@bananapus/core/src/interfaces/IJBPermissions.sol"
 import {IJBProjects} from "@bananapus/core/src/interfaces/IJBProjects.sol";
 import {IJBTerminalStore} from "@bananapus/core/src/interfaces/IJBTerminalStore.sol";
 import {JBMetadataResolver} from "@bananapus/core/src/libraries/JBMetadataResolver.sol";
-import {JBSingleAllowanceContext} from "@bananapus/core/src/structs/JBSingleAllowanceContext.sol";
+import {JBSingleAllowance} from "@bananapus/core/src/structs/JBSingleAllowance.sol";
 import {JBPermissioned} from "@bananapus/core/src/abstract/JBPermissioned.sol";
 import {JBAccountingContext} from "@bananapus/core/src/structs/JBAccountingContext.sol";
 import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
@@ -256,8 +256,10 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         view
         returns (uint32 secondsAgo, uint160 slippageTolerance)
     {
+        // Get a reference to the swap params for the provided project.
         uint256 twapParams = _twapParamsOf[projectId][pool];
 
+        // Check the default if needed.
         if (twapParams == 0) {
             twapParams = _twapParamsOf[DEFAULT_PROJECT_ID][pool];
         }
@@ -510,7 +512,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     }
 
     /// @notice Empty implementation to satisfy the interface. Accounting contexts are set in `addDefaultPool(...)`.
-    function addAccountingContextsFor(uint256 projectId, address[] calldata tokens) external {}
+    function addAccountingContextsFor(uint256 projectId, JBAccountingContext[] calldata accountingContexts) external {}
 
     /// @notice Set the specified project's rules for calculating a quote based on the TWAP. Only the project's owner or
     /// an address with `MODIFY_TWAP_PARAMS` permission from the owner  or the terminal owner can call this function.
@@ -579,12 +581,11 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         if ((tokenIn == JBConstants.NATIVE_TOKEN && OUT_IS_NATIVE_TOKEN) || (normalizedTokenIn == normalizedTokenOut)) {
             amountToSend = amount;
         } else {
-            bool zeroForOne = normalizedTokenIn < normalizedTokenOut;
             amountToSend = _swap({
                 tokenIn: tokenIn,
                 amountIn: amount,
                 minAmountOut: minAmountOut,
-                zeroForOne: zeroForOne,
+                zeroForOne: normalizedTokenIn < normalizedTokenOut,
                 projectId: projectId,
                 pool: pool
             });
@@ -676,22 +677,34 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         // Otherwise, the `msg.value` should be 0.
         if (msg.value != 0) revert NO_MSG_VALUE_ALLOWED();
 
-        // Unpack the `JBSingleAllowanceContext` to use given by the frontend.
+        // Unpack the `JBSingleAllowance` to use given by the frontend.
         (bool exists, bytes memory parsedMetadata) =
             JBMetadataResolver.getDataFor(JBMetadataResolver.getId("permit2"), metadata);
 
         // If the metadata contained permit data, use it to set the allowance.
         if (exists) {
             // Keep a reference to the allowance context parsed from the metadata.
-            (JBSingleAllowanceContext memory allowance) = abi.decode(parsedMetadata, (JBSingleAllowanceContext));
+            (JBSingleAllowance memory allowance) = abi.decode(parsedMetadata, (JBSingleAllowance));
 
             // Make sure the permit allowance is enough for this payment. If not, revert early.
             if (allowance.amount < amount) {
                 revert PERMIT_ALLOWANCE_NOT_ENOUGH();
             }
 
-            // Set the `permit2` allowance for the user.
-            _permitAllowance(allowance, token);
+            // Keep a reference to the permit rules.
+            IAllowanceTransfer.PermitSingle memory permitSingle = IAllowanceTransfer.PermitSingle({
+                details: IAllowanceTransfer.PermitDetails({
+                    token: token,
+                    amount: allowance.amount,
+                    expiration: allowance.expiration,
+                    nonce: allowance.nonce
+                }),
+                spender: address(this),
+                sigDeadline: allowance.sigDeadline
+            });
+
+            try PERMIT2.permit({owner: msg.sender, permitSingle: permitSingle, signature: allowance.signature}) {}
+                catch {}
         }
 
         // Transfer the tokens from the `msg.sender` to this terminal.
@@ -777,25 +790,6 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
 
         // Otherwise, set the appropriate allowance for the recipient.
         IERC20(token).safeIncreaseAllowance(to, amount);
-    }
-
-    /// @notice Attempts to set the `permit2` allowance for a token.
-    /// @param allowance The allowance to set using `permit2`.
-    /// @param token The token to set the allowance for.
-    function _permitAllowance(JBSingleAllowanceContext memory allowance, address token) internal {
-        // Keep a reference to the permit rules.
-        IAllowanceTransfer.PermitSingle memory permitSingle = IAllowanceTransfer.PermitSingle({
-            details: IAllowanceTransfer.PermitDetails({
-                token: token,
-                amount: allowance.amount,
-                expiration: allowance.expiration,
-                nonce: allowance.nonce
-            }),
-            spender: address(this),
-            sigDeadline: allowance.sigDeadline
-        });
-
-        try PERMIT2.permit({owner: msg.sender, permitSingle: permitSingle, signature: allowance.signature}) {} catch {}
     }
 
     /// @notice Returns the token that flows out of this terminal, wrapped as an ERC-20 if needed.

@@ -85,7 +85,7 @@ contract TestSwapTerminal_Fork is Test {
     uint256 internal _projectId = 1;
 
     function setUp() public {
-        vm.createSelectFork("https://rpc.ankr.com/eth_sepolia");
+        vm.createSelectFork("https://eth-sepolia.g.alchemy.com/v2/aqe_TW1SAuXZdaooXMhf1RW0WSAW7XFd");
 
         vm.label(address(UNI), "UNI");
         vm.label(address(WETH), "WETH");
@@ -200,9 +200,9 @@ contract TestSwapTerminal_Fork is Test {
 
         // Make sure the beneficiary has a balance of project tokens
         uint256 _weight = _terminalStore.RULESETS().currentOf(_projectId).weight;
-        uint256 _reservedRate = _terminalStore.RULESETS().currentOf(_projectId).reservedRate();
+        uint256 _reservedRate = _terminalStore.RULESETS().currentOf(_projectId).reservedPercent();
         uint256 _totalMinted = _weight * _minAmountOut / 1 ether;
-        uint256 _reservedToken = _totalMinted * _reservedRate / JBConstants.MAX_RESERVED_RATE;
+        uint256 _reservedToken = _totalMinted * _reservedRate / JBConstants.MAX_RESERVED_PERCENT;
 
         // 1 wei delta for rounding
         assertApproxEqAbs(
@@ -257,9 +257,9 @@ contract TestSwapTerminal_Fork is Test {
 
         // Make sure the beneficiary has a balance of project tokens
         uint256 _weight = _terminalStore.RULESETS().currentOf(_projectId).weight;
-        uint256 _reservedRate = _terminalStore.RULESETS().currentOf(_projectId).reservedRate();
+        uint256 _reservedRate = _terminalStore.RULESETS().currentOf(_projectId).reservedPercent();
         uint256 _totalMinted = _weight * _minAmountOut / 1 ether;
-        uint256 _reservedToken = _totalMinted * _reservedRate / JBConstants.MAX_RESERVED_RATE;
+        uint256 _reservedToken = _totalMinted * _reservedRate / JBConstants.MAX_RESERVED_PERCENT;
 
         // 1 wei delta for rounding
         assertApproxEqAbs(
@@ -359,9 +359,9 @@ contract TestSwapTerminal_Fork is Test {
 
         // Make sure the beneficiary has a balance of project tokens
         uint256 _weight = _terminalStore.RULESETS().currentOf(_projectId).weight;
-        uint256 _reservedRate = _terminalStore.RULESETS().currentOf(_projectId).reservedRate();
+        uint256 _reservedRate = _terminalStore.RULESETS().currentOf(_projectId).reservedPercent();
         uint256 _totalMinted = _weight * _minAmountOut / 1 ether;
-        uint256 _reservedToken = _totalMinted * _reservedRate / JBConstants.MAX_RESERVED_RATE;
+        uint256 _reservedToken = _totalMinted * _reservedRate / JBConstants.MAX_RESERVED_PERCENT;
 
         // 1 wei delta for rounding
         assertApproxEqAbs(
