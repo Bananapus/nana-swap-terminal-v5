@@ -1,7 +1,7 @@
 JBSwapTerminal::addTwapParamsFor // path coverage
 ├── given the caller is a project owner
 │   ├── when setting twap params of its project
-│   │   └── it should the params
+│   │   └── it should add the twap params to the project
 │   └── when setting twap params to another project
 │       └── it should revert
 ├── given the caller is not a project owner
