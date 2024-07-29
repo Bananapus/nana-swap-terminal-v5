@@ -139,6 +139,9 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         view
         returns (IUniswapV3Pool pool, bool zeroForOne)
     {
+        // Convert the token in as weth if it's the native token
+        tokenIn = tokenIn == JBConstants.NATIVE_TOKEN ? address(WETH) : tokenIn;
+
         // Get the pool for the project ID and token.
         pool = _poolFor[projectId][tokenIn];
 
