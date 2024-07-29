@@ -216,7 +216,7 @@ contract Pay is UnitFixture {
         // add the permit2 data to the metadata
         bytes memory payMetadata = _createMetadata("SWAP", abi.encode(amountOut, pool, tokenIn < tokenOut));
 
-        JBSingleAllowanceContext memory context = JBSingleAllowanceContext({
+        JBSingleAllowance memory context = JBSingleAllowance({
             sigDeadline: 0,
             amount: uint160(amountIn),
             expiration: 0,
@@ -330,7 +330,7 @@ contract Pay is UnitFixture {
         // add the permit2 data to the metadata
         bytes memory payMetadata = _createMetadata("SWAP", abi.encode(amountOut, pool, tokenIn < tokenOut));
 
-        JBSingleAllowanceContext memory context = JBSingleAllowanceContext({
+        JBSingleAllowance memory context = JBSingleAllowance({
             sigDeadline: 0,
             amount: uint160(amountIn) - 1,
             expiration: 0,

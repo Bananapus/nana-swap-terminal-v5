@@ -12,8 +12,10 @@ contract UnitFixture is Test {
     IJBProjects public mockJBProjects;
     IJBPermissions public mockJBPermissions;
     IJBDirectory public mockJBDirectory;
+
     IPermit2 public mockPermit2;
     IWETH9 public mockWETH;
+    IUniswapV3Factory public mockUniswapFactory;
 
     address public terminalOwner;
 
@@ -24,13 +26,16 @@ contract UnitFixture is Test {
         mockJBProjects = IJBProjects(makeAddr("mockJBProjects"));
         mockJBPermissions = IJBPermissions(makeAddr("mockJBPermissions"));
         mockJBDirectory = IJBDirectory(makeAddr("mockJBDirectory"));
+        
         mockPermit2 = IPermit2(makeAddr("mockPermit2"));
         mockWETH = IWETH9(makeAddr("mockWETH"));
+        mockUniswapFactory = IUniswapV3Factory(makeAddr("mockUniswapFactory"));
+
         terminalOwner = makeAddr("terminalOwner");
 
         // -- deploy the swap terminal --
         swapTerminal =
-            new JBSwapTerminal(mockJBProjects, mockJBPermissions, mockJBDirectory, mockPermit2, terminalOwner, mockWETH, JBConstants.NATIVE_TOKEN);
+            new JBSwapTerminal(mockJBProjects, mockJBPermissions, mockJBDirectory, mockPermit2, terminalOwner, mockWETH, JBConstants.NATIVE_TOKEN, mockUniswapFactory);
 
         
     }

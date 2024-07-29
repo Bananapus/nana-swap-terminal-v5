@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 
 import "../helper/UnitFixture.sol";
 
-contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
+contract AddTwapParamsFor is UnitFixture {
     address caller;
     address projectOwner;
 
@@ -18,72 +18,42 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
         pool = IUniswapV3Pool(makeAddr("pool"));
     }
 
-    modifier givenTheCallerIsAProjectOwner() {
+    /// @notice Test that the project owner can add twap params to its project
+    function test_AddTwapParamsForWhenCalledByAProjectOwner(uint32 secondsAgo, uint160 slippageTolerance) external {
+        // Set the project owner
         mockExpectCall(address(mockJBProjects), abi.encodeCall(IERC721.ownerOf, (projectId)), abi.encode(projectOwner));
 
-        vm.startPrank(projectOwner);
-        _;
-    }
-
-    function test_WhenSettingTwapParamsOfItsProject(uint32 secondsAgo, uint160 slippageTolerance) external givenTheCallerIsAProjectOwner {
+        // Add the pool as the project owner
+        vm.prank(projectOwner);
         swapTerminal.addTwapParamsFor(projectId, pool, secondsAgo, slippageTolerance);
 
         // it should add the twap params to the project
         (uint256 twapSecondsAgo, uint256 twapSlippageTolerance) = swapTerminal.twapParamsOf(projectId, pool); // implicit
-        
+            // upcast
         assertEq(twapSecondsAgo, secondsAgo);
         assertEq(twapSlippageTolerance, slippageTolerance);
     }
 
-    function test_RevertWhen_SettingTwapParamsToAnotherProject() external givenTheCallerIsAProjectOwner {
-        mockExpectCall(address(mockJBProjects), abi.encodeCall(IERC721.ownerOf, (projectId)), abi.encode(projectOwner));
-
-        uint32 secondsAgo = 100;
-        uint160 slippageTolerance = 1000;
-
-        // Do not give specific or generic permission to the caller
-        mockExpectCall(
-            address(mockJBPermissions),
-            abi.encodeCall(
-                IJBPermissions.hasPermission,
-                (caller, projectOwner, projectId, JBPermissionIds.ADD_SWAP_TERMINAL_TWAP_PARAMS, true, true)
-            ),
-            abi.encode(false)
-        );
-
-        mockExpectCall(
-            address(mockJBPermissions),
-            abi.encodeCall(
-                IJBPermissions.hasPermission,
-                (caller, projectOwner, 0, JBPermissionIds.ADD_SWAP_TERMINAL_TWAP_PARAMS, true, true)
-            ),
-            abi.encode(false)
-        );
-
-        // it should revert
-        vm.prank(caller);
-        vm.expectRevert(JBPermissioned.UNAUTHORIZED.selector);
-        swapTerminal.addTwapParamsFor(projectId, pool, secondsAgo, slippageTolerance);
-    }
-
-    modifier givenTheCallerIsNotAProjectOwner() {
+    /// @notice Set the project owner
+    modifier whenCalledByANonProjectOwner() {
         mockExpectCall(address(mockJBProjects), abi.encodeCall(IERC721.ownerOf, (projectId)), abi.encode(projectOwner));
         _;
     }
 
-    function test_WhenTheCallerHasTheRole(
+    /// @notice Test that the caller can add twap params to a project when it has the permission
+    function test_AddTwapParamsForWhenTheCallerHasTheRole(
         uint32 secondsAgo,
         uint160 slippageTolerance
     )
         external
-        givenTheCallerIsNotAProjectOwner
+        whenCalledByANonProjectOwner
     {
         // Give the permission to the caller
         mockExpectCall(
             address(mockJBPermissions),
             abi.encodeCall(
                 IJBPermissions.hasPermission,
-                (caller, projectOwner, projectId, JBPermissionIds.ADD_SWAP_TERMINAL_TWAP_PARAMS, true, true)
+                (caller, projectOwner, projectId, JBPermissionIds.ADD_SWAP_TERMINAL_TWAP_PARAMS)
             ),
             abi.encode(true)
         );
@@ -99,47 +69,21 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
         assertEq(twapSlippageTolerance, slippageTolerance);
     }
 
-    function test_RevertWhen_TheCallerHasNoRole() external givenTheCallerIsNotAProjectOwner {
-        uint32 secondsAgo = 100;
-        uint160 slippageTolerance = 1000;
-
-        // Do not give specific or generic permission to the caller
-        mockExpectCall(
-            address(mockJBPermissions),
-            abi.encodeCall(
-                IJBPermissions.hasPermission,
-                (caller, projectOwner, projectId, JBPermissionIds.ADD_SWAP_TERMINAL_TWAP_PARAMS, true, true)
-            ),
-            abi.encode(false)
-        );
-
-        mockExpectCall(
-            address(mockJBPermissions),
-            abi.encodeCall(
-                IJBPermissions.hasPermission,
-                (caller, projectOwner, 0, JBPermissionIds.ADD_SWAP_TERMINAL_TWAP_PARAMS, true, true)
-            ),
-            abi.encode(false)
-        );
-
-        // it should revert
-        vm.prank(caller);
-        vm.expectRevert(JBPermissioned.UNAUTHORIZED.selector);
-        swapTerminal.addTwapParamsFor(projectId, pool, secondsAgo, slippageTolerance);
-    }
-
-    modifier givenTheCallerIsTheTerminalOwner() {
+    modifier whenCalledByTerminalOwner() {
+        vm.startPrank(terminalOwner);
         _;
     }
 
-    function test_WhenAddingDefaultParamsForAPool(
+    /// @notice Test that the terminal owner can add generic twap params, used for any non-set projects
+    function test_AddTwapParamsForWhenTheCallerIsTheTerminalOwner(
         uint256 _projectId,
         uint32 secondsAgo,
         uint160 slippageTolerance
     )
         external
-        givenTheCallerIsTheTerminalOwner
+        whenCalledByTerminalOwner
     {
+        vm.assume(_projectId != projectId);
         vm.assume(_projectId != 0);
 
         // Add the twap params as the terminal owner
@@ -166,7 +110,8 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
         assertEq(twapSlippageTolerance, slippageTolerance);
     }
 
-    function test_RevertWhen_SettingTheParamsOfAProject() external givenTheCallerIsTheTerminalOwner {
+    /// @notice Test that other callers cannot add twap params to a project
+    function test_AddTwapParamsForRevertWhen_TheCallerIsNotTheTerminalOwner() external whenCalledByANonProjectOwner {
         uint32 secondsAgo = 100;
         uint160 slippageTolerance = 1000;
 
@@ -175,7 +120,7 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
             address(mockJBPermissions),
             abi.encodeCall(
                 IJBPermissions.hasPermission,
-                (caller, projectOwner, projectId, JBPermissionIds.ADD_SWAP_TERMINAL_TWAP_PARAMS, true, true)
+                (caller, projectOwner, projectId, JBPermissionIds.ADD_SWAP_TERMINAL_TWAP_PARAMS)
             ),
             abi.encode(false)
         );
@@ -184,7 +129,7 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
             address(mockJBPermissions),
             abi.encodeCall(
                 IJBPermissions.hasPermission,
-                (caller, projectOwner, 0, JBPermissionIds.ADD_SWAP_TERMINAL_TWAP_PARAMS, true, true)
+                (caller, projectOwner, 0, JBPermissionIds.ADD_SWAP_TERMINAL_TWAP_PARAMS)
             ),
             abi.encode(false)
         );
@@ -193,6 +138,5 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
         vm.prank(caller);
         vm.expectRevert(JBPermissioned.UNAUTHORIZED.selector);
         swapTerminal.addTwapParamsFor(projectId, pool, secondsAgo, slippageTolerance);
-
     }
 }

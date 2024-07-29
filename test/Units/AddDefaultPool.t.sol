@@ -62,7 +62,7 @@ contract JBSwapTerminaladdDefaultPool is UnitFixture {
             address(mockJBPermissions),
             abi.encodeCall(
                 IJBPermissions.hasPermission,
-                (caller, projectOwner, projectId, JBPermissionIds.ADD_SWAP_TERMINAL_POOL)
+                (caller, projectOwner, projectId, JBPermissionIds.ADD_SWAP_TERMINAL_POOL, true, true)
             ),
             abi.encode(true)
         );
@@ -85,7 +85,7 @@ contract JBSwapTerminaladdDefaultPool is UnitFixture {
             address(mockJBPermissions),
             abi.encodeCall(
                 IJBPermissions.hasPermission,
-                (caller, projectOwner, projectId, JBPermissionIds.ADD_SWAP_TERMINAL_POOL)
+                (caller, projectOwner, projectId, JBPermissionIds.ADD_SWAP_TERMINAL_POOL, true, true)
             ),
             abi.encode(false)
         );
@@ -94,7 +94,7 @@ contract JBSwapTerminaladdDefaultPool is UnitFixture {
             address(mockJBPermissions),
             abi.encodeCall(
                 IJBPermissions.hasPermission,
-                (caller, projectOwner, 0, JBPermissionIds.ADD_SWAP_TERMINAL_POOL)
+                (caller, projectOwner, 0, JBPermissionIds.ADD_SWAP_TERMINAL_POOL, true, true)
             ),
             abi.encode(false)
         );
@@ -149,7 +149,7 @@ contract JBSwapTerminaladdDefaultPool is UnitFixture {
             address(mockJBPermissions),
             abi.encodeCall(
                 IJBPermissions.hasPermission,
-                (terminalOwner, projectOwner, projectId, JBPermissionIds.ADD_SWAP_TERMINAL_POOL)
+                (terminalOwner, projectOwner, projectId, JBPermissionIds.ADD_SWAP_TERMINAL_POOL, true, true)
             ),
             abi.encode(false)
         );
@@ -158,7 +158,7 @@ contract JBSwapTerminaladdDefaultPool is UnitFixture {
             address(mockJBPermissions),
             abi.encodeCall(
                 IJBPermissions.hasPermission,
-                (terminalOwner, projectOwner, 0, JBPermissionIds.ADD_SWAP_TERMINAL_POOL)
+                (terminalOwner, projectOwner, 0, JBPermissionIds.ADD_SWAP_TERMINAL_POOL, true, true)
             ),
             abi.encode(false)
         );

@@ -31,7 +31,8 @@ contract JBSwapTerminalaccountingContextsOf is UnitFixture {
             mockPermit2,
             makeAddr("owner"),
             mockWETH,
-            makeAddr("tokenOut")
+            makeAddr("tokenOut"),
+            mockUniswapFactory
         );
     }
 
@@ -72,7 +73,6 @@ contract JBSwapTerminalaccountingContextsOf is UnitFixture {
                 currency: uint32(bytes4(keccak256(abi.encodePacked(i, "overlap")))) // different currency, to differentiate them
             });
         }
-
 
         // Context defined by the project
         swapTerminalWrapper.forTest_forceAddAccountingContexts(projectId, projectContexts);
@@ -124,7 +124,8 @@ contract  ForTest_SwapTerminal is JBSwapTerminal {
         IPermit2 permit2,
         address owner,
         IWETH9 weth,
-        address tokenOut
+        address tokenOut,
+        IUniswapV3Factory uniswapFactory
     ) JBSwapTerminal(
         projects,
         permissions,
@@ -132,7 +133,8 @@ contract  ForTest_SwapTerminal is JBSwapTerminal {
         permit2,
         owner,
         weth,
-        tokenOut
+        tokenOut,
+        uniswapFactory
     ) {}
 
     function forTest_forceAddAccountingContexts(uint256 projectId, JBAccountingContext[] memory contexts) public {
