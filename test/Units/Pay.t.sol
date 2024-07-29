@@ -32,7 +32,12 @@ contract Pay is UnitFixture {
         tokenOut = swapTerminal.TOKEN_OUT();
     }
 
-    function test_PayWhenTokenInIsTheNativeToken(uint256 msgValue, uint256 amountIn, uint256 amountOut) public {
+    function test_WhenTokenInIsTheNativeToken(uint256 msgValue, uint256 amountIn, uint256 amountOut) public {
+                // it should use weth as tokenIn
+        // it should set inIsNativeToken to true
+        // it should use msg value as amountIn
+        // it should pass the benefiaciary as beneficiary for the next terminal
+
         vm.deal(caller, msgValue);
 
         tokenIn = JBConstants.NATIVE_TOKEN;
@@ -96,7 +101,11 @@ contract Pay is UnitFixture {
         _;
     }
 
-    function test_PayWhenTokenInIsAnErc20Token(uint256 amountIn, uint256 amountOut) public whenTokenInIsAnErc20Token {
+    function test_WhenTokenInIsAnErc20Token(uint256 amountIn, uint256 amountOut) public whenTokenInIsAnErc20Token {
+                // it should use tokenIn as tokenIn
+        // it should set inIsNativeToken to false
+        // it should use amountIn as amountIn
+        
         // Should transfer the token in from the caller to the swap terminal
         mockExpectTransferFrom(caller, address(swapTerminal), tokenIn, amountIn);
 
@@ -153,7 +162,7 @@ contract Pay is UnitFixture {
         });
     }
 
-    function test_PayRevertWhen_AMsgValueIsPassedAlongAnErc20Token(
+    function test_RevertWhen_AMsgValueIsPassedAlongAnErc20Token(
         uint256 msgValue,
         uint256 amountIn,
         uint256 amountOut
@@ -187,7 +196,7 @@ contract Pay is UnitFixture {
         });
     }
 
-    function test_PayWhenTokenInUsesAnErc20Approval(
+    function test_WhenTokenInUsesAnErc20Approval(
         uint256 amountIn,
         uint256 amountOut
     )
@@ -195,14 +204,14 @@ contract Pay is UnitFixture {
         whenTokenInIsAnErc20Token
     {
         // it should use the token transferFrom
-        test_PayWhenTokenInIsAnErc20Token(amountIn, amountOut);
+        test_WhenTokenInIsAnErc20Token(amountIn, amountOut);
     }
 
     modifier whenPermit2DataArePassed() {
         _;
     }
 
-    function test_PayWhenPermit2DataArePassed(
+    function test_WhenPermit2DataArePassed(
         uint256 amountIn,
         uint256 amountOut
     )
@@ -317,7 +326,7 @@ contract Pay is UnitFixture {
         });
     }
 
-    function test_PayRevertWhen_ThePermit2AllowanceIsLessThanTheAmountIn(uint256 amountIn)
+    function test_RevertWhen_ThePermit2AllowanceIsLessThanTheAmountIn(uint256 amountIn)
         public
         whenTokenInIsAnErc20Token
         whenPermit2DataArePassed
@@ -366,7 +375,7 @@ contract Pay is UnitFixture {
         _;
     }
 
-    function test_PayWhenAQuoteIsProvided(
+    function test_WhenAQuoteIsProvided(
         uint256 msgValue,
         uint256 amountIn,
         uint256 amountOut
@@ -377,10 +386,10 @@ contract Pay is UnitFixture {
         // it should use the quote as amountOutMin
         // it should use the pool passed
         // it should use the token passed as tokenOut
-        test_PayWhenTokenInIsTheNativeToken(msgValue, amountIn, amountOut);
+        test_WhenTokenInIsTheNativeToken(msgValue, amountIn, amountOut);
     }
 
-    function test_PayRevertWhen_TheAmountReceivedIsLessThanTheAmountOutMin(
+    function test_RevertWhen_TheAmountReceivedIsLessThanTheAmountOutMin(
         uint256 amountIn,
         uint256 minAmountOut,
         uint256 amountReceived
@@ -442,13 +451,15 @@ contract Pay is UnitFixture {
         });
     }
 
-
     modifier whenNoQuoteIsPassed() {
         _;
     }
 
-    function test_PayWhenNoQuoteIsPassed() public whenNoQuoteIsPassed {
+    function test_WhenNoQuoteIsPassed() public whenNoQuoteIsPassed {
         tokenIn = makeAddr("tokenIn");
+
+                // it should use the default pool
+        // it should get a twap and compute a min amount
         tokenOut = makeAddr("tokenOut");
         uint256 amountIn = 10;
         uint256 amountOut = 1337;
@@ -547,33 +558,25 @@ contract Pay is UnitFixture {
         });
     }
 
-    function test_PayRevertWhen_NoDefaultPoolIsDefined() public  whenNoQuoteIsPassed {
+    function test_RevertWhen_NoDefaultPoolIsDefined() public  whenNoQuoteIsPassed {
         vm.skip(true);
 
         // it should revert
     }
 
-    function test_PayRevertWhen_TheAmountReceivedIsLessThanTheTwapAmountOutMin() public  whenNoQuoteIsPassed {
+    function test_RevertWhen_TheAmountReceivedIsLessThanTheTwapAmountOutMin() public  whenNoQuoteIsPassed {
         vm.skip(true);
 
         // it should revert
     }
 
-
-    function test_PayWhenTheTokenOutIsAnErc20Token() public whenTokenInIsAnErc20Token {
-        vm.skip(true);
-
-        // it should use tokenOut as tokenOut
-        // it should set outIsNativeToken to false
-        // it should set the correct approval
-        // it should use the tokenOut for the next terminal pay()
-    }
-
-    function test_PayWhenTheTokenOutIsTheNativeToken(uint256 amountIn, uint256 amountOut) public whenAQuoteIsProvided whenTokenInIsAnErc20Token {
+    function test_WhenTheTokenOutIsTheNativeToken(uint256 amountIn, uint256 amountOut) public whenAQuoteIsProvided whenTokenInIsAnErc20Token {
         vm.skip(true);
 
         // it should use weth as tokenOut
         // it should set outIsNativeToken to true
+        // it should unwrap the tokenOut after swapping
+        // it should use the native token for the next terminal pay()
 
         // Should transfer the token in from the caller to the swap terminal
         mockExpectTransferFrom(caller, address(swapTerminal), tokenIn, amountIn);
@@ -630,10 +633,18 @@ contract Pay is UnitFixture {
             metadata: quoteMetadata
         });
     }
-    function test_PayRevertWhen_TheTokenOutHasNoTerminalDefined() public {
+    function test_RevertWhen_TheTokenOutHasNoTerminalDefined() public {
         vm.skip(true);
 
         // it should revert
+    }
+
+    function test_WhenTheTokenOutIsAnErc20Token() public whenTokenInIsAnErc20Token {
+        vm.skip(true);
+        // it should use tokenOut as tokenOut
+        // it should set outIsNativeToken to false
+        // it should set the correct approval
+        // it should use the tokenOut for the next terminal pay()
     }
 
     function _addDefaultPoolAndParams(uint32 secondsAgo, uint160 slippageTolerance) internal {

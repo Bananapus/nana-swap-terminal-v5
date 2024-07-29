@@ -16,13 +16,13 @@ contract UniswapV3Callback is UnitFixture {
         _;
     }
 
-    function test_UniswapV3SwapCallbackWhenShouldWrapIsTrue_Token0() external whenAmount0IsPositive {
+    function test_WhenShouldWrapIsTrue_Token0() external whenAmount0IsPositive {
         vm.skip(true);
 
         // it should wrap and send the token0 to the pool
     }
 
-    function test_UniswapV3SwapCallbackWhenShouldWrapIsFalse_Token0() external whenAmount0IsPositive {
+    function test_WhenShouldWrapIsFalse_Token0() external whenAmount0IsPositive {
         vm.skip(true);
 
         // it should send the token0 to the pool
@@ -32,19 +32,19 @@ contract UniswapV3Callback is UnitFixture {
         _;
     }
 
-    function test_UniswapV3SwapCallbackWhenShouldWrapIsTrue_Token1() external whenAmount1IsPositive {
+    function test_WhenShouldWrapIsTrue_Token1() external whenAmount1IsPositive {
         vm.skip(true);
 
         // it should wrap and send the token1 to the pool
     }
 
-    function test_UniswapV3SwapCallbackWhenShouldWrapIsFalse_Token1() external whenAmount1IsPositive {
+    function test_WhenShouldWrapIsFalse_Token1() external whenAmount1IsPositive {
         vm.skip(true);
 
         // it should send the token1 to the pool
     }
 
-    function test_UniswapV3SwapCallbackWhenBothAmountsAre0() external {
+    function test_WhenBothAmountsAre0() external {
         vm.skip(true);
 
         // it should not transfer anything
