@@ -1,13 +1,20 @@
-JBSwapTerminal::uniswapV3SwapCallback // path coverage + boundary
-├── when amount0 is positive
-│   ├── when shouldWrap is true - token0
-│   │   └── it should wrap and send the token0 to the pool
-│   └── when shouldWrap is false - token0
-│       └── it should send the token0 to the pool
-├── when amount1 is positive
-│   ├── when shouldWrap is true - token1
-│   │   └── it should wrap and send the token1 to the pool
-│   └── when shouldWrap is false - token1
-│       └── it should send the token1 to the pool
+JBSwapTerminal::uniswapV3SwapCallback 
+├── given the project has a pool to use
+│   ├── when the caller is the project pool
+│   │   └── it should succeed
+│   └── when the caller is not the project pool
+│       └── it should revert
+├── given the project has no pool
+│   ├── when the caller is the default pool
+│   │   └── it should succeed
+│   └── when the caller is not the default pool
+│       └── it should revert
+├── when the token to send is the native token
+│   ├── it should wrap to weth
+│   └── it should use weth as token to send to the pool
+├── when amount0 is positive or null
+│   └── it should send the token0 to the pool
+├── when amount0 is negative
+│   └── it should send the token1 to the pool
 └── when both amounts are 0
     └── it should not transfer anything
