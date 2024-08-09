@@ -3,13 +3,18 @@ pragma solidity ^0.8.17;
 
 import "../helper/UnitFixture.sol";
 
-contract JBSwapTerminaladdDefaultPool is UnitFixture {
+import {IUniswapV3PoolImmutables} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
+
+contract JBSwapTerminaladdDefaultPool is UnitFixture {
     address caller;
     address projectOwner;
     address otherProjectOwner;
     address token;
     IUniswapV3Pool pool;
+
+    uint24 fee = 1000;
+    uint24 otherPoolFee = 500;
 
     uint256 projectId = 1337;
     uint256 otherProjectId = 69;
@@ -26,13 +31,21 @@ contract JBSwapTerminaladdDefaultPool is UnitFixture {
     }
 
     modifier givenTheCallerIsAProjectOwner() {
-        vm.startPrank(projectOwner);
+        vm.mockCall(address(mockJBProjects), abi.encodeCall(IERC721.ownerOf, (projectId)), abi.encode(caller));
+        vm.startPrank(caller);
         _;
     }
 
     function test_WhenAddingAPoolToItsProject() external givenTheCallerIsAProjectOwner {
         // Set the project owner
-        mockExpectCall(address(mockJBProjects), abi.encodeCall(IERC721.ownerOf, (projectId)), abi.encode(projectOwner));
+        mockExpectCall(address(mockJBProjects), abi.encodeCall(IERC721.ownerOf, (projectId)), abi.encode(caller));
+
+        // Fee call in the factory check
+        mockExpectCall(address(pool), abi.encodeCall(IUniswapV3PoolImmutables.fee, ()), abi.encode(fee));
+
+        // Get the already deployed pool
+        (address token0, address token1) = token < mockTokenOut ? (token, mockTokenOut) : (mockTokenOut, token); 
+        mockExpectCall(address(mockUniswapFactory), abi.encodeCall(IUniswapV3Factory.getPool, (token0, token1, fee)), abi.encode(pool));
 
         // decimals() call while setting the accounting context
         mockExpectCall(address(token), abi.encodeCall(IERC20Metadata.decimals, ()), abi.encode(18));
@@ -43,8 +56,26 @@ contract JBSwapTerminaladdDefaultPool is UnitFixture {
         // it should add the pool to the project owned
         (IUniswapV3Pool storedPool, bool zeroForOne) = swapTerminal.getPoolFor(projectId, token);
         assertEq(storedPool, pool);
-        assertEq(zeroForOne, address(token) < address(mockWETH));
-        
+        assertEq(zeroForOne, token < mockTokenOut);
+    }
+
+    function test_RevertWhen_AddingAPoolToAnotherProject() external givenTheCallerIsAProjectOwner {
+        // Set the project owner
+        mockExpectCall(address(mockJBProjects), abi.encodeCall(IERC721.ownerOf, (otherProjectId)), abi.encode(projectOwner));
+
+        // Do not give specific or generic permission to the caller
+        mockExpectCall(
+            address(mockJBPermissions),
+            abi.encodeCall(
+                IJBPermissions.hasPermission,
+                (caller, projectOwner, otherProjectId, JBPermissionIds.ADD_SWAP_TERMINAL_POOL, true, true)
+            ),
+            abi.encode(false)
+        );
+
+        // it should revert
+        vm.expectRevert(JBPermissioned.UNAUTHORIZED.selector);
+        swapTerminal.addDefaultPool(otherProjectId, token, pool);
     }
 
     modifier givenTheCallerIsNotAProjectOwner() {
@@ -67,6 +98,13 @@ contract JBSwapTerminaladdDefaultPool is UnitFixture {
             abi.encode(true)
         );
 
+        // Fee call in the factory check
+        mockExpectCall(address(pool), abi.encodeCall(IUniswapV3PoolImmutables.fee, ()), abi.encode(fee));
+
+        // Get the already deployed pool
+        (address token0, address token1) = token < mockTokenOut ? (token, mockTokenOut) : (mockTokenOut, token); 
+        mockExpectCall(address(mockUniswapFactory), abi.encodeCall(IUniswapV3Factory.getPool, (token0, token1, fee)), abi.encode(pool));
+
         // decimals() call while setting the accounting context
         mockExpectCall(address(token), abi.encodeCall(IERC20Metadata.decimals, ()), abi.encode(18));
 
@@ -76,7 +114,7 @@ contract JBSwapTerminaladdDefaultPool is UnitFixture {
         // it should add the pool to the project
         (IUniswapV3Pool storedPool, bool zeroForOne) = swapTerminal.getPoolFor(projectId, token);
         assertEq(storedPool, pool);
-        assertEq(zeroForOne, address(token) < address(mockWETH));
+        assertEq(zeroForOne, token < mockTokenOut);
     }
 
     function test_RevertWhen_TheCallerHasNoRole() external givenTheCallerIsNotAProjectOwner {
@@ -86,15 +124,6 @@ contract JBSwapTerminaladdDefaultPool is UnitFixture {
             abi.encodeCall(
                 IJBPermissions.hasPermission,
                 (caller, projectOwner, projectId, JBPermissionIds.ADD_SWAP_TERMINAL_POOL, true, true)
-            ),
-            abi.encode(false)
-        );
-
-        mockExpectCall(
-            address(mockJBPermissions),
-            abi.encodeCall(
-                IJBPermissions.hasPermission,
-                (caller, projectOwner, 0, JBPermissionIds.ADD_SWAP_TERMINAL_POOL, true, true)
             ),
             abi.encode(false)
         );
@@ -117,6 +146,15 @@ contract JBSwapTerminaladdDefaultPool is UnitFixture {
         // Set a project owner
         mockExpectCall(address(mockJBProjects), abi.encodeCall(IERC721.ownerOf, (projectId)), abi.encode(projectOwner));
 
+        // Fee call in the factory check
+        mockExpectCall(address(pool), abi.encodeCall(IUniswapV3PoolImmutables.fee, ()), abi.encode(fee));
+        mockExpectCall(address(otherPool), abi.encodeCall(IUniswapV3PoolImmutables.fee, ()), abi.encode(otherPoolFee));
+
+        // Get the already deployed pool
+        (address token0, address token1) = token < mockTokenOut ? (token, mockTokenOut) : (mockTokenOut, token); 
+        mockExpectCall(address(mockUniswapFactory), abi.encodeCall(IUniswapV3Factory.getPool, (token0, token1, fee)), abi.encode(pool));
+        mockExpectCall(address(mockUniswapFactory), abi.encodeCall(IUniswapV3Factory.getPool, (token0, token1, otherPoolFee)), abi.encode(otherPool));
+
         // decimals() call while setting the accounting context
         mockExpectCall(address(token), abi.encodeCall(IERC20Metadata.decimals, ()), abi.encode(18));
 
@@ -130,12 +168,12 @@ contract JBSwapTerminaladdDefaultPool is UnitFixture {
         // it should add the pool to any project without a default pool
         (IUniswapV3Pool storedPool, bool zeroForOne) = swapTerminal.getPoolFor(_projectIdWithoutPool, token);
         assertEq(storedPool, pool);
-        assertEq(zeroForOne, address(token) < address(mockWETH));
+        assertEq(zeroForOne, token < mockTokenOut);
 
         // it should not override the project pool
         (storedPool, zeroForOne) = swapTerminal.getPoolFor(projectId, token);
         assertEq(storedPool, otherPool);
-        assertEq(zeroForOne, address(token) < address(mockWETH));
+        assertEq(zeroForOne, token < mockTokenOut);
     }
 
     function test_RevertWhen_AddingAPoolToAProject() external givenTheCallerIsTheTerminalOwner {
@@ -154,17 +192,27 @@ contract JBSwapTerminaladdDefaultPool is UnitFixture {
             abi.encode(false)
         );
 
-        mockExpectCall(
-            address(mockJBPermissions),
-            abi.encodeCall(
-                IJBPermissions.hasPermission,
-                (terminalOwner, projectOwner, 0, JBPermissionIds.ADD_SWAP_TERMINAL_POOL, true, true)
-            ),
-            abi.encode(false)
-        );
-
         // it should revert
         vm.expectRevert(JBPermissioned.UNAUTHORIZED.selector);
         swapTerminal.addDefaultPool(projectId, token, otherPool);
+    }
+
+    function test_RevertWhen_ThePoolHasNotBeenDeployedByTheFactory() external {
+        IUniswapV3Pool otherPool = IUniswapV3Pool(makeAddr("otherPool"));
+
+        // Set the project owner
+        mockExpectCall(address(mockJBProjects), abi.encodeCall(IERC721.ownerOf, (projectId)), abi.encode(caller));
+
+        // Fee call in the factory check
+        mockExpectCall(address(pool), abi.encodeCall(IUniswapV3PoolImmutables.fee, ()), abi.encode(fee));
+
+        // Get the already deployed pool
+        (address token0, address token1) = token < mockTokenOut ? (token, mockTokenOut) : (mockTokenOut, token); 
+        mockExpectCall(address(mockUniswapFactory), abi.encodeCall(IUniswapV3Factory.getPool, (token0, token1, fee)), abi.encode(otherPool));
+
+        // it should revert
+        vm.prank(caller);
+        vm.expectRevert(JBSwapTerminal.WRONG_POOL.selector);
+        swapTerminal.addDefaultPool(projectId, token, pool);
     }
 }
