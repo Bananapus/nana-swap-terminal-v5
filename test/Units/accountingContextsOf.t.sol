@@ -13,10 +13,8 @@ contract JBSwapTerminalaccountingContextsOf is UnitFixture {
 
     uint256 projectId = 1337; 
 
-    ForTest_SwapTerminal swapTerminalWrapper;
-
     /// @notice Create random address
-    function setUp() public override {
+    function setUp() public override { 
         super.setUp();
 
         caller = makeAddr("sender");
@@ -24,7 +22,7 @@ contract JBSwapTerminalaccountingContextsOf is UnitFixture {
         token = makeAddr("token");
         pool = IUniswapV3Pool(makeAddr("pool"));
 
-        swapTerminalWrapper = new ForTest_SwapTerminal(
+        swapTerminal = JBSwapTerminal(payable(new ForTest_SwapTerminal(
             mockJBProjects,
             mockJBPermissions,
             mockJBDirectory,
@@ -33,7 +31,7 @@ contract JBSwapTerminalaccountingContextsOf is UnitFixture {
             mockWETH,
             makeAddr("tokenOut"),
             mockUniswapFactory
-        );
+        )));
     }
 
     /// @param numberProjectContexts The number of accounting contexts defined for the project.
@@ -75,19 +73,19 @@ contract JBSwapTerminalaccountingContextsOf is UnitFixture {
         }
 
         // Context defined by the project
-        swapTerminalWrapper.forTest_forceAddAccountingContexts(projectId, projectContexts);
+        ForTest_SwapTerminal(payable(swapTerminal)).forTest_forceAddAccountingContexts(projectId, projectContexts);
 
         // Generic contexts
-        swapTerminalWrapper.forTest_forceAddAccountingContexts(swapTerminalWrapper.DEFAULT_PROJECT_ID(), genericContexts);
+        ForTest_SwapTerminal(payable(swapTerminal)).forTest_forceAddAccountingContexts(swapTerminal.DEFAULT_PROJECT_ID(), genericContexts);
 
         // it should return the accounting contexts of the project
-        assertIsIncluded(projectContexts, swapTerminalWrapper.accountingContextsOf(projectId));
+        assertIsIncluded(projectContexts, swapTerminal.accountingContextsOf(projectId));
 
         // it should include generic accounting contexts
-        assertIsIncluded(nonOverlappingGeneric, swapTerminalWrapper.accountingContextsOf(projectId));
+        assertIsIncluded(nonOverlappingGeneric, swapTerminal.accountingContextsOf(projectId));
 
         // it shouldn't return empty values at the end of the array
-        assertEq(swapTerminalWrapper.accountingContextsOf(projectId).length, numberProjectContexts+numberGenericContexts-numberOverlaps);
+        assertEq(swapTerminal.accountingContextsOf(projectId).length, numberProjectContexts+numberGenericContexts-numberOverlaps);
     }
 
     /// @dev there is no project specific accounting context
@@ -105,13 +103,13 @@ contract JBSwapTerminalaccountingContextsOf is UnitFixture {
             });
         }
 
-        swapTerminalWrapper.forTest_forceAddAccountingContexts(swapTerminalWrapper.DEFAULT_PROJECT_ID(), genericContexts);
+        ForTest_SwapTerminal(payable(swapTerminal)).forTest_forceAddAccountingContexts(swapTerminal.DEFAULT_PROJECT_ID(), genericContexts);
 
         // it should return the generic accounting contexts
-        assertIsIncluded(genericContexts, swapTerminalWrapper.accountingContextsOf(projectId));
+        assertIsIncluded(genericContexts, swapTerminal.accountingContextsOf(projectId));
 
         // it shouldn't return empty values at the end of the array
-        assertEq(swapTerminalWrapper.accountingContextsOf(projectId).length, numberGenericContexts);
+        assertEq(swapTerminal.accountingContextsOf(projectId).length, numberGenericContexts);
     }
 }
 
