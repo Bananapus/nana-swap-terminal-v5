@@ -22,7 +22,7 @@ contract JBSwapTerminaluniswapV3SwapCallback is UnitFixture {
                 mockPermit2,
                 makeAddr("owner"),
                 mockWETH,
-                makeAddr("tokenOut"),
+                mockTokenOut,
                 mockUniswapFactory
                 )
             )

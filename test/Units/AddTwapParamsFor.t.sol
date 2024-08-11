@@ -19,28 +19,29 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
     }
 
     modifier givenTheCallerIsAProjectOwner() {
-        vm.mockCall(
-            address(mockJBProjects),
-            abi.encodeCall(IERC721.ownerOf, (projectId)),
-            abi.encode(caller)
-        );
+        vm.mockCall(address(mockJBProjects), abi.encodeCall(IERC721.ownerOf, (projectId)), abi.encode(caller));
 
         vm.startPrank(caller);
         _;
     }
 
-    function test_WhenSettingTwapParamsOfItsProject(uint32 secondsAgo, uint160 slippageTolerance) external givenTheCallerIsAProjectOwner {
+    function test_WhenSettingTwapParamsOfItsProject(uint32 secondsAgo, uint160 slippageTolerance)
+        external
+        givenTheCallerIsAProjectOwner
+    {
         swapTerminal.addTwapParamsFor(projectId, pool, secondsAgo, slippageTolerance);
 
         // it should add the twap params to the project
         (uint256 twapSecondsAgo, uint256 twapSlippageTolerance) = swapTerminal.twapParamsOf(projectId, pool); // implicit
-        
+
         assertEq(twapSecondsAgo, secondsAgo);
         assertEq(twapSlippageTolerance, slippageTolerance);
     }
 
     function test_RevertWhen_SettingTwapParamsToAnotherProject() external givenTheCallerIsAProjectOwner {
-        mockExpectCall(address(mockJBProjects), abi.encodeCall(IERC721.ownerOf, (projectId + 1)), abi.encode(projectOwner));
+        mockExpectCall(
+            address(mockJBProjects), abi.encodeCall(IERC721.ownerOf, (projectId + 1)), abi.encode(projectOwner)
+        );
 
         uint32 secondsAgo = 100;
         uint160 slippageTolerance = 1000;
@@ -65,10 +66,7 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
         _;
     }
 
-    function test_WhenTheCallerHasTheRole(
-        uint32 secondsAgo,
-        uint160 slippageTolerance
-    )
+    function test_WhenTheCallerHasTheRole(uint32 secondsAgo, uint160 slippageTolerance)
         external
         givenTheCallerIsNotAProjectOwner
     {
@@ -119,11 +117,7 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
         _;
     }
 
-    function test_WhenAddingDefaultParamsForAPool(
-        uint256 _projectId,
-        uint32 secondsAgo,
-        uint160 slippageTolerance
-    )
+    function test_WhenAddingDefaultParamsForAPool(uint256 _projectId, uint32 secondsAgo, uint160 slippageTolerance)
         external
         givenTheCallerIsTheTerminalOwner
     {
@@ -171,6 +165,5 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
         // it should revert
         vm.expectRevert(JBPermissioned.UNAUTHORIZED.selector);
         swapTerminal.addTwapParamsFor(projectId, pool, secondsAgo, slippageTolerance);
-
     }
 }

@@ -4,10 +4,14 @@ pragma solidity ^0.8.17;
 import "../helper/UnitFixture.sol";
 
 import {JBMetadataResolver} from "@bananapus/core/src/libraries/JBMetadataResolver.sol";
-import {IUniswapV3PoolActions, IUniswapV3PoolImmutables, IUniswapV3PoolDerivedState} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import {
+    IUniswapV3PoolActions,
+    IUniswapV3PoolImmutables,
+    IUniswapV3PoolDerivedState
+} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {IPermit2, IAllowanceTransfer} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 
-contract Pay is UnitFixture {
+contract JBSwapTerminalpay is UnitFixture {
     address caller;
     address projectOwner;
 
@@ -33,7 +37,7 @@ contract Pay is UnitFixture {
     }
 
     function test_WhenTokenInIsTheNativeToken(uint256 msgValue, uint256 amountIn, uint256 amountOut) public {
-                // it should use weth as tokenIn
+        // it should use weth as tokenIn
         // it should set inIsNativeToken to true
         // it should use msg value as amountIn
         // it should pass the benefiaciary as beneficiary for the next terminal
@@ -102,14 +106,14 @@ contract Pay is UnitFixture {
     }
 
     function test_WhenTokenInIsAnErc20Token(uint256 amountIn, uint256 amountOut) public whenTokenInIsAnErc20Token {
-                // it should use tokenIn as tokenIn
+        // it should use tokenIn as tokenIn
         // it should set inIsNativeToken to false
         // it should use amountIn as amountIn
-        
+
         // Should transfer the token in from the caller to the swap terminal
         mockExpectTransferFrom(caller, address(swapTerminal), tokenIn, amountIn);
 
-        bytes memory quoteMetadata = _createMetadata("SWAP", abi.encode(amountOut, pool,  tokenIn < tokenOut));
+        bytes memory quoteMetadata = _createMetadata("SWAP", abi.encode(amountOut, pool, tokenIn < tokenOut));
 
         // Mock the swap - this is where we make most of the tests
         mockExpectCall(
@@ -162,18 +166,14 @@ contract Pay is UnitFixture {
         });
     }
 
-    function test_RevertWhen_AMsgValueIsPassedAlongAnErc20Token(
-        uint256 msgValue,
-        uint256 amountIn,
-        uint256 amountOut
-    )
+    function test_RevertWhen_AMsgValueIsPassedAlongAnErc20Token(uint256 msgValue, uint256 amountIn, uint256 amountOut)
         public
         whenTokenInIsAnErc20Token
     {
         msgValue = bound(msgValue, 1, type(uint256).max);
         vm.deal(caller, msgValue);
 
-        bytes memory quoteMetadata = _createMetadata("SWAP", abi.encode(amountOut, pool,  tokenIn < tokenOut));
+        bytes memory quoteMetadata = _createMetadata("SWAP", abi.encode(amountOut, pool, tokenIn < tokenOut));
 
         mockExpectCall(
             address(mockJBDirectory),
@@ -196,10 +196,7 @@ contract Pay is UnitFixture {
         });
     }
 
-    function test_WhenTokenInUsesAnErc20Approval(
-        uint256 amountIn,
-        uint256 amountOut
-    )
+    function test_WhenTokenInUsesAnErc20Approval(uint256 amountIn, uint256 amountOut)
         public
         whenTokenInIsAnErc20Token
     {
@@ -211,10 +208,7 @@ contract Pay is UnitFixture {
         _;
     }
 
-    function test_WhenPermit2DataArePassed(
-        uint256 amountIn,
-        uint256 amountOut
-    )
+    function test_WhenPermit2DataArePassed(uint256 amountIn, uint256 amountOut)
         public
         whenTokenInIsAnErc20Token
         whenPermit2DataArePassed
@@ -225,13 +219,8 @@ contract Pay is UnitFixture {
         // add the permit2 data to the metadata
         bytes memory payMetadata = _createMetadata("SWAP", abi.encode(amountOut, pool, tokenIn < tokenOut));
 
-        JBSingleAllowance memory context = JBSingleAllowance({
-            sigDeadline: 0,
-            amount: uint160(amountIn),
-            expiration: 0,
-            nonce: 0,
-            signature: ""
-        });
+        JBSingleAllowance memory context =
+            JBSingleAllowance({sigDeadline: 0, amount: uint160(amountIn), expiration: 0, nonce: 0, signature: ""});
 
         payMetadata = JBMetadataResolver.addToMetadata(
             payMetadata, bytes4(uint32(uint160(address(swapTerminal)))), abi.encode(context)
@@ -339,13 +328,8 @@ contract Pay is UnitFixture {
         // add the permit2 data to the metadata
         bytes memory payMetadata = _createMetadata("SWAP", abi.encode(amountOut, pool, tokenIn < tokenOut));
 
-        JBSingleAllowance memory context = JBSingleAllowance({
-            sigDeadline: 0,
-            amount: uint160(amountIn) - 1,
-            expiration: 0,
-            nonce: 0,
-            signature: ""
-        });
+        JBSingleAllowance memory context =
+            JBSingleAllowance({sigDeadline: 0, amount: uint160(amountIn) - 1, expiration: 0, nonce: 0, signature: ""});
 
         payMetadata = JBMetadataResolver.addToMetadata(
             payMetadata, bytes4(uint32(uint160(address(swapTerminal)))), abi.encode(context)
@@ -375,11 +359,7 @@ contract Pay is UnitFixture {
         _;
     }
 
-    function test_WhenAQuoteIsProvided(
-        uint256 msgValue,
-        uint256 amountIn,
-        uint256 amountOut
-    )
+    function test_WhenAQuoteIsProvided(uint256 msgValue, uint256 amountIn, uint256 amountOut)
         public
         whenAQuoteIsProvided
     {
@@ -393,15 +373,11 @@ contract Pay is UnitFixture {
         uint256 amountIn,
         uint256 minAmountOut,
         uint256 amountReceived
-    )
-        public
-        whenAQuoteIsProvided
-    {
+    ) public whenAQuoteIsProvided {
         minAmountOut = bound(minAmountOut, 1, type(uint256).max);
         amountReceived = bound(amountReceived, 0, minAmountOut - 1);
 
         vm.assume(amountIn > 0);
-
 
         bytes memory quoteMetadata = _createMetadata("SWAP", abi.encode(minAmountOut, pool, tokenIn < tokenOut));
 
@@ -443,7 +419,7 @@ contract Pay is UnitFixture {
         swapTerminal.pay({
             projectId: projectId,
             token: tokenIn,
-            amount: amountIn, 
+            amount: amountIn,
             beneficiary: beneficiary,
             minReturnedTokens: amountReceived,
             memo: "",
@@ -458,9 +434,9 @@ contract Pay is UnitFixture {
     function test_WhenNoQuoteIsPassed() public whenNoQuoteIsPassed {
         tokenIn = makeAddr("tokenIn");
 
-                // it should use the default pool
+        // it should use the default pool
         // it should get a twap and compute a min amount
-        tokenOut = makeAddr("tokenOut");
+        tokenOut = mockTokenOut;
         uint256 amountIn = 10;
         uint256 amountOut = 1337;
 
@@ -471,17 +447,9 @@ contract Pay is UnitFixture {
 
         _addDefaultPoolAndParams(secondsAgo, slippageTolerance);
 
-        mockExpectCall(
-            address(pool),
-            abi.encodeCall(IUniswapV3PoolImmutables.token0, ()),
-            abi.encode(tokenIn)
-        );
+        mockExpectCall(address(pool), abi.encodeCall(IUniswapV3PoolImmutables.token0, ()), abi.encode(tokenIn));
 
-        mockExpectCall(
-            address(pool),
-            abi.encodeCall(IUniswapV3PoolImmutables.token1, ()),
-            abi.encode(tokenOut)
-        );
+        mockExpectCall(address(pool), abi.encodeCall(IUniswapV3PoolImmutables.token1, ()), abi.encode(tokenOut));
 
         uint32[] memory timeframeArray = new uint32[](2);
         timeframeArray[0] = secondsAgo;
@@ -558,19 +526,23 @@ contract Pay is UnitFixture {
         });
     }
 
-    function test_RevertWhen_NoDefaultPoolIsDefined() public  whenNoQuoteIsPassed {
+    function test_RevertWhen_NoDefaultPoolIsDefined() public whenNoQuoteIsPassed {
         vm.skip(true);
 
         // it should revert
     }
 
-    function test_RevertWhen_TheAmountReceivedIsLessThanTheTwapAmountOutMin() public  whenNoQuoteIsPassed {
+    function test_RevertWhen_TheAmountReceivedIsLessThanTheTwapAmountOutMin() public whenNoQuoteIsPassed {
         vm.skip(true);
 
         // it should revert
     }
 
-    function test_WhenTheTokenOutIsTheNativeToken(uint256 amountIn, uint256 amountOut) public whenAQuoteIsProvided whenTokenInIsAnErc20Token {
+    function test_WhenTheTokenOutIsTheNativeToken(uint256 amountIn, uint256 amountOut)
+        public
+        whenAQuoteIsProvided
+        whenTokenInIsAnErc20Token
+    {
         vm.skip(true);
 
         // it should use weth as tokenOut
@@ -633,11 +605,6 @@ contract Pay is UnitFixture {
             metadata: quoteMetadata
         });
     }
-    function test_RevertWhen_TheTokenOutHasNoTerminalDefined() public {
-        vm.skip(true);
-
-        // it should revert
-    }
 
     function test_WhenTheTokenOutIsAnErc20Token() public whenTokenInIsAnErc20Token {
         vm.skip(true);
@@ -645,6 +612,12 @@ contract Pay is UnitFixture {
         // it should set outIsNativeToken to false
         // it should set the correct approval
         // it should use the tokenOut for the next terminal pay()
+    }
+
+    function test_RevertWhen_TheTokenOutHasNoTerminalDefined() public {
+        vm.skip(true);
+
+        // it should revert
     }
 
     function _addDefaultPoolAndParams(uint32 secondsAgo, uint160 slippageTolerance) internal {
