@@ -127,6 +127,34 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     mapping(uint256 projectId => mapping(IUniswapV3Pool pool => uint256 params)) internal _twapParamsOf;
 
     //*********************************************************************//
+    // -------------------------- constructor ---------------------------- //
+    //*********************************************************************//
+
+    constructor(
+        IJBDirectory directory,
+        IJBPermissions permissions,
+        IJBProjects projects,
+        IPermit2 permit2,
+        address owner,
+        IWETH9 weth,
+        address tokenOut,
+        IUniswapV3Factory factory
+    )
+        JBPermissioned(permissions)
+        Ownable(owner)
+    {
+        if (tokenOut == address(0)) revert JBSwapTerminal_TokenNotAccepted();
+
+        DIRECTORY = directory;
+        PROJECTS = projects;
+        PERMIT2 = permit2;
+        WETH = weth;
+        TOKEN_OUT = tokenOut;
+        _OUT_IS_NATIVE_TOKEN = tokenOut == JBConstants.NATIVE_TOKEN;
+        FACTORY = factory;
+    }
+
+    //*********************************************************************//
     // ------------------------- external views -------------------------- //
     //*********************************************************************//
 
@@ -350,35 +378,6 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
             // Return the lowest acceptable return based on the TWAP and its parameters.
             minAmountOut -= (minAmountOut * slippageTolerance) / SLIPPAGE_DENOMINATOR;
         }
-    }
-
-
-    //*********************************************************************//
-    // -------------------------- constructor ---------------------------- //
-    //*********************************************************************//
-
-    constructor(
-        IJBDirectory directory,
-        IJBPermissions permissions,
-        IJBProjects projects,
-        IPermit2 permit2,
-        address owner,
-        IWETH9 weth,
-        address tokenOut,
-        IUniswapV3Factory factory
-    )
-        JBPermissioned(permissions)
-        Ownable(owner)
-    {
-        if (tokenOut == address(0)) revert JBSwapTerminal_TokenNotAccepted();
-
-        DIRECTORY = directory;
-        PROJECTS = projects;
-        PERMIT2 = permit2;
-        WETH = weth;
-        TOKEN_OUT = tokenOut;
-        _OUT_IS_NATIVE_TOKEN = tokenOut == JBConstants.NATIVE_TOKEN;
-        FACTORY = factory;
     }
 
     //*********************************************************************//
