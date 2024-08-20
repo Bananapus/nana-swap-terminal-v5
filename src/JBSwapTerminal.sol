@@ -130,6 +130,14 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     // -------------------------- constructor ---------------------------- //
     //*********************************************************************//
 
+    /// @param directory A contract storing directories of terminals and controllers for each project.    
+    /// @param permissions A contract storing permissions.
+    /// @param projects A contract which mints ERC-721s that represent project ownership and transfers.
+    /// @param permit2 A permit2 utility.
+    /// @param owner The owner of the contract.
+    /// @param weth A contract which wraps the native token.
+    /// @param tokenOut The token which flows out of this terminal (JBConstants.NATIVE_TOKEN for the chain native token)
+    /// @param factory A factory which creates Uniswap V3 pools.
     constructor(
         IJBDirectory directory,
         IJBPermissions permissions,
