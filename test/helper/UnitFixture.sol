@@ -98,14 +98,8 @@ contract UnitFixture is Test {
         }
     }
 
-    // create a metadata based on a single entry (abstracting the arrays away)
+    // create a metadata based on a single entry
     function _createMetadata(bytes4 id, bytes memory data) internal pure returns (bytes memory) {
-        bytes4[] memory idArray = new bytes4[](1);
-        idArray[0] = id;
-
-        bytes[] memory dataArray = new bytes[](1);
-        dataArray[0] = data;
-
-        return JBMetadataResolver.createMetadata(idArray, dataArray);
+        return JBMetadataResolver.addToMetadata('', id, data);
     }
 }

@@ -1,12 +1,10 @@
 JBSwapTerminal::pay // full branch coverage
 ├── when tokenIn is the native token
 │   ├── it should use weth as tokenIn // test in the uniswap call
-│   ├── it should set inIsNativeToken to true // test in the uniswap call
 │   ├── it should use msg value as amountIn
 │   └── it should pass the benefiaciary as beneficiary for the next terminal
 ├── when tokenIn is an erc20 token
 │   ├── it should use tokenIn as tokenIn // test in the uniswap call
-│   ├── it should set inIsNativeToken to false // test in the uniswap call
 │   ├── it should use amountIn as amountIn
 │   ├── when a msg value is passed along an erc20 token
 │   │   └── it should revert
@@ -38,5 +36,8 @@ JBSwapTerminal::pay // full branch coverage
 │   ├── it should set outIsNativeToken to false
 │   ├── it should set the correct approval
 │   └── it should use the tokenOut for the next terminal pay()
-└── when the tokenOut has no terminal defined
-    └── it should revert
+├── when the tokenOut has no terminal defined
+│   └── it should revert
+└── when not all token in are swapped
+    ├── it should send the difference back to the caller
+    └── it should not keep any token in swap terminal
