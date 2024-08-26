@@ -47,13 +47,15 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     // --------------------------- custom errors ------------------------- //
     //*********************************************************************//
 
-    error JBSwapTerminal_CallerNotPool();
-    error JBSwapTerminal_PermitAllowanceNotEnough();
-    error JBSwapTerminal_NoDefaultPoolDefined();
-    error JBSwapTerminal_NoMsgValueAllowed();
-    error JBSwapTerminal_TokenNotAccepted();
-    error JBSwapTerminal_MaxSlippage();
+    error JBSwapTerminal_CallerNotPool(address caller);
+    error JBSwapTerminal_SpecifiedSlippageExceeded(uint256 amount, uint256 minimum);
+    error JBSwapTerminal_NoDefaultPoolDefined(uint256 projectId, address token);
+    error JBSwapTerminal_NoMsgValueAllowed(uint256 value);
+    error JBSwapTerminal_PermitAllowanceNotEnough(uint256 amount, uint256 allowance);
+    error JBSwapTerminal_TokenNotAccepted(uint256 projectId, address token);
+    error JBSwapTerminal_UnexpectedCall(address caller);
     error JBSwapTerminal_WrongPool();
+    error JBSwapTerminal_ZeroToken();
 
 
     //*********************************************************************//
@@ -151,7 +153,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         JBPermissioned(permissions)
         Ownable(owner)
     {
-        if (tokenOut == address(0)) revert JBSwapTerminal_TokenNotAccepted();
+        if (tokenOut == address(0)) revert JBSwapTerminal_ZeroToken();
 
         DIRECTORY = directory;
         PROJECTS = projects;
@@ -365,7 +367,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
                 pool = _poolFor[DEFAULT_PROJECT_ID][normalizedTokenIn];
 
                 // If there's no default pool neither, revert.
-                if (address(pool) == address(0)) revert JBSwapTerminal_NoDefaultPoolDefined();
+                if (address(pool) == address(0)) revert JBSwapTerminal_NoDefaultPoolDefined(projectId, normalizedTokenIn);
             }
 
             // Get a quote based on the pool's TWAP, including a default slippage maximum.
@@ -469,7 +471,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         IJBTerminal terminal = DIRECTORY.primaryTerminalOf(projectId, TOKEN_OUT);
 
         // Revert if the project does not have a primary terminal for the destination token.
-        if (address(terminal) == address(0)) revert JBSwapTerminal_TokenNotAccepted();
+        if (address(terminal) == address(0)) revert JBSwapTerminal_TokenNotAccepted(projectId, TOKEN_OUT);
 
         // Execute the swap.
         uint256 receivedFromSwap = _handleTokenTransfersAndSwap({
@@ -560,7 +562,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         IJBTerminal terminal = DIRECTORY.primaryTerminalOf(projectId, TOKEN_OUT);
 
         // Revert if the project does not have a primary terminal for the destination token.
-        if (address(terminal) == address(0)) revert JBSwapTerminal_TokenNotAccepted();
+        if (address(terminal) == address(0)) revert JBSwapTerminal_TokenNotAccepted(projectId, TOKEN_OUT);
 
         // Execute the swap.
         uint256 receivedFromSwap = _handleTokenTransfersAndSwap({
@@ -607,7 +609,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         if (address(storedPool) == address(0)) storedPool = _poolFor[DEFAULT_PROJECT_ID][normalizedTokenIn];
 
         // Make sure the address making this call is the expected pool.
-        if (msg.sender != address(storedPool)) revert JBSwapTerminal_CallerNotPool();
+        if (msg.sender != address(storedPool)) revert JBSwapTerminal_CallerNotPool(msg.sender);
 
         // Keep a reference to the amount of tokens that should be sent to fulfill the swap (the positive delta).
         uint256 amountToSendToPool = amount0Delta < 0 ? uint256(amount1Delta) : uint256(amount0Delta);
@@ -627,7 +629,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
     /// @notice Fallback to prevent native tokens being sent to this terminal.
     /// @dev Native tokens should only be sent to this terminal when being unwrapped from a swap.
     receive() external payable {
-        if (msg.sender != address(WETH)) revert JBSwapTerminal_NoMsgValueAllowed();
+        if (msg.sender != address(WETH)) revert JBSwapTerminal_UnexpectedCall(msg.sender);
     }
 
     //*********************************************************************//
@@ -644,7 +646,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         if (token == JBConstants.NATIVE_TOKEN) return msg.value;
 
         // Otherwise, the `msg.value` should be 0.
-        if (msg.value != 0) revert JBSwapTerminal_NoMsgValueAllowed();
+        if (msg.value != 0) revert JBSwapTerminal_NoMsgValueAllowed(msg.value);
 
         // Unpack the `JBSingleAllowance` to use given by the frontend.
         (bool exists, bytes memory parsedMetadata) =
@@ -656,8 +658,8 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
             (JBSingleAllowance memory allowance) = abi.decode(parsedMetadata, (JBSingleAllowance));
 
             // Make sure the permit allowance is enough for this payment. If not, revert early.
-            if (allowance.amount < amount) {
-                revert JBSwapTerminal_PermitAllowanceNotEnough();
+            if (amount > allowance.amount) {
+                revert JBSwapTerminal_PermitAllowanceNotEnough(amount, allowance.amount);
             }
 
             // Keep a reference to the permit rules.
@@ -790,7 +792,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         amountOut = uint256(-(zeroForOne ? amount1 : amount0));
 
         // Ensure the amount received is not less than the minimum amount specified in the swap configuration.
-        if (amountOut < minAmountOut) revert JBSwapTerminal_MaxSlippage();
+        if (amountOut < minAmountOut) revert JBSwapTerminal_SpecifiedSlippageExceeded(amountOut, minAmountOut);
 
         // If the output token is a native token, unwrap it from its wrapped form.
         if (_OUT_IS_NATIVE_TOKEN) WETH.withdraw(amountOut);
