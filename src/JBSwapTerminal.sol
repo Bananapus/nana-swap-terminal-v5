@@ -570,6 +570,12 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         // Keep a reference to the normalized token out, which wraps the native token if needed.
         address normalizedTokenOut = _normalizedTokenOut();
 
+        // If the token in is the same as the token out, don't swap, just call the next terminal
+        if ((tokenIn == JBConstants.NATIVE_TOKEN && OUT_IS_NATIVE_TOKEN) || (normalizedTokenIn == normalizedTokenOut)) {
+            amountToSend = amount;
+            return amountToSend;
+        }
+
         // Get the quote that should be used for the swap, and the pool where the swap will take place.
         (uint256 minAmountOut, IUniswapV3Pool pool) = _pickPoolAndQuote({
             metadata: metadata,
@@ -580,19 +586,14 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         });
 
         // Swap if needed. The callback will ensure that we're within the intended slippage tolerance.
-        // If the token in is the same as the token out, don't swap, just call the next terminal
-        if ((tokenIn == JBConstants.NATIVE_TOKEN && OUT_IS_NATIVE_TOKEN) || (normalizedTokenIn == normalizedTokenOut)) {
-            amountToSend = amount;
-        } else {
-            amountToSend = _swap({
-                tokenIn: tokenIn,
-                amountIn: amount,
-                minAmountOut: minAmountOut,
-                zeroForOne: normalizedTokenIn < normalizedTokenOut,
-                projectId: projectId,
-                pool: pool
-            });
-        }
+        amountToSend = _swap({
+            tokenIn: tokenIn,
+            amountIn: amount,
+            minAmountOut: minAmountOut,
+            zeroForOne: normalizedTokenIn < normalizedTokenOut,
+            projectId: projectId,
+            pool: pool
+        });
 
         // Send back any leftover tokens to the payer
         uint256 leftover = IERC20(normalizedTokenIn).balanceOf(address(this));
