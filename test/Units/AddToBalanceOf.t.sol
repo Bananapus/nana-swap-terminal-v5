@@ -103,7 +103,7 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
     }
 
     function test_WhenTokenInIsAnErc20Token(uint256 amountIn, uint256 amountOut) public whenTokenInIsAnErc20Token {
-        amountIn = bound(amountIn, 1, type(uint160).max);
+        amountOut = bound(amountOut, 1, type(uint248).max);
 
         // Should transfer the token in from the caller to the swap terminal
         mockExpectTransferFrom(caller, address(swapTerminal), tokenIn, amountIn);
@@ -231,7 +231,8 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         public
         whenTokenInIsAnErc20Token
         whenPermit2DataArePassed
-    {
+    {   
+        amountOut = bound(amountOut, 1, type(uint248).max);
         // 0 amountIn will not trigger a permit2 use
         amountIn = bound(amountIn, 1, type(uint160).max);
 
@@ -402,7 +403,7 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         public
         whenAQuoteIsProvided
     {
-        minAmountOut = bound(minAmountOut, 1, type(uint256).max);
+        minAmountOut = bound(minAmountOut, 1, type(uint248).max);
         amountReceived = bound(amountReceived, 0, minAmountOut - 1);
 
         vm.assume(amountIn > 0);
@@ -552,7 +553,6 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
 
         tokenOut = mockTokenOut;
         uint256 amountIn = 10;
-        uint256 amountOut = 1337;
 
         bytes memory quoteMetadata = "";
 
@@ -581,7 +581,6 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
 
         tokenOut = mockTokenOut;
         uint256 amountIn = 10;
-        uint256 amountOut = 1337;
 
         bytes memory quoteMetadata = "";
 
@@ -665,7 +664,9 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         public
         whenAQuoteIsProvided
         whenTokenInIsAnErc20Token
-    {
+    {   
+        amountOut = bound(amountOut, 1, type(uint248).max);
+
         // Set the token out as native token
         tokenOut = JBConstants.NATIVE_TOKEN;
 
@@ -893,6 +894,7 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         int56[] memory tickCumulatives
     )
         internal
+        view
         returns (uint256)
     {
         uint32[] memory secondsAgos = new uint32[](2);

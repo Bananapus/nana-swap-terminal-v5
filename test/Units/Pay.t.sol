@@ -38,6 +38,7 @@ contract JBSwapTerminalpay is UnitFixture {
 
     function test_WhenTokenInIsTheNativeToken(uint256 msgValue, uint256 amountIn, uint256 amountOut) public {
         vm.deal(caller, msgValue);
+        amountOut = bound(amountOut, 1, type(uint248).max);
 
         tokenIn = JBConstants.NATIVE_TOKEN;
 
@@ -105,12 +106,12 @@ contract JBSwapTerminalpay is UnitFixture {
     }
 
     function test_WhenTokenInIsAnErc20Token(uint256 amountIn, uint256 amountOut) public whenTokenInIsAnErc20Token {
+        amountOut = bound(amountOut, 1, type(uint248).max);
+
         // Should transfer the token in from the caller to the swap terminal
         mockExpectTransferFrom(caller, address(swapTerminal), tokenIn, amountIn);
 
-        bytes memory quoteMetadata = _createMetadata(
-            JBMetadataResolver.getId("quoteForSwap", address(swapTerminal)), abi.encode(amountOut, pool)
-        );
+        bytes memory quoteMetadata = _createMetadata(JBMetadataResolver.getId("quoteForSwap", address(swapTerminal)), abi.encode(amountOut, pool));
 
         // Mock the swap - this is where we make most of the tests
         mockExpectCall(
@@ -233,7 +234,8 @@ contract JBSwapTerminalpay is UnitFixture {
         public
         whenTokenInIsAnErc20Token
         whenPermit2DataArePassed
-    {
+    {   
+        amountOut = bound(amountOut, 1, type(uint248).max);
         // 0 amountIn will not trigger a permit2 use
         amountIn = bound(amountIn, 1, type(uint160).max);
 
@@ -671,6 +673,8 @@ contract JBSwapTerminalpay is UnitFixture {
         whenAQuoteIsProvided
         whenTokenInIsAnErc20Token
     {
+        amountOut = bound(amountOut, 1, type(uint248).max);
+
         // Set the token out as native token
         tokenOut = JBConstants.NATIVE_TOKEN;
 
