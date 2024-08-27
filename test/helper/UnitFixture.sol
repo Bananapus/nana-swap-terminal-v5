@@ -27,7 +27,7 @@ contract UnitFixture is Test {
         mockJBProjects = IJBProjects(makeAddr("mockJBProjects"));
         mockJBPermissions = IJBPermissions(makeAddr("mockJBPermissions"));
         mockJBDirectory = IJBDirectory(makeAddr("mockJBDirectory"));
-        
+
         mockPermit2 = IPermit2(makeAddr("mockPermit2"));
         mockWETH = IWETH9(makeAddr("mockWETH"));
         mockTokenOut = makeAddr("tokenOut");
@@ -37,10 +37,16 @@ contract UnitFixture is Test {
         terminalOwner = makeAddr("terminalOwner");
 
         // -- deploy the swap terminal --
-        swapTerminal =
-            new JBSwapTerminal(mockJBProjects, mockJBPermissions, mockJBDirectory, mockPermit2, terminalOwner, mockWETH, mockTokenOut, mockUniswapFactory);
-
-        
+        swapTerminal = new JBSwapTerminal(
+            mockJBProjects,
+            mockJBPermissions,
+            mockJBDirectory,
+            mockPermit2,
+            terminalOwner,
+            mockWETH,
+            mockTokenOut,
+            mockUniswapFactory
+        );
     }
 
     // test helpers:
@@ -81,11 +87,10 @@ contract UnitFixture is Test {
             assertEq(a[i].currency, b[i].currency, "currencies are not equal");
         }
     }
-    
+
     // check if a is included in b
     function assertIsIncluded(JBAccountingContext[] memory a, JBAccountingContext[] memory b) internal {
-        for(uint256 i; i < a.length; i++) {
-
+        for (uint256 i; i < a.length; i++) {
             bool _elementIsIncluded;
             for (uint256 j; j < b.length; j++) {
                 if (a[i].token == b[j].token && a[i].decimals == b[j].decimals && a[i].currency == b[j].currency) {
@@ -100,6 +105,6 @@ contract UnitFixture is Test {
 
     // create a metadata based on a single entry
     function _createMetadata(bytes4 id, bytes memory data) internal pure returns (bytes memory) {
-        return JBMetadataResolver.addToMetadata('', id, data);
+        return JBMetadataResolver.addToMetadata("", id, data);
     }
 }

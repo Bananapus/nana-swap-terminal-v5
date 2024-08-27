@@ -25,7 +25,10 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
         _;
     }
 
-    function test_WhenSettingTwapParamsOfItsProject(uint32 secondsAgo, uint160 slippageTolerance)
+    function test_WhenSettingTwapParamsOfItsProject(
+        uint32 secondsAgo,
+        uint160 slippageTolerance
+    )
         external
         givenTheCallerIsAProjectOwner
     {
@@ -66,7 +69,10 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
         _;
     }
 
-    function test_WhenTheCallerHasTheRole(uint32 secondsAgo, uint160 slippageTolerance)
+    function test_WhenTheCallerHasTheRole(
+        uint32 secondsAgo,
+        uint160 slippageTolerance
+    )
         external
         givenTheCallerIsNotAProjectOwner
     {
@@ -117,7 +123,11 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
         _;
     }
 
-    function test_WhenAddingDefaultParamsForAPool(uint256 _projectId, uint32 secondsAgo, uint160 slippageTolerance)
+    function test_WhenAddingDefaultParamsForAPool(
+        uint256 _projectId,
+        uint32 secondsAgo,
+        uint160 slippageTolerance
+    )
         external
         givenTheCallerIsTheTerminalOwner
     {

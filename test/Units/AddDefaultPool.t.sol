@@ -5,7 +5,6 @@ import "../helper/UnitFixture.sol";
 
 import {IUniswapV3PoolImmutables} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
-
 contract JBSwapTerminaladdDefaultPool is UnitFixture {
     address caller;
     address projectOwner;
@@ -44,8 +43,12 @@ contract JBSwapTerminaladdDefaultPool is UnitFixture {
         mockExpectCall(address(pool), abi.encodeCall(IUniswapV3PoolImmutables.fee, ()), abi.encode(fee));
 
         // Get the already deployed pool
-        (address token0, address token1) = token < mockTokenOut ? (token, mockTokenOut) : (mockTokenOut, token); 
-        mockExpectCall(address(mockUniswapFactory), abi.encodeCall(IUniswapV3Factory.getPool, (token0, token1, fee)), abi.encode(pool));
+        (address token0, address token1) = token < mockTokenOut ? (token, mockTokenOut) : (mockTokenOut, token);
+        mockExpectCall(
+            address(mockUniswapFactory),
+            abi.encodeCall(IUniswapV3Factory.getPool, (token0, token1, fee)),
+            abi.encode(pool)
+        );
 
         // decimals() call while setting the accounting context
         mockExpectCall(address(token), abi.encodeCall(IERC20Metadata.decimals, ()), abi.encode(18));
@@ -61,7 +64,9 @@ contract JBSwapTerminaladdDefaultPool is UnitFixture {
 
     function test_RevertWhen_AddingAPoolToAnotherProject() external givenTheCallerIsAProjectOwner {
         // Set the project owner
-        mockExpectCall(address(mockJBProjects), abi.encodeCall(IERC721.ownerOf, (otherProjectId)), abi.encode(projectOwner));
+        mockExpectCall(
+            address(mockJBProjects), abi.encodeCall(IERC721.ownerOf, (otherProjectId)), abi.encode(projectOwner)
+        );
 
         // Do not give specific or generic permission to the caller
         mockExpectCall(
@@ -102,8 +107,12 @@ contract JBSwapTerminaladdDefaultPool is UnitFixture {
         mockExpectCall(address(pool), abi.encodeCall(IUniswapV3PoolImmutables.fee, ()), abi.encode(fee));
 
         // Get the already deployed pool
-        (address token0, address token1) = token < mockTokenOut ? (token, mockTokenOut) : (mockTokenOut, token); 
-        mockExpectCall(address(mockUniswapFactory), abi.encodeCall(IUniswapV3Factory.getPool, (token0, token1, fee)), abi.encode(pool));
+        (address token0, address token1) = token < mockTokenOut ? (token, mockTokenOut) : (mockTokenOut, token);
+        mockExpectCall(
+            address(mockUniswapFactory),
+            abi.encodeCall(IUniswapV3Factory.getPool, (token0, token1, fee)),
+            abi.encode(pool)
+        );
 
         // decimals() call while setting the accounting context
         mockExpectCall(address(token), abi.encodeCall(IERC20Metadata.decimals, ()), abi.encode(18));
@@ -151,9 +160,17 @@ contract JBSwapTerminaladdDefaultPool is UnitFixture {
         mockExpectCall(address(otherPool), abi.encodeCall(IUniswapV3PoolImmutables.fee, ()), abi.encode(otherPoolFee));
 
         // Get the already deployed pool
-        (address token0, address token1) = token < mockTokenOut ? (token, mockTokenOut) : (mockTokenOut, token); 
-        mockExpectCall(address(mockUniswapFactory), abi.encodeCall(IUniswapV3Factory.getPool, (token0, token1, fee)), abi.encode(pool));
-        mockExpectCall(address(mockUniswapFactory), abi.encodeCall(IUniswapV3Factory.getPool, (token0, token1, otherPoolFee)), abi.encode(otherPool));
+        (address token0, address token1) = token < mockTokenOut ? (token, mockTokenOut) : (mockTokenOut, token);
+        mockExpectCall(
+            address(mockUniswapFactory),
+            abi.encodeCall(IUniswapV3Factory.getPool, (token0, token1, fee)),
+            abi.encode(pool)
+        );
+        mockExpectCall(
+            address(mockUniswapFactory),
+            abi.encodeCall(IUniswapV3Factory.getPool, (token0, token1, otherPoolFee)),
+            abi.encode(otherPool)
+        );
 
         // decimals() call while setting the accounting context
         mockExpectCall(address(token), abi.encodeCall(IERC20Metadata.decimals, ()), abi.encode(18));
@@ -207,8 +224,12 @@ contract JBSwapTerminaladdDefaultPool is UnitFixture {
         mockExpectCall(address(pool), abi.encodeCall(IUniswapV3PoolImmutables.fee, ()), abi.encode(fee));
 
         // Get the already deployed pool
-        (address token0, address token1) = token < mockTokenOut ? (token, mockTokenOut) : (mockTokenOut, token); 
-        mockExpectCall(address(mockUniswapFactory), abi.encodeCall(IUniswapV3Factory.getPool, (token0, token1, fee)), abi.encode(otherPool));
+        (address token0, address token1) = token < mockTokenOut ? (token, mockTokenOut) : (mockTokenOut, token);
+        mockExpectCall(
+            address(mockUniswapFactory),
+            abi.encodeCall(IUniswapV3Factory.getPool, (token0, token1, fee)),
+            abi.encode(otherPool)
+        );
 
         // it should revert
         vm.prank(caller);

@@ -16,14 +16,14 @@ contract JBSwapTerminaluniswapV3SwapCallback is UnitFixture {
         swapTerminal = JBSwapTerminal(
             payable(
                 new ForTest_SwapTerminal(
-                mockJBProjects,
-                mockJBPermissions,
-                mockJBDirectory,
-                mockPermit2,
-                makeAddr("owner"),
-                mockWETH,
-                mockTokenOut,
-                mockUniswapFactory
+                    mockJBProjects,
+                    mockJBPermissions,
+                    mockJBDirectory,
+                    mockPermit2,
+                    makeAddr("owner"),
+                    mockWETH,
+                    mockTokenOut,
+                    mockUniswapFactory
                 )
             )
         );
@@ -116,7 +116,8 @@ contract JBSwapTerminaluniswapV3SwapCallback is UnitFixture {
         swapTerminal.uniswapV3SwapCallback(amountZero, amountOne, data);
     }
 
-    /// @dev There is an underlying assertion on uniswap pool logic which is there can't be a situation where both amounts are negative (which would be having to pay both token)
+    /// @dev There is an underlying assertion on uniswap pool logic which is there can't be a situation where both
+    /// amounts are negative (which would be having to pay both token)
     function test_WhenAmount0IsNegative(int256 amountZero, int256 amountOne) external {
         amountZero = bound(amountZero, type(int256).min, -1);
         amountOne = bound(amountOne, 0, type(int256).max);
@@ -157,7 +158,9 @@ contract ForTest_SwapTerminal is JBSwapTerminal {
         IWETH9 weth,
         address tokenOut,
         IUniswapV3Factory uniswapFactory
-    ) JBSwapTerminal(projects, permissions, directory, permit2, owner, weth, tokenOut, uniswapFactory) {}
+    )
+        JBSwapTerminal(projects, permissions, directory, permit2, owner, weth, tokenOut, uniswapFactory)
+    {}
 
     function forTest_forceAddPool(uint256 projectId, address token, IUniswapV3Pool pool) public {
         _poolFor[projectId][token] = pool;

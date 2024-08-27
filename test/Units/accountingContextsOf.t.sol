@@ -25,14 +25,14 @@ contract JBSwapTerminalaccountingContextsOf is UnitFixture {
         swapTerminal = JBSwapTerminal(
             payable(
                 new ForTest_SwapTerminal(
-                mockJBProjects,
-                mockJBPermissions,
-                mockJBDirectory,
-                mockPermit2,
-                makeAddr("owner"),
-                mockWETH,
-                mockTokenOut,
-                mockUniswapFactory
+                    mockJBProjects,
+                    mockJBPermissions,
+                    mockJBDirectory,
+                    mockPermit2,
+                    makeAddr("owner"),
+                    mockWETH,
+                    mockTokenOut,
+                    mockUniswapFactory
                 )
             )
         );
@@ -45,7 +45,9 @@ contract JBSwapTerminalaccountingContextsOf is UnitFixture {
         uint256 numberProjectContexts,
         uint256 numberGenericContexts,
         uint256 numberOverlaps
-    ) external {
+    )
+        external
+    {
         numberProjectContexts = bound(numberProjectContexts, 1, 10);
         numberGenericContexts = bound(numberGenericContexts, 0, 10);
         numberOverlaps = bound(
@@ -81,7 +83,8 @@ contract JBSwapTerminalaccountingContextsOf is UnitFixture {
             genericContexts[(numberGenericContexts - numberOverlaps) + i] = JBAccountingContext({
                 token: address(bytes20(keccak256(abi.encodePacked(i, "project")))), // same token
                 decimals: uint8(i),
-                currency: uint32(bytes4(keccak256(abi.encodePacked(i, "overlap")))) // different currency, to differentiate them
+                currency: uint32(bytes4(keccak256(abi.encodePacked(i, "overlap")))) // different currency, to
+                    // differentiate them
             });
         }
 
@@ -143,7 +146,9 @@ contract ForTest_SwapTerminal is JBSwapTerminal {
         IWETH9 weth,
         address tokenOut,
         IUniswapV3Factory uniswapFactory
-    ) JBSwapTerminal(projects, permissions, directory, permit2, owner, weth, tokenOut, uniswapFactory) {}
+    )
+        JBSwapTerminal(projects, permissions, directory, permit2, owner, weth, tokenOut, uniswapFactory)
+    {}
 
     function forTest_forceAddAccountingContexts(uint256 projectId, JBAccountingContext[] memory contexts) public {
         for (uint256 i; i < contexts.length; i++) {

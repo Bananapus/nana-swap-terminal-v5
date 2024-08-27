@@ -79,29 +79,3 @@ contract ForTest_SwapTerminal is JBSwapTerminal {
         _twapParamsOf[projectId][pool] = params;
     }
 }
-
-contract ForTest_SwapTerminal is JBSwapTerminal {
-    constructor(
-        IJBProjects projects,
-        IJBPermissions permissions,
-        IJBDirectory directory,
-        IPermit2 permit2,
-        address owner,
-        IWETH9 weth,
-        address tokenOut,
-        IUniswapV3Factory uniswapFactory
-    )
-        JBSwapTerminal(projects, permissions, directory, permit2, owner, weth, tokenOut, uniswapFactory)
-    {}
-
-    function forTest_setTwapParams(
-        uint256 projectId,
-        IUniswapV3Pool pool,
-        uint32 secondsAgo,
-        uint160 slippageTolerance
-    )
-        public
-    {
-        _twapParamsOf[projectId][pool] = uint256(secondsAgo | uint256(slippageTolerance) << 32);
-    }
-}
