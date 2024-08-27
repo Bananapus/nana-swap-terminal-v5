@@ -231,7 +231,7 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         public
         whenTokenInIsAnErc20Token
         whenPermit2DataArePassed
-    {   
+    {
         amountOut = bound(amountOut, 1, type(uint248).max);
         // 0 amountIn will not trigger a permit2 use
         amountIn = bound(amountIn, 1, type(uint160).max);
@@ -664,7 +664,7 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         public
         whenAQuoteIsProvided
         whenTokenInIsAnErc20Token
-    {   
+    {
         amountOut = bound(amountOut, 1, type(uint248).max);
 
         // Set the token out as native token

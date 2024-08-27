@@ -111,7 +111,9 @@ contract JBSwapTerminalpay is UnitFixture {
         // Should transfer the token in from the caller to the swap terminal
         mockExpectTransferFrom(caller, address(swapTerminal), tokenIn, amountIn);
 
-        bytes memory quoteMetadata = _createMetadata(JBMetadataResolver.getId("quoteForSwap", address(swapTerminal)), abi.encode(amountOut, pool));
+        bytes memory quoteMetadata = _createMetadata(
+            JBMetadataResolver.getId("quoteForSwap", address(swapTerminal)), abi.encode(amountOut, pool)
+        );
 
         // Mock the swap - this is where we make most of the tests
         mockExpectCall(
@@ -234,7 +236,7 @@ contract JBSwapTerminalpay is UnitFixture {
         public
         whenTokenInIsAnErc20Token
         whenPermit2DataArePassed
-    {   
+    {
         amountOut = bound(amountOut, 1, type(uint248).max);
         // 0 amountIn will not trigger a permit2 use
         amountIn = bound(amountIn, 1, type(uint160).max);
