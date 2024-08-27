@@ -785,7 +785,8 @@ contract JBSwapTerminalpay is UnitFixture {
     }
 
     function test_WhenNotAllTokenInAreSwapped(uint256 amountIn, uint256 amountOut) external whenTokenInIsAnErc20Token {
-        amountIn = bound(amountIn, 1, type(uint160).max);
+        amountIn = bound(amountIn, 1, type(uint256).max); // insure there is at least 1 token in
+        amountOut = bound(amountOut, 1, type(uint248).max); // avoid overflow when casting to int
 
         // Should transfer the token in from the caller to the swap terminal
         mockExpectTransferFrom(caller, address(swapTerminal), tokenIn, amountIn);
@@ -864,6 +865,45 @@ contract JBSwapTerminalpay is UnitFixture {
             metadata: quoteMetadata
         });
 
+    }
+
+    function test_WhenTheTokenInIsTheTokenOut(uint256 amountIn) external {
+        tokenIn = tokenOut;
+
+        amountIn = bound(amountIn, 1, type(uint160).max);
+        uint256 amountOut = amountIn;
+
+        bytes memory metadata = bytes("qwerty");
+
+        // Should transfer the token in from the caller to the swap terminal
+        mockExpectTransferFrom(caller, address(swapTerminal), tokenIn, amountIn);
+
+        mockExpectCall(
+            address(mockJBDirectory),
+            abi.encodeCall(IJBDirectory.primaryTerminalOf, (projectId, tokenOut)),
+            abi.encode(nextTerminal)
+        );
+
+        mockExpectSafeApprove(tokenOut, address(swapTerminal), nextTerminal, amountOut);
+
+        // Mock the call to the next terminal, using the token out as new token in
+        mockExpectCall(
+            nextTerminal,
+            abi.encodeCall(IJBTerminal.pay, (projectId, tokenOut, amountOut, beneficiary, amountOut, "", metadata)),
+            abi.encode(1337)
+        );
+        
+        // it should not swap and just call the next terminal
+        vm.prank(caller);
+        swapTerminal.pay{value: 0}({
+            projectId: projectId,
+            token: tokenIn,
+            amount: amountIn,
+            beneficiary: beneficiary,
+            minReturnedTokens: amountOut,
+            memo: "",
+            metadata: metadata
+        });
     }
 
     function _addDefaultPoolAndParams(uint32 secondsAgo, uint160 slippageTolerance) internal returns (uint256) {

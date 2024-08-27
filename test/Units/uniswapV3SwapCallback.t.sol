@@ -87,14 +87,14 @@ contract JBSwapTerminaluniswapV3SwapCallback is UnitFixture {
 
     function test_WhenTheTokenToSendIsTheNativeToken() external {
         token = JBConstants.NATIVE_TOKEN;
-        vm.mockCall(address(mockWETH), abi.encodeCall(IWETH9.deposit, ()), "");
-        vm.mockCall(address(mockWETH), abi.encodeCall(IERC20.transfer, (address(pool), 0)), abi.encode(true));
         ForTest_SwapTerminal(payable(swapTerminal)).forTest_forceAddPool(projectId, address(mockWETH), pool);
 
         // it should wrap to weth
+        vm.mockCall(address(mockWETH), abi.encodeCall(IWETH9.deposit, ()), "");
         vm.expectCall(address(mockWETH), abi.encodeCall(IWETH9.deposit, ()));
 
         // it should use weth as token to send to the pool
+        vm.mockCall(address(mockWETH), abi.encodeCall(IERC20.transfer, (address(pool), 0)), abi.encode(true));
         vm.expectCall(address(mockWETH), abi.encodeCall(IERC20.transfer, (address(pool), 0)));
 
         vm.prank(address(pool));

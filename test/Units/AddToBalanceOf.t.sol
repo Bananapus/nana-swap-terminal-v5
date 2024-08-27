@@ -35,6 +35,7 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
     }
 
     function test_WhenTokenInIsTheNativeToken(uint256 msgValue, uint256 amountIn, uint256 amountOut) public {
+        amountOut = bound(amountOut, 1, type(uint160).max);
         vm.deal(caller, msgValue);
 
         tokenIn = JBConstants.NATIVE_TOKEN;
@@ -102,6 +103,8 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
     }
 
     function test_WhenTokenInIsAnErc20Token(uint256 amountIn, uint256 amountOut) public whenTokenInIsAnErc20Token {
+        amountIn = bound(amountIn, 1, type(uint160).max);
+
         // Should transfer the token in from the caller to the swap terminal
         mockExpectTransferFrom(caller, address(swapTerminal), tokenIn, amountIn);
 
@@ -776,6 +779,7 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
 
     function test_WhenNotAllTokenInAreSwapped(uint256 amountIn, uint256 amountOut) external whenTokenInIsAnErc20Token {
         amountIn = bound(amountIn, 1, type(uint160).max);
+        amountOut = bound(amountOut, 1, type(uint160).max);
 
         // Should transfer the token in from the caller to the swap terminal
         mockExpectTransferFrom(caller, address(swapTerminal), tokenIn, amountIn);

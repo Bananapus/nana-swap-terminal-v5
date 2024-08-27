@@ -38,6 +38,8 @@ JBSwapTerminal::pay // full branch coverage
 │   └── it should use the tokenOut for the next terminal pay()
 ├── when the tokenOut has no terminal defined
 │   └── it should revert
-└── when not all token in are swapped
-    ├── it should send the difference back to the caller
-    └── it should not keep any token in swap terminal
+├── when not all token in are swapped
+│   ├── it should send the difference back to the caller
+│   └── it should not keep any token in swap terminal
+└── when the tokenIn is the tokenOut
+    └── it should not swap and just call the next terminal
