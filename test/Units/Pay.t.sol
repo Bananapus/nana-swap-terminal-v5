@@ -267,7 +267,7 @@ contract JBSwapTerminalpay is UnitFixture {
                 }),
                 ""
             ),
-            ''
+            ""
         );
 
         mockExpectCall(
@@ -279,7 +279,7 @@ contract JBSwapTerminalpay is UnitFixture {
                 uint160(amountIn),
                 tokenIn
             ),
-            ''
+            ""
         );
 
         // no allowance granted outside of permit2
@@ -607,8 +607,7 @@ contract JBSwapTerminalpay is UnitFixture {
         secondsPerLiquidityCumulativeX128s[0] = 100;
         secondsPerLiquidityCumulativeX128s[1] = 1000;
 
-        uint256 minAmountOut =
-            _computeTwapAmountOut(amountIn, secondsAgo, tickCumulatives);
+        uint256 minAmountOut = _computeTwapAmountOut(amountIn, secondsAgo, tickCumulatives);
 
         // it should get a twap and compute a min amount
         mockExpectCall(
@@ -671,7 +670,7 @@ contract JBSwapTerminalpay is UnitFixture {
         public
         whenAQuoteIsProvided
         whenTokenInIsAnErc20Token
-    {   
+    {
         // Set the token out as native token
         tokenOut = JBConstants.NATIVE_TOKEN;
 
@@ -711,7 +710,9 @@ contract JBSwapTerminalpay is UnitFixture {
             ),
             // 0 for 1 => amount0 is the token in (positive), amount1 is the token out (negative/owed to the pool), and
             // vice versa
-            tokenIn < address(mockWETH) ? abi.encode(amountIn, -int256(amountOut)) : abi.encode(-int256(amountOut), amountIn)
+            tokenIn < address(mockWETH)
+                ? abi.encode(amountIn, -int256(amountOut))
+                : abi.encode(-int256(amountOut), amountIn)
         );
 
         // it should use the native token for the next terminal pay()
@@ -730,11 +731,7 @@ contract JBSwapTerminalpay is UnitFixture {
 
         // it should use weth as tokenOut
         // it should unwrap the tokenOut after swapping
-        mockExpectCall(
-            address(mockWETH),
-            abi.encodeCall(IWETH9.withdraw, (amountOut)),
-            abi.encode(true)
-        );
+        mockExpectCall(address(mockWETH), abi.encodeCall(IWETH9.withdraw, (amountOut)), abi.encode(true));
         vm.deal(address(swapTerminal), amountOut);
 
         // minReturnedTokens is used for the next terminal minAmountOut (where tokenOut is actually becoming the
@@ -836,13 +833,10 @@ contract JBSwapTerminalpay is UnitFixture {
 
         // it should send the difference back to the caller
         // this should be the amountIn - swapped, but the balanceOf is mocked to always return amountIn...
-        mockExpectCall(
-            address(tokenIn),
-            abi.encodeCall(IERC20.transfer, (caller, amountIn)),
-            abi.encode(true)
-        );
+        mockExpectCall(address(tokenIn), abi.encodeCall(IERC20.transfer, (caller, amountIn)), abi.encode(true));
 
-        // it should not keep any token in swap terminal - not being tested, cf supra, only single returned value for a mock
+        // it should not keep any token in swap terminal - not being tested, cf supra, only single returned value for a
+        // mock
         // vm.mockCall(
         //     address(tokenIn),
         //     abi.encodeCall(
@@ -864,7 +858,6 @@ contract JBSwapTerminalpay is UnitFixture {
             memo: "",
             metadata: quoteMetadata
         });
-
     }
 
     function test_WhenTheTokenInIsTheTokenOut(uint256 amountIn) external {
@@ -892,7 +885,7 @@ contract JBSwapTerminalpay is UnitFixture {
             abi.encodeCall(IJBTerminal.pay, (projectId, tokenOut, amountOut, beneficiary, amountOut, "", metadata)),
             abi.encode(1337)
         );
-        
+
         // it should not swap and just call the next terminal
         vm.prank(caller);
         swapTerminal.pay{value: 0}({
@@ -947,7 +940,7 @@ contract JBSwapTerminalpay is UnitFixture {
         int56[] memory tickCumulatives
     )
         internal
-        returns(uint256)
+        returns (uint256)
     {
         uint32[] memory secondsAgos = new uint32[](2);
         secondsAgos[0] = secondsAgo;
