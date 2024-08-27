@@ -4,10 +4,8 @@ pragma solidity ^0.8.17;
 import "../helper/UnitFixture.sol";
 
 contract JBSwapTerminaltwapParamsOf is UnitFixture {
-
     uint256 projectId = 1337;
     IUniswapV3Pool pool;
-
 
     function setUp() public override {
         super.setUp();
@@ -17,18 +15,18 @@ contract JBSwapTerminaltwapParamsOf is UnitFixture {
         swapTerminal = JBSwapTerminal(
             payable(
                 new ForTest_SwapTerminal(
-                mockJBProjects,
-                mockJBPermissions,
-                mockJBDirectory,
-                mockPermit2,
-                makeAddr("owner"),
-                mockWETH,
-                mockTokenOut,
-                mockUniswapFactory
+                    mockJBProjects,
+                    mockJBPermissions,
+                    mockJBDirectory,
+                    mockPermit2,
+                    makeAddr("owner"),
+                    mockWETH,
+                    mockTokenOut,
+                    mockUniswapFactory
                 )
             )
         );
-    } 
+    }
 
     function test_WhenThereAreTwapParams(uint192 params) external {
         ForTest_SwapTerminal(payable(swapTerminal)).forTest_forceAddTwapParams(projectId, pool, params);
@@ -44,7 +42,9 @@ contract JBSwapTerminaltwapParamsOf is UnitFixture {
     }
 
     function test_WhenThereAreDefaultParamForThePool(uint192 params) external whenThereAreNoTwapParamsForTheProject {
-        ForTest_SwapTerminal(payable(swapTerminal)).forTest_forceAddTwapParams(swapTerminal.DEFAULT_PROJECT_ID(), pool, params);
+        ForTest_SwapTerminal(payable(swapTerminal)).forTest_forceAddTwapParams(
+            swapTerminal.DEFAULT_PROJECT_ID(), pool, params
+        );
 
         // it should return the default params
         (uint32 secondsAgo, uint160 slippageTolerance) = swapTerminal.twapParamsOf(projectId, pool);
@@ -71,9 +71,37 @@ contract ForTest_SwapTerminal is JBSwapTerminal {
         IWETH9 weth,
         address tokenOut,
         IUniswapV3Factory uniswapFactory
-    ) JBSwapTerminal(projects, permissions, directory, permit2, owner, weth, tokenOut, uniswapFactory) {}
+    )
+        JBSwapTerminal(projects, permissions, directory, permit2, owner, weth, tokenOut, uniswapFactory)
+    {}
 
     function forTest_forceAddTwapParams(uint256 projectId, IUniswapV3Pool pool, uint256 params) public {
         _twapParamsOf[projectId][pool] = params;
+    }
+}
+
+contract ForTest_SwapTerminal is JBSwapTerminal {
+    constructor(
+        IJBProjects projects,
+        IJBPermissions permissions,
+        IJBDirectory directory,
+        IPermit2 permit2,
+        address owner,
+        IWETH9 weth,
+        address tokenOut,
+        IUniswapV3Factory uniswapFactory
+    )
+        JBSwapTerminal(projects, permissions, directory, permit2, owner, weth, tokenOut, uniswapFactory)
+    {}
+
+    function forTest_setTwapParams(
+        uint256 projectId,
+        IUniswapV3Pool pool,
+        uint32 secondsAgo,
+        uint160 slippageTolerance
+    )
+        public
+    {
+        _twapParamsOf[projectId][pool] = uint256(secondsAgo | uint256(slippageTolerance) << 32);
     }
 }
