@@ -1,0 +1,8 @@
+JBSwapTerminal::twapParamsOf // paths coverage
+├── when there are twap params
+│   └── it should return the params
+└── when there are no twap params for the project
+    ├── when there are default param for the pool
+    │   └── it should return the default params
+    └── when there are no default param for the pool
+        └── it should return empty values
