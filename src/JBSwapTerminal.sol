@@ -564,7 +564,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         bytes calldata metadata
     )
         internal
-        returns (uint256 amountToSend)
+        returns (uint256)
     {
         // Keep a reference to the normalized token, which wraps the native token if needed.
         address normalizedTokenIn = tokenIn == JBConstants.NATIVE_TOKEN ? address(WETH) : tokenIn;
@@ -574,8 +574,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
 
         // If the token in is the same as the token out, don't swap, just call the next terminal
         if ((tokenIn == JBConstants.NATIVE_TOKEN && OUT_IS_NATIVE_TOKEN) || (normalizedTokenIn == normalizedTokenOut)) {
-            amountToSend = amount;
-            return amountToSend;
+            return amount;
         }
 
         // Get the quote that should be used for the swap, and the pool where the swap will take place.
@@ -588,7 +587,7 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
         });
 
         // Swap if needed. The callback will ensure that we're within the intended slippage tolerance.
-        amountToSend = _swap({
+        uint256 amountToSend = _swap({
             tokenIn: tokenIn,
             amountIn: amount,
             minAmountOut: minAmountOut,
@@ -608,6 +607,8 @@ contract JBSwapTerminal is JBPermissioned, Ownable, IJBTerminal, IJBPermitTermin
 
             _transferFor(address(this), payable(msg.sender), tokenIn, leftover);
         }
+
+        return amountToSend;
     }
 
     /// @notice Picks the pool and quote for the swap.
