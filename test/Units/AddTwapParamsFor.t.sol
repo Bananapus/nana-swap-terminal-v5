@@ -139,7 +139,7 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
         external
         givenTheCallerIsTheTerminalOwner
     {
-        vm.assume(_projectId != 0);
+        vm.assume(_projectId != 0 && _projectId != projectId);
 
         // Add the twap params as the terminal owner
         swapTerminal.addTwapParamsFor(0, pool, secondsAgo, slippageTolerance);
