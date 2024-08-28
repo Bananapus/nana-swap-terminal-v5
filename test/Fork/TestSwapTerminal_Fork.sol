@@ -306,8 +306,8 @@ contract TestSwapTerminal_Fork is Test {
         vm.expectRevert(
             abi.encodeWithSelector(
                 JBSwapTerminal.JBSwapTerminal_SpecifiedSlippageExceeded.selector,
-                268_922_902_846_394_818_880,
-                533_730_266_458_888_487_268
+                268_889_523_528_411_245_264,
+                533_570_179_397_430_306_074
             )
         );
 
@@ -459,7 +459,7 @@ contract TestSwapTerminal_Fork is Test {
         // Old deploy is used so we'll just allow this
         vm.expectRevert(
             abi.encodeWithSelector(
-                JBPermissioned.JBPermissioned_Unauthorized.selector, address(0), address(12_345), _projectId, 27
+                JBPermissioned.JBPermissioned_Unauthorized.selector, _projectOwner, address(12_345), _projectId, 26
             )
         );
         vm.prank(address(12_345));
