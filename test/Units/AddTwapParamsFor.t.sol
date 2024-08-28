@@ -119,7 +119,7 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
         vm.prank(caller);
         vm.expectRevert(
             abi.encodeWithSelector(
-                JBPermissioned.JBPermissioned_Unauthorized.selector, address(0), caller, projectId, 27
+                JBPermissioned.JBPermissioned_Unauthorized.selector, projectOwner, caller, projectId, 27
             )
         );
         swapTerminal.addTwapParamsFor(projectId, pool, secondsAgo, slippageTolerance);

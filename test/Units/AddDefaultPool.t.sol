@@ -81,7 +81,7 @@ contract JBSwapTerminaladdDefaultPool is UnitFixture {
         // it should revert
         vm.expectRevert(
             abi.encodeWithSelector(
-                JBPermissioned.JBPermissioned_Unauthorized.selector, address(0), caller, otherProjectId, 27
+                JBPermissioned.JBPermissioned_Unauthorized.selector, projectOwner, caller, otherProjectId, 26
             )
         );
         swapTerminal.addDefaultPool(otherProjectId, token, pool);
@@ -144,7 +144,7 @@ contract JBSwapTerminaladdDefaultPool is UnitFixture {
         // it should revert
         vm.expectRevert(
             abi.encodeWithSelector(
-                JBPermissioned.JBPermissioned_Unauthorized.selector, address(0), caller, projectId, 27
+                JBPermissioned.JBPermissioned_Unauthorized.selector, projectOwner, caller, projectId, 26
             )
         );
         swapTerminal.addDefaultPool(projectId, token, pool);
@@ -220,7 +220,7 @@ contract JBSwapTerminaladdDefaultPool is UnitFixture {
         // it should revert
         vm.expectRevert(
             abi.encodeWithSelector(
-                JBPermissioned.JBPermissioned_Unauthorized.selector, address(0), address(this), projectId, 27
+                JBPermissioned.JBPermissioned_Unauthorized.selector, projectOwner, terminalOwner, projectId, 26
             )
         );
         swapTerminal.addDefaultPool(projectId, token, otherPool);
