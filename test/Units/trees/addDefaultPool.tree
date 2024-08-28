@@ -1,0 +1,19 @@
+JBSwapTerminal::addDefaultPool // path coverage
+├── given the caller is a project owner
+│   ├── when adding a pool to its project
+│   │   ├── it should add the pool to the project owned
+│   │   └── it sould create the accounting context
+│   └── when adding a pool to another project
+│       └── it should revert
+├── given the caller is not a project owner
+│   ├── when the caller has the role
+│   │   └── it should add the pool to the project
+│   └── when the caller has no role
+│       └── it should revert
+├── given the caller is the terminal owner
+│   ├── when adding a default pool
+│   │   └── it should add the default pool
+│   └── when adding a pool to a project
+│       └── it should revert
+└── when the pool has not been deployed by the factory
+    └── it should revert

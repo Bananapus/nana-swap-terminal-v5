@@ -1,0 +1,43 @@
+// this now became the exact same flow as pay, except for the final call to the next terminal
+JBSwapTerminal::addToBalanceOf // branch coverage
+├── when tokenIn is the native token
+│   ├── it should use weth as tokenIn // test in the uniswap call
+│   ├── it should set inIsNativeToken to true // test in the uniswap call
+│   ├── it should use msg value as amountIn
+│   └── it should pass the benefiaciary as beneficiary for the next terminal
+├── when tokenIn is an erc20 token
+│   ├── it should use tokenIn as tokenIn // test in the uniswap call
+│   ├── it should set inIsNativeToken to false // test in the uniswap call
+│   ├── it should use amountIn as amountIn
+│   ├── when a msg value is passed along an erc20 token
+│   │   └── it should revert
+│   ├── when tokenIn uses an erc20 approval
+│   │   └── it should use the token transferFrom
+│   └── when permit2 data are passed
+│       ├── it should use the permit2 call
+│       └── when the permit2 allowance is less than the amountIn
+│           └── it should revert
+├── when a quote is provided
+│   ├── it should use the quote as amountOutMin
+│   ├── it should use the pool passed
+│   └── when the amount received is less than the amountOutMin
+│       └── it should revert
+├── when no quote is passed
+│   ├── it should use the default pool
+│   ├── when no default pool is defined
+│   │   └── it should revert
+│   ├── it should get a twap and compute a min amount
+│   └── when the amount received is less than the twap amountOutMin // <-- TODO: implement fix post audit
+│       └── it should revert
+├── when the token out is the native token
+│   ├── it should use weth as tokenOut
+│   ├── it should set outIsNativeToken to true
+│   ├── it should unwrap the tokenOut after swapping
+│   └── it should use the native token for the next terminal pay()
+├── when the token out is an erc20 token
+│   ├── it should use tokenOut as tokenOut
+│   ├── it should set outIsNativeToken to false
+│   ├── it should set the correct approval
+│   └── it should use the tokenOut for the next terminal pay()
+└── when the tokenOut has no terminal defined
+    └── it should revert

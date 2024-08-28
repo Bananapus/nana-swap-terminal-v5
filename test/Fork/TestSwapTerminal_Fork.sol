@@ -129,7 +129,7 @@ contract TestSwapTerminal_Fork is Test {
         vm.label(_projectOwner, "projectOwner");
 
         _swapTerminal = new JBSwapTerminal(
-           _directory, _permissions, _projects, _permit2, _owner, WETH, JBConstants.NATIVE_TOKEN, factory
+            _directory, _permissions, _projects, _permit2, _owner, WETH, JBConstants.NATIVE_TOKEN, factory
         );
         vm.label(address(_swapTerminal), "swapTerminal");
 
@@ -303,7 +303,13 @@ contract TestSwapTerminal_Fork is Test {
         UNI.approve(address(_swapTerminal), _amountIn);
 
         // Funny value
-        vm.expectRevert(abi.encodeWithSelector(JBSwapTerminal.JBSwapTerminal_SpecifiedSlippageExceeded.selector, 268922902846394818880, 533730266458888487268));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                JBSwapTerminal.JBSwapTerminal_SpecifiedSlippageExceeded.selector,
+                268_922_902_846_394_818_880,
+                533_730_266_458_888_487_268
+            )
+        );
 
         // Make a payment.
         _swapTerminal.pay({
@@ -451,7 +457,11 @@ contract TestSwapTerminal_Fork is Test {
         emit log_address(address(_permissions));
 
         // Old deploy is used so we'll just allow this
-        vm.expectRevert(JBPermissioned.JBPermissioned_Unauthorized.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                JBPermissioned.JBPermissioned_Unauthorized.selector, address(0), address(12_345), _projectId, 27
+            )
+        );
         vm.prank(address(12_345));
         _swapTerminal.addDefaultPool(_projectId, address(UNI), IUniswapV3Pool(address(5432)));
     }
