@@ -96,11 +96,6 @@ contract TestSwapTerminal_Fork is Test {
             vm.envOr("NANA_CORE_DEPLOYMENT_PATH", string("node_modules/@bananapus/core/deployments/"))
         );
 
-        // TODO: find a new way to parse broadcast json
-        // _controller = IJBController(stdJson.readAddress(
-        //         vm.readFile("broadcast/Deploy.s.sol/11155420/run-latest.json"), ".address"
-        //     ));
-
         _controller = core.controller;
         vm.label(address(_controller), "controller");
 
