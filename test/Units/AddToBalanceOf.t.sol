@@ -335,9 +335,7 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         });
     }
 
-    function test_RevertWhen_ThePermit2AllowanceIsLessThanTheAmountIn(
-        uint256 amountIn
-    )
+    function test_RevertWhen_ThePermit2AllowanceIsLessThanTheAmountIn(uint256 amountIn)
         public
         whenTokenInIsAnErc20Token
         whenPermit2DataArePassed

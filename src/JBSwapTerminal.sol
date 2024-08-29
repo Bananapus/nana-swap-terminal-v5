@@ -202,9 +202,7 @@ contract JBSwapTerminal is
     ///         taking precedence.
     /// @param projectId The ID of the project to get the accounting contexts for.
     /// @return contexts An array of `JBAccountingContext` containing the accounting contexts for the project ID.
-    function accountingContextsOf(
-        uint256 projectId
-    )
+    function accountingContextsOf(uint256 projectId)
         external
         view
         override
