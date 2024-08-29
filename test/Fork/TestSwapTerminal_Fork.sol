@@ -85,7 +85,7 @@ contract TestSwapTerminal_Fork is Test {
     uint256 internal _projectId = 1;
 
     function setUp() public {
-        vm.createSelectFork("https://eth-sepolia.g.alchemy.com/v2/aqe_TW1SAuXZdaooXMhf1RW0WSAW7XFd");
+        vm.createSelectFork("https://eth-sepolia.g.alchemy.com/v2/aqe_TW1SAuXZdaooXMhf1RW0WSAW7XFd", 6_593_449);
 
         vm.label(address(UNI), "UNI");
         vm.label(address(WETH), "WETH");
@@ -306,7 +306,7 @@ contract TestSwapTerminal_Fork is Test {
         vm.expectRevert(
             abi.encodeWithSelector(
                 JBSwapTerminal.JBSwapTerminal_SpecifiedSlippageExceeded.selector,
-                268_889_523_528_411_245_264,
+                268_890_184_115_505_958_075,
                 533_570_179_397_430_306_074
             )
         );
