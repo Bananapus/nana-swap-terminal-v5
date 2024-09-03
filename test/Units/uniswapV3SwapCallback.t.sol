@@ -51,7 +51,7 @@ contract JBSwapTerminaluniswapV3SwapCallback is UnitFixture {
         bytes memory data = abi.encode(projectId, token);
 
         // it should revert
-        vm.expectRevert(JBSwapTerminal.CALLER_NOT_POOL.selector);
+        vm.expectRevert(abi.encodeWithSelector(JBSwapTerminal.JBSwapTerminal_CallerNotPool.selector, caller));
 
         vm.prank(caller);
         swapTerminal.uniswapV3SwapCallback(0, 0, data);
@@ -79,7 +79,7 @@ contract JBSwapTerminaluniswapV3SwapCallback is UnitFixture {
         bytes memory data = abi.encode(projectId, token);
 
         // it should revert
-        vm.expectRevert(JBSwapTerminal.CALLER_NOT_POOL.selector);
+        vm.expectRevert(abi.encodeWithSelector(JBSwapTerminal.JBSwapTerminal_CallerNotPool.selector, caller));
 
         vm.prank(caller);
         swapTerminal.uniswapV3SwapCallback(0, 0, data);
@@ -159,7 +159,7 @@ contract ForTest_SwapTerminal is JBSwapTerminal {
         address tokenOut,
         IUniswapV3Factory uniswapFactory
     )
-        JBSwapTerminal(projects, permissions, directory, permit2, owner, weth, tokenOut, uniswapFactory)
+        JBSwapTerminal(directory, permissions, projects, permit2, owner, weth, tokenOut, uniswapFactory)
     {}
 
     function forTest_forceAddPool(uint256 projectId, address token, IUniswapV3Pool pool) public {

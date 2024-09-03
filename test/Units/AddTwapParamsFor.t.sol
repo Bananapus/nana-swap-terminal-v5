@@ -60,7 +60,11 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
         );
 
         // it should revert
-        vm.expectRevert(JBPermissioned.UNAUTHORIZED.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                JBPermissioned.JBPermissioned_Unauthorized.selector, address(0), caller, projectId + 1, 27
+            )
+        );
         swapTerminal.addTwapParamsFor(projectId + 1, pool, secondsAgo, slippageTolerance);
     }
 
@@ -113,7 +117,11 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
 
         // it should revert
         vm.prank(caller);
-        vm.expectRevert(JBPermissioned.UNAUTHORIZED.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                JBPermissioned.JBPermissioned_Unauthorized.selector, projectOwner, caller, projectId, 27
+            )
+        );
         swapTerminal.addTwapParamsFor(projectId, pool, secondsAgo, slippageTolerance);
     }
 
@@ -131,7 +139,7 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
         external
         givenTheCallerIsTheTerminalOwner
     {
-        vm.assume(_projectId != 0);
+        vm.assume(_projectId != 0 && _projectId != projectId);
 
         // Add the twap params as the terminal owner
         swapTerminal.addTwapParamsFor(0, pool, secondsAgo, slippageTolerance);
@@ -173,7 +181,11 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
         mockExpectCall(address(mockJBProjects), abi.encodeCall(IERC721.ownerOf, (projectId)), abi.encode(projectOwner));
 
         // it should revert
-        vm.expectRevert(JBPermissioned.UNAUTHORIZED.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                JBPermissioned.JBPermissioned_Unauthorized.selector, address(0), caller, projectId, 27
+            )
+        );
         swapTerminal.addTwapParamsFor(projectId, pool, secondsAgo, slippageTolerance);
     }
 }

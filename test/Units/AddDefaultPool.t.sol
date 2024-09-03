@@ -79,7 +79,11 @@ contract JBSwapTerminaladdDefaultPool is UnitFixture {
         );
 
         // it should revert
-        vm.expectRevert(JBPermissioned.UNAUTHORIZED.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                JBPermissioned.JBPermissioned_Unauthorized.selector, projectOwner, caller, otherProjectId, 26
+            )
+        );
         swapTerminal.addDefaultPool(otherProjectId, token, pool);
     }
 
@@ -138,7 +142,11 @@ contract JBSwapTerminaladdDefaultPool is UnitFixture {
         );
 
         // it should revert
-        vm.expectRevert(JBPermissioned.UNAUTHORIZED.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                JBPermissioned.JBPermissioned_Unauthorized.selector, projectOwner, caller, projectId, 26
+            )
+        );
         swapTerminal.addDefaultPool(projectId, token, pool);
     }
 
@@ -210,7 +218,11 @@ contract JBSwapTerminaladdDefaultPool is UnitFixture {
         );
 
         // it should revert
-        vm.expectRevert(JBPermissioned.UNAUTHORIZED.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                JBPermissioned.JBPermissioned_Unauthorized.selector, projectOwner, terminalOwner, projectId, 26
+            )
+        );
         swapTerminal.addDefaultPool(projectId, token, otherPool);
     }
 
@@ -233,7 +245,7 @@ contract JBSwapTerminaladdDefaultPool is UnitFixture {
 
         // it should revert
         vm.prank(caller);
-        vm.expectRevert(JBSwapTerminal.WRONG_POOL.selector);
+        vm.expectRevert(abi.encodeWithSelector(JBSwapTerminal.JBSwapTerminal_WrongPool.selector, pool, otherPool));
         swapTerminal.addDefaultPool(projectId, token, pool);
     }
 }

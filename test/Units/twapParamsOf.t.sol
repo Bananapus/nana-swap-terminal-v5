@@ -72,7 +72,7 @@ contract ForTest_SwapTerminal is JBSwapTerminal {
         address tokenOut,
         IUniswapV3Factory uniswapFactory
     )
-        JBSwapTerminal(projects, permissions, directory, permit2, owner, weth, tokenOut, uniswapFactory)
+        JBSwapTerminal(directory, permissions, projects, permit2, owner, weth, tokenOut, uniswapFactory)
     {}
 
     function forTest_forceAddTwapParams(uint256 projectId, IUniswapV3Pool pool, uint256 params) public {

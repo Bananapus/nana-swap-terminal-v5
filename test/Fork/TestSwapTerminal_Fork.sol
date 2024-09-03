@@ -85,7 +85,7 @@ contract TestSwapTerminal_Fork is Test {
     uint256 internal _projectId = 1;
 
     function setUp() public {
-        vm.createSelectFork("https://eth-sepolia.g.alchemy.com/v2/aqe_TW1SAuXZdaooXMhf1RW0WSAW7XFd");
+        vm.createSelectFork("https://eth-sepolia.g.alchemy.com/v2/aqe_TW1SAuXZdaooXMhf1RW0WSAW7XFd", 6_593_449);
 
         vm.label(address(UNI), "UNI");
         vm.label(address(WETH), "WETH");
@@ -95,11 +95,6 @@ contract TestSwapTerminal_Fork is Test {
         core = CoreDeploymentLib.getDeployment(
             vm.envOr("NANA_CORE_DEPLOYMENT_PATH", string("node_modules/@bananapus/core/deployments/"))
         );
-
-        // TODO: find a new way to parse broadcast json
-        // _controller = IJBController(stdJson.readAddress(
-        //         vm.readFile("broadcast/Deploy.s.sol/11155420/run-latest.json"), ".address"
-        //     ));
 
         _controller = core.controller;
         vm.label(address(_controller), "controller");
@@ -129,7 +124,7 @@ contract TestSwapTerminal_Fork is Test {
         vm.label(_projectOwner, "projectOwner");
 
         _swapTerminal = new JBSwapTerminal(
-            _projects, _permissions, _directory, _permit2, _owner, WETH, JBConstants.NATIVE_TOKEN, factory
+            _directory, _permissions, _projects, _permit2, _owner, WETH, JBConstants.NATIVE_TOKEN, factory
         );
         vm.label(address(_swapTerminal), "swapTerminal");
 
@@ -303,7 +298,13 @@ contract TestSwapTerminal_Fork is Test {
         UNI.approve(address(_swapTerminal), _amountIn);
 
         // Funny value
-        vm.expectRevert(abi.encodeWithSelector(JBSwapTerminal.MAX_SLIPPAGE.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                JBSwapTerminal.JBSwapTerminal_SpecifiedSlippageExceeded.selector,
+                268_890_184_115_505_958_075,
+                533_570_179_397_430_306_074
+            )
+        );
 
         // Make a payment.
         _swapTerminal.pay({
@@ -451,7 +452,11 @@ contract TestSwapTerminal_Fork is Test {
         emit log_address(address(_permissions));
 
         // Old deploy is used so we'll just allow this
-        vm.expectRevert(JBPermissioned.UNAUTHORIZED.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                JBPermissioned.JBPermissioned_Unauthorized.selector, _projectOwner, address(12_345), _projectId, 26
+            )
+        );
         vm.prank(address(12_345));
         _swapTerminal.addDefaultPool(_projectId, address(UNI), IUniswapV3Pool(address(5432)));
     }

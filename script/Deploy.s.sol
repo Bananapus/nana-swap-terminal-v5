@@ -91,9 +91,9 @@ contract DeployScript is Script, Sphinx {
                 SWAP_TERMINAL,
                 type(JBSwapTerminal).creationCode,
                 abi.encode(
-                    core.projects,
-                    core.permissions,
                     core.directory,
+                    core.permissions,
+                    core.projects,
                     permit2,
                     address(manager),
                     IWETH9(weth),

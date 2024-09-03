@@ -196,7 +196,7 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         );
 
         // it should revert
-        vm.expectRevert(JBSwapTerminal.NO_MSG_VALUE_ALLOWED.selector);
+        vm.expectRevert(abi.encodeWithSelector(JBSwapTerminal.JBSwapTerminal_NoMsgValueAllowed.selector, msgValue));
 
         vm.prank(caller);
         swapTerminal.addToBalanceOf{value: msgValue}({
@@ -335,9 +335,7 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         });
     }
 
-    function test_RevertWhen_ThePermit2AllowanceIsLessThanTheAmountIn(
-        uint256 amountIn
-    )
+    function test_RevertWhen_ThePermit2AllowanceIsLessThanTheAmountIn(uint256 amountIn)
         public
         whenTokenInIsAnErc20Token
         whenPermit2DataArePassed
@@ -366,7 +364,11 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         );
 
         // it should revert
-        vm.expectRevert(JBSwapTerminal.PERMIT_ALLOWANCE_NOT_ENOUGH.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                JBSwapTerminal.JBSwapTerminal_PermitAllowanceNotEnough.selector, amountIn, amountIn - 1
+            )
+        );
         vm.prank(caller);
         swapTerminal.pay{value: 0}({
             projectId: projectId,
@@ -444,7 +446,11 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         );
 
         // it should revert
-        vm.expectRevert(abi.encodeWithSelector(JBSwapTerminal.MAX_SLIPPAGE.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                JBSwapTerminal.JBSwapTerminal_SpecifiedSlippageExceeded.selector, amountReceived, minAmountOut
+            )
+        );
 
         vm.prank(caller);
         swapTerminal.pay({
@@ -566,7 +572,9 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         mockExpectTransferFrom(caller, address(swapTerminal), tokenIn, amountIn);
 
         // it should revert
-        vm.expectRevert(JBSwapTerminal.NO_DEFAULT_POOL_DEFINED.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(JBSwapTerminal.JBSwapTerminal_NoDefaultPoolDefined.selector, projectId, tokenIn)
+        );
         vm.prank(caller);
         swapTerminal.addToBalanceOf{value: 0}({
             projectId: projectId,
@@ -646,7 +654,11 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         );
 
         // it should revert
-        vm.expectRevert(JBSwapTerminal.MAX_SLIPPAGE.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                JBSwapTerminal.JBSwapTerminal_SpecifiedSlippageExceeded.selector, minAmountOut - 1, minAmountOut
+            )
+        );
 
         vm.prank(caller);
         swapTerminal.addToBalanceOf{value: 0}({
@@ -673,9 +685,9 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         tokenOut = JBConstants.NATIVE_TOKEN;
 
         swapTerminal = new JBSwapTerminal(
-            mockJBProjects,
-            mockJBPermissions,
             mockJBDirectory,
+            mockJBPermissions,
+            mockJBProjects,
             mockPermit2,
             terminalOwner,
             mockWETH,
@@ -765,7 +777,9 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         );
 
         // it should revert
-        vm.expectRevert(JBSwapTerminal.TOKEN_NOT_ACCEPTED.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(JBSwapTerminal.JBSwapTerminal_TokenNotAccepted.selector, projectId, tokenOut)
+        );
         vm.prank(caller);
         swapTerminal.addToBalanceOf{value: 0}({
             projectId: projectId,
