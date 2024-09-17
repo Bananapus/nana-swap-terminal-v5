@@ -4,12 +4,12 @@ pragma solidity 0.8.23;
 import {stdJson} from "forge-std/Script.sol";
 import {Vm} from "forge-std/Vm.sol";
 
-import {JBSwapTerminal} from "../../src/JBSwapTerminal.sol";
+import {IJBSwapTerminal} from "../../src/interfaces/IJBSwapTerminal.sol";
 
 import {SphinxConstants, NetworkInfo} from "@sphinx-labs/contracts/SphinxConstants.sol";
 
 struct SwapTerminalDeployment {
-    JBSwapTerminal swap_terminal;
+    IJBSwapTerminal swap_terminal;
 }
 
 library SwapTerminalDeploymentLib {
@@ -43,7 +43,7 @@ library SwapTerminalDeploymentLib {
         view
         returns (SwapTerminalDeployment memory deployment)
     {
-        deployment.swap_terminal = JBSwapTerminal(
+        deployment.swap_terminal = IJBSwapTerminal(
             payable(_getDeploymentAddress(path, "nana-swap-terminal-testnet", network_name, "JBSwapTerminal"))
         );
     }
