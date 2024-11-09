@@ -381,6 +381,10 @@ contract JBSwapTerminal is
             // Get a quote based on the pool's TWAP, including a default slippage maximum.
             (uint32 secondsAgo, uint160 slippageTolerance) = twapParamsOf(projectId, pool);
 
+            // Use the oldest observation if it's less than the secondsAgo.
+            uint32 oldestObservation = OracleLibrary.getOldestObservationSecondsAgo(pool);
+            if (oldestObservation < secondsAgo) secondsAgo = oldestObservation;
+
             // Keep a reference to the TWAP tick.
             //slither-disable-next-line unused-return
             (int24 arithmeticMeanTick,) = OracleLibrary.consult(address(pool), secondsAgo);
