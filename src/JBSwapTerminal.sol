@@ -355,6 +355,20 @@ contract JBSwapTerminal is
         view
         returns (uint256 minAmountOut, IUniswapV3Pool pool)
     {
+        // If there is no quote, check for this project's default pool for the token and get a quote based on
+        // its TWAP.
+        pool = _poolFor[projectId][normalizedTokenIn];
+
+        // If this project doesn't have a default pool specified for this token, try using a generic one.
+        if (address(pool) == address(0)) {
+            pool = _poolFor[DEFAULT_PROJECT_ID][normalizedTokenIn];
+
+            // If there's no default pool neither, revert.
+            if (address(pool) == address(0)) {
+                revert JBSwapTerminal_NoDefaultPoolDefined(projectId, normalizedTokenIn);
+            }
+        }
+
         // Check for a quote passed in by the user/client.
         (bool exists, bytes memory quote) =
             JBMetadataResolver.getDataFor(JBMetadataResolver.getId("quoteForSwap"), metadata);
@@ -362,22 +376,8 @@ contract JBSwapTerminal is
         // If there's a quote, use it.
         if (exists) {
             // If there is a quote, use it for the swap config.
-            (minAmountOut, pool) = abi.decode(quote, (uint256, IUniswapV3Pool));
+            (minAmountOut) = abi.decode(quote, (uint256));
         } else {
-            // If there is no quote, check for this project's default pool for the token and get a quote based on
-            // its TWAP.
-            pool = _poolFor[projectId][normalizedTokenIn];
-
-            // If this project doesn't have a default pool specified for this token, try using a generic one.
-            if (address(pool) == address(0)) {
-                pool = _poolFor[DEFAULT_PROJECT_ID][normalizedTokenIn];
-
-                // If there's no default pool neither, revert.
-                if (address(pool) == address(0)) {
-                    revert JBSwapTerminal_NoDefaultPoolDefined(projectId, normalizedTokenIn);
-                }
-            }
-
             // Get a quote based on the pool's TWAP, including a default slippage maximum.
             (uint32 secondsAgo, uint160 slippageTolerance) = twapParamsOf(projectId, pool);
 
