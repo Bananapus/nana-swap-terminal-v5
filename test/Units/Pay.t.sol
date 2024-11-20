@@ -1009,6 +1009,43 @@ contract JBSwapTerminalpay is UnitFixture {
         });
     }
 
+    function test_WhenNoQuoteIsPassedAndNoDefaultPool() public whenNoQuoteIsPassed {
+        tokenIn = makeAddr("tokenIn");
+
+        tokenOut = mockTokenOut;
+        uint256 amountIn = 10;
+        uint256 amountOut = 1337;
+
+        bytes memory quoteMetadata = "";
+
+        // Should transfer the token in from the caller to the swap terminal
+        mockExpectTransferFrom(caller, address(swapTerminal), tokenIn, amountIn);
+
+        mockExpectCall(
+            address(mockJBDirectory),
+            abi.encodeCall(IJBDirectory.primaryTerminalOf, (projectId, tokenOut)),
+            abi.encode(nextTerminal)
+        );
+
+        vm.expectRevert(
+            abi.encodeWithSelector(JBSwapTerminal.JBSwapTerminal_NoDefaultPoolDefined.selector, projectId, tokenIn)
+        );
+
+        // minReturnedTokens is used for the next terminal minAmountOut (where tokenOut is actually becoming the
+        // tokenIn,
+        // meaning the minReturned insure a min 1:1 token ratio is the next terminal)
+        vm.prank(caller);
+        swapTerminal.pay{value: 0}({
+            projectId: projectId,
+            token: tokenIn,
+            amount: amountIn,
+            beneficiary: beneficiary,
+            minReturnedTokens: amountOut,
+            memo: "",
+            metadata: quoteMetadata
+        });
+    }
+
     function _addDefaultPoolAndParams(uint32 secondsAgo, uint160 slippageTolerance) internal returns (uint256) {
         // Add a default pool
         projectOwner = makeAddr("projectOwner");
