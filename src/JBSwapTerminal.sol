@@ -305,14 +305,7 @@ contract JBSwapTerminal is
     /// @return twapWindow The period of time in the past to calculate the TWAP from.
     /// @return slippageTolerance The maximum allowed slippage tolerance when calculating the TWAP, as a fraction out of
     /// `SLIPPAGE_DENOMINATOR`.
-    function twapParamsOf(
-        uint256 projectId,
-        IUniswapV3Pool pool
-    )
-        public
-        view
-        returns (uint32, uint160)
-    {
+    function twapParamsOf(uint256 projectId, IUniswapV3Pool pool) public view returns (uint32, uint160) {
         // Get a reference to the swap params for the provided project.
         uint256 twapParams = _twapParamsOf[projectId][pool];
 
@@ -387,10 +380,10 @@ contract JBSwapTerminal is
 
             // Keep a reference to the TWAP tick.
             int24 arithmeticMeanTick;
-            
+
             if (oldestObservation == 0) {
                 // Get the current tick from the pool's slot0
-                (, int24 tick, , , , , ) = pool.slot0();
+                (, int24 tick,,,,,) = pool.slot0();
                 arithmeticMeanTick = tick;
             } else {
                 //slither-disable-next-line unused-return
