@@ -37,6 +37,39 @@ contract JBSwapTerminalpay is UnitFixture {
     }
 
     function test_WhenTokenInIsTheNativeToken(uint256 msgValue, uint256 amountIn, uint256 amountOut) public {
+        // Add a default pool
+        projectOwner = makeAddr("projectOwner");
+
+        // Set the project owner
+        mockExpectCall(address(mockJBProjects), abi.encodeCall(IERC721.ownerOf, (projectId)), abi.encode(projectOwner));
+
+        // decimals() call while setting the accounting context
+        mockExpectCall(address(mockWETH), abi.encodeCall(IERC20Metadata.decimals, ()), abi.encode(18));
+
+        // fee() call when swapping
+        mockExpectCall(address(pool), abi.encodeCall(IUniswapV3PoolImmutables.fee, ()), abi.encode(1000));
+
+        // getPool() call when swapping
+        vm.mockCall(
+            address(mockUniswapFactory),
+            abi.encodeCall(IUniswapV3Factory.getPool, (tokenOut, address(mockWETH), 1000)),
+            abi.encode(address(pool))
+        );
+
+        vm.mockCall(
+            address(mockUniswapFactory),
+            abi.encodeCall(IUniswapV3Factory.getPool, (address(mockWETH), tokenIn, 1000)),
+            abi.encode(address(pool))
+        );
+
+        // Add the pool as the project owner
+        vm.prank(projectOwner);
+        swapTerminal.addDefaultPool(projectId, address(mockWETH), pool);
+
+        // Add default twap params
+        vm.prank(projectOwner);
+        swapTerminal.addTwapParamsFor(projectId, pool, 100, 100);
+
         vm.deal(caller, msgValue);
         amountOut = bound(amountOut, 1, type(uint248).max);
 
@@ -107,6 +140,12 @@ contract JBSwapTerminalpay is UnitFixture {
 
     function test_WhenTokenInIsAnErc20Token(uint256 amountIn, uint256 amountOut) public whenTokenInIsAnErc20Token {
         amountOut = bound(amountOut, 1, type(uint248).max);
+
+        uint32 secondsAgo = 100;
+        uint160 slippageTolerance = 100;
+
+        // it should use the default pool
+        _addDefaultPoolAndParams(secondsAgo, slippageTolerance);
 
         // Should transfer the token in from the caller to the swap terminal
         mockExpectTransferFrom(caller, address(swapTerminal), tokenIn, amountIn);
@@ -240,6 +279,12 @@ contract JBSwapTerminalpay is UnitFixture {
         amountOut = bound(amountOut, 1, type(uint248).max);
         // 0 amountIn will not trigger a permit2 use
         amountIn = bound(amountIn, 1, type(uint160).max);
+
+        uint32 secondsAgo = 100;
+        uint160 slippageTolerance = 100;
+
+        // it should use the default pool
+        _addDefaultPoolAndParams(secondsAgo, slippageTolerance);
 
         // add the permit2 data to the metadata
         bytes memory payMetadata = _createMetadata(
@@ -412,6 +457,13 @@ contract JBSwapTerminalpay is UnitFixture {
         public
         whenAQuoteIsProvided
     {
+        uint32 secondsAgo = 100;
+        uint160 slippageTolerance = 100;
+
+        // it should use the default pool
+        // it should take the other pool token as tokenOut
+        _addDefaultPoolAndParams(secondsAgo, slippageTolerance);
+
         minAmountOut = bound(minAmountOut, 1, type(uint256).max);
         amountReceived = bound(amountReceived, 0, minAmountOut - 1);
 
@@ -705,6 +757,36 @@ contract JBSwapTerminalpay is UnitFixture {
             mockUniswapFactory
         );
 
+        // Add a default pool
+        projectOwner = terminalOwner;
+
+        // decimals() call while setting the accounting context
+        mockExpectCall(tokenIn, abi.encodeCall(IERC20Metadata.decimals, ()), abi.encode(18));
+
+        // fee() call when swapping
+        mockExpectCall(address(pool), abi.encodeCall(IUniswapV3PoolImmutables.fee, ()), abi.encode(1000));
+
+        // getPool() call when swapping
+        vm.mockCall(
+            address(mockUniswapFactory),
+            abi.encodeCall(IUniswapV3Factory.getPool, (tokenIn, address(mockWETH), 1000)),
+            abi.encode(address(pool))
+        );
+
+        vm.mockCall(
+            address(mockUniswapFactory),
+            abi.encodeCall(IUniswapV3Factory.getPool, (tokenOut, address(swapTerminal.WETH()), 1000)),
+            abi.encode(address(pool))
+        );
+
+        // Add the pool as the project owner
+        vm.startPrank(projectOwner);
+        swapTerminal.addDefaultPool(0, tokenIn, pool);
+
+        // Add default twap params
+        swapTerminal.addTwapParamsFor(0, pool, 100, 100);
+        vm.stopPrank();
+
         // Should transfer the token in from the caller to the swap terminal
         mockExpectTransferFrom(caller, address(swapTerminal), tokenIn, amountIn);
 
@@ -806,6 +888,12 @@ contract JBSwapTerminalpay is UnitFixture {
     function test_WhenNotAllTokenInAreSwapped(uint256 amountIn, uint256 amountOut) external whenTokenInIsAnErc20Token {
         amountIn = bound(amountIn, 1, type(uint256).max); // insure there is at least 1 token in
         amountOut = bound(amountOut, 1, type(uint248).max); // avoid overflow when casting to int
+
+        uint32 secondsAgo = 100;
+        uint160 slippageTolerance = 100;
+
+        // it should use the default pool
+        _addDefaultPoolAndParams(secondsAgo, slippageTolerance);
 
         // Should transfer the token in from the caller to the swap terminal
         mockExpectTransferFrom(caller, address(swapTerminal), tokenIn, amountIn);
@@ -918,6 +1006,43 @@ contract JBSwapTerminalpay is UnitFixture {
             minReturnedTokens: amountOut,
             memo: "",
             metadata: metadata
+        });
+    }
+
+    function test_WhenNoQuoteIsPassedAndNoDefaultPool() public whenNoQuoteIsPassed {
+        tokenIn = makeAddr("tokenIn");
+
+        tokenOut = mockTokenOut;
+        uint256 amountIn = 10;
+        uint256 amountOut = 1337;
+
+        bytes memory quoteMetadata = "";
+
+        // Should transfer the token in from the caller to the swap terminal
+        mockExpectTransferFrom(caller, address(swapTerminal), tokenIn, amountIn);
+
+        mockExpectCall(
+            address(mockJBDirectory),
+            abi.encodeCall(IJBDirectory.primaryTerminalOf, (projectId, tokenOut)),
+            abi.encode(nextTerminal)
+        );
+
+        vm.expectRevert(
+            abi.encodeWithSelector(JBSwapTerminal.JBSwapTerminal_NoDefaultPoolDefined.selector, projectId, tokenIn)
+        );
+
+        // minReturnedTokens is used for the next terminal minAmountOut (where tokenOut is actually becoming the
+        // tokenIn,
+        // meaning the minReturned insure a min 1:1 token ratio is the next terminal)
+        vm.prank(caller);
+        swapTerminal.pay{value: 0}({
+            projectId: projectId,
+            token: tokenIn,
+            amount: amountIn,
+            beneficiary: beneficiary,
+            minReturnedTokens: amountOut,
+            memo: "",
+            metadata: quoteMetadata
         });
     }
 
