@@ -386,8 +386,16 @@ contract JBSwapTerminal is
             if (oldestObservation < secondsAgo) secondsAgo = oldestObservation;
 
             // Keep a reference to the TWAP tick.
-            //slither-disable-next-line unused-return
-            (int24 arithmeticMeanTick,) = OracleLibrary.consult(address(pool), secondsAgo);
+            int24 arithmeticMeanTick;
+            
+            if (oldestObservation == 0) {
+                // Get the current tick from the pool's slot0
+                (, int24 tick, , , , , ) = pool.slot0();
+                arithmeticMeanTick = tick;
+            } else {
+                //slither-disable-next-line unused-return
+                (arithmeticMeanTick,) = OracleLibrary.consult(address(pool), secondsAgo);
+            }
 
             // Get a quote based on this TWAP tick.
             minAmountOut = OracleLibrary.getQuoteAtTick({
