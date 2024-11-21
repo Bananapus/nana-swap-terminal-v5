@@ -302,17 +302,10 @@ contract JBSwapTerminal is
 
     /// @notice Returns the default twap parameters for a given pool project.
     /// @param projectId The ID of the project to retrieve TWAP parameters for.
-    /// @return secondsAgo The period of time in the past to calculate the TWAP from.
+    /// @return twapWindow The period of time in the past to calculate the TWAP from.
     /// @return slippageTolerance The maximum allowed slippage tolerance when calculating the TWAP, as a fraction out of
     /// `SLIPPAGE_DENOMINATOR`.
-    function twapParamsOf(
-        uint256 projectId,
-        IUniswapV3Pool pool
-    )
-        public
-        view
-        returns (uint32 secondsAgo, uint160 slippageTolerance)
-    {
+    function twapParamsOf(uint256 projectId, IUniswapV3Pool pool) public view returns (uint32, uint160) {
         // Get a reference to the swap params for the provided project.
         uint256 twapParams = _twapParamsOf[projectId][pool];
 
@@ -379,11 +372,23 @@ contract JBSwapTerminal is
             (minAmountOut) = abi.decode(quote, (uint256));
         } else {
             // Get a quote based on the pool's TWAP, including a default slippage maximum.
-            (uint32 secondsAgo, uint160 slippageTolerance) = twapParamsOf(projectId, pool);
+            (uint32 twapWindow, uint160 slippageTolerance) = twapParamsOf(projectId, pool);
+
+            // Use the oldest observation if it's less than the twapWindow.
+            uint32 oldestObservation = OracleLibrary.getOldestObservationSecondsAgo(address(pool));
+            if (oldestObservation < twapWindow) twapWindow = oldestObservation;
 
             // Keep a reference to the TWAP tick.
-            //slither-disable-next-line unused-return
-            (int24 arithmeticMeanTick,) = OracleLibrary.consult(address(pool), secondsAgo);
+            int24 arithmeticMeanTick;
+
+            if (oldestObservation == 0) {
+                // Get the current tick from the pool's slot0
+                (, int24 tick,,,,,) = pool.slot0();
+                arithmeticMeanTick = tick;
+            } else {
+                //slither-disable-next-line unused-return
+                (arithmeticMeanTick,) = OracleLibrary.consult(address(pool), twapWindow);
+            }
 
             // Get a quote based on this TWAP tick.
             minAmountOut = OracleLibrary.getQuoteAtTick({
@@ -525,13 +530,13 @@ contract JBSwapTerminal is
     /// @notice Set the specified project's rules for calculating a quote based on the TWAP. Only the project's owner or
     /// an address with `MODIFY_TWAP_PARAMS` permission from the owner  or the terminal owner can call this function.
     /// @param projectId The ID of the project to set the TWAP-based quote rules for.
-    /// @param secondsAgo The period of time over which the TWAP is calculated, in seconds.
+    /// @param twapWindow The period of time over which the TWAP is calculated, in seconds.
     /// @param slippageTolerance The maximum spread allowed between the amount received and the TWAP (as a fraction out
     /// of `SLIPPAGE_DENOMINATOR`).
     function addTwapParamsFor(
         uint256 projectId,
         IUniswapV3Pool pool,
-        uint32 secondsAgo,
+        uint32 twapWindow,
         uint160 slippageTolerance
     )
         external
@@ -544,7 +549,7 @@ contract JBSwapTerminal is
             : _requirePermissionFrom(PROJECTS.ownerOf(projectId), projectId, JBPermissionIds.ADD_SWAP_TERMINAL_TWAP_PARAMS);
 
         // Set the TWAP params for the project.
-        _twapParamsOf[projectId][pool] = uint256(secondsAgo | uint256(slippageTolerance) << 32);
+        _twapParamsOf[projectId][pool] = uint256(twapWindow | uint256(slippageTolerance) << 32);
     }
 
     /// @notice Empty implementation to satisfy the interface.
