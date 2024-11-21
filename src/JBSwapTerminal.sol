@@ -375,7 +375,7 @@ contract JBSwapTerminal is
             (uint32 twapWindow, uint160 slippageTolerance) = twapParamsOf(projectId, pool);
 
             // Use the oldest observation if it's less than the twapWindow.
-            uint32 oldestObservation = OracleLibrary.getOldestObservationSecondsAgo(pool);
+            uint32 oldestObservation = OracleLibrary.getOldestObservationSecondsAgo(address(pool));
             if (oldestObservation < twapWindow) twapWindow = oldestObservation;
 
             // Keep a reference to the TWAP tick.
