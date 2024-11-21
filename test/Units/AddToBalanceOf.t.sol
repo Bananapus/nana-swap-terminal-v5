@@ -40,6 +40,39 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
 
         tokenIn = JBConstants.NATIVE_TOKEN;
 
+        // Add a default pool
+        projectOwner = makeAddr("projectOwner");
+
+        // Set the project owner
+        mockExpectCall(address(mockJBProjects), abi.encodeCall(IERC721.ownerOf, (projectId)), abi.encode(projectOwner));
+
+        // decimals() call while setting the accounting context
+        mockExpectCall(address(mockWETH), abi.encodeCall(IERC20Metadata.decimals, ()), abi.encode(18));
+
+        // fee() call when swapping
+        mockExpectCall(address(pool), abi.encodeCall(IUniswapV3PoolImmutables.fee, ()), abi.encode(1000));
+
+        // getPool() call when swapping
+        vm.mockCall(
+            address(mockUniswapFactory),
+            abi.encodeCall(IUniswapV3Factory.getPool, (tokenOut, address(mockWETH), 1000)),
+            abi.encode(address(pool))
+        );
+
+        vm.mockCall(
+            address(mockUniswapFactory),
+            abi.encodeCall(IUniswapV3Factory.getPool, (address(mockWETH), tokenIn, 1000)),
+            abi.encode(address(pool))
+        );
+
+        // Add the pool as the project owner
+        vm.prank(projectOwner);
+        swapTerminal.addDefaultPool(projectId, address(mockWETH), pool);
+
+        // Add default twap params
+        vm.prank(projectOwner);
+        swapTerminal.addTwapParamsFor(projectId, pool, 100, 100);
+
         bytes memory quoteMetadata = _createMetadata(
             JBMetadataResolver.getId("quoteForSwap", address(swapTerminal)), abi.encode(amountOut, pool)
         );
@@ -104,6 +137,8 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
 
     function test_WhenTokenInIsAnErc20Token(uint256 amountIn, uint256 amountOut) public whenTokenInIsAnErc20Token {
         amountOut = bound(amountOut, 1, type(uint248).max);
+
+        _addDefaultPoolAndParams(100, 100);
 
         // Should transfer the token in from the caller to the swap terminal
         mockExpectTransferFrom(caller, address(swapTerminal), tokenIn, amountIn);
@@ -235,6 +270,8 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         amountOut = bound(amountOut, 1, type(uint248).max);
         // 0 amountIn will not trigger a permit2 use
         amountIn = bound(amountIn, 1, type(uint160).max);
+
+        _addDefaultPoolAndParams(100, 100);
 
         // add the permit2 data to the metadata
         bytes memory payMetadata = _createMetadata(
@@ -412,6 +449,8 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
 
         vm.assume(amountIn > 0);
 
+        _addDefaultPoolAndParams(100, 100);
+
         bytes memory quoteMetadata = _createMetadata(
             JBMetadataResolver.getId("quoteForSwap", address(swapTerminal)), abi.encode(minAmountOut, pool)
         );
@@ -495,6 +534,14 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         uint160[] memory secondsPerLiquidityCumulativeX128s = new uint160[](2);
         secondsPerLiquidityCumulativeX128s[0] = 100;
         secondsPerLiquidityCumulativeX128s[1] = 1000;
+
+        // Mock the pool being unlocked.
+        mockExpectCall(address(pool), abi.encodeCall(pool.slot0, ()), abi.encode(0, 0, 0, 1, 0, 0, true));
+
+        // Return the observationTimestamp
+        mockExpectCall(
+            address(pool), abi.encodeCall(pool.observations, (0)), abi.encode(block.timestamp - secondsAgo, 0, 0, true)
+        );
 
         // it should get a twap and compute a min amount
         mockExpectCall(
@@ -614,6 +661,14 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
 
         uint256 minAmountOut = _computeTwapAmountOut(amountIn, secondsAgo, tickCumulatives);
 
+        // Mock the pool being unlocked.
+        mockExpectCall(address(pool), abi.encodeCall(pool.slot0, ()), abi.encode(0, 0, 0, 1, 0, 0, true));
+
+        // Return the observationTimestamp
+        mockExpectCall(
+            address(pool), abi.encodeCall(pool.observations, (0)), abi.encode(block.timestamp - secondsAgo, 0, 0, true)
+        );
+
         // it should get a twap and compute a min amount
         mockExpectCall(
             address(pool),
@@ -694,6 +749,36 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
             tokenOut,
             mockUniswapFactory
         );
+
+        // Add a default pool
+        projectOwner = terminalOwner;
+
+        // decimals() call while setting the accounting context
+        mockExpectCall(tokenIn, abi.encodeCall(IERC20Metadata.decimals, ()), abi.encode(18));
+
+        // fee() call when swapping
+        mockExpectCall(address(pool), abi.encodeCall(IUniswapV3PoolImmutables.fee, ()), abi.encode(1000));
+
+        // getPool() call when swapping
+        vm.mockCall(
+            address(mockUniswapFactory),
+            abi.encodeCall(IUniswapV3Factory.getPool, (tokenIn, address(mockWETH), 1000)),
+            abi.encode(address(pool))
+        );
+
+        vm.mockCall(
+            address(mockUniswapFactory),
+            abi.encodeCall(IUniswapV3Factory.getPool, (tokenOut, address(swapTerminal.WETH()), 1000)),
+            abi.encode(address(pool))
+        );
+
+        // Add the pool as the project owner
+        vm.startPrank(projectOwner);
+        swapTerminal.addDefaultPool(0, tokenIn, pool);
+
+        // Add default twap params
+        swapTerminal.addTwapParamsFor(0, pool, 100, 100);
+        vm.stopPrank();
 
         // Should transfer the token in from the caller to the swap terminal
         mockExpectTransferFrom(caller, address(swapTerminal), tokenIn, amountIn);
@@ -794,6 +879,8 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
     function test_WhenNotAllTokenInAreSwapped(uint256 amountIn, uint256 amountOut) external whenTokenInIsAnErc20Token {
         amountIn = bound(amountIn, 1, type(uint160).max);
         amountOut = bound(amountOut, 1, type(uint160).max);
+
+        _addDefaultPoolAndParams(100, 100);
 
         // Should transfer the token in from the caller to the swap terminal
         mockExpectTransferFrom(caller, address(swapTerminal), tokenIn, amountIn);

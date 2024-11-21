@@ -231,7 +231,7 @@ contract TestSwapTerminal_Fork is Test {
         _swapTerminal.addDefaultPool(_projectId, address(UNI), POOL);
 
         vm.prank(_projectOwner);
-        _swapTerminal.addTwapParamsFor({projectId: _projectId, pool: POOL, secondsAgo: 60, slippageTolerance: 500});
+        _swapTerminal.addTwapParamsFor({projectId: _projectId, pool: POOL, twapWindow: 60, slippageTolerance: 500});
 
         bytes memory _metadata = "";
 
@@ -287,7 +287,7 @@ contract TestSwapTerminal_Fork is Test {
         _swapTerminal.addTwapParamsFor({
             projectId: _projectId,
             pool: POOL,
-            secondsAgo: 60,
+            twapWindow: 60,
             slippageTolerance: 500 // max slippage allowed is 5%
         });
 
