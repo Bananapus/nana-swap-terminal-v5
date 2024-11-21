@@ -535,6 +535,14 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         secondsPerLiquidityCumulativeX128s[0] = 100;
         secondsPerLiquidityCumulativeX128s[1] = 1000;
 
+        // Mock the pool being unlocked.
+        mockExpectCall(address(pool), abi.encodeCall(pool.slot0, ()), abi.encode(0, 0, 0, 1, 0, 0, true));
+
+        // Return the observationTimestamp
+        mockExpectCall(
+            address(pool), abi.encodeCall(pool.observations, (0)), abi.encode(block.timestamp - secondsAgo, 0, 0, true)
+        );
+
         // it should get a twap and compute a min amount
         mockExpectCall(
             address(pool),
@@ -652,6 +660,14 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         secondsPerLiquidityCumulativeX128s[1] = 1000;
 
         uint256 minAmountOut = _computeTwapAmountOut(amountIn, secondsAgo, tickCumulatives);
+
+        // Mock the pool being unlocked.
+        mockExpectCall(address(pool), abi.encodeCall(pool.slot0, ()), abi.encode(0, 0, 0, 1, 0, 0, true));
+
+        // Return the observationTimestamp
+        mockExpectCall(
+            address(pool), abi.encodeCall(pool.observations, (0)), abi.encode(block.timestamp - secondsAgo, 0, 0, true)
+        );
 
         // it should get a twap and compute a min amount
         mockExpectCall(
