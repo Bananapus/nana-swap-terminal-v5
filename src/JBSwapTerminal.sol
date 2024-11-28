@@ -217,26 +217,20 @@ contract JBSwapTerminal is
         // Combine the two.
         contexts = new JBAccountingContext[](projectContextTokens.length + genericContextTokens.length);
 
-        // Keep a reference to the number of project-specific contexts.
-        uint256 numberOfProjectContextTokens = projectContextTokens.length;
-
         // include all the project specific contexts
-        for (uint256 i; i < numberOfProjectContextTokens; i++) {
+        for (uint256 i; i < projectContextTokens.length; i++) {
             contexts[i] = _accountingContextFor[projectId][projectContextTokens[i]];
         }
 
-        // Keep a reference to the number of generic contexts.
-        uint256 numberOfGenericContextTokens = genericContextTokens.length;
-
         // Keep a reference to the number of combined token contexts.
-        uint256 numberOfCombinedContextTokens = numberOfProjectContextTokens;
+        uint256 numberOfCombinedContextTokens = projectContextTokens.length;
 
         // add the generic contexts, iff they are not defined for the project (ie do not include duplicates)
-        for (uint256 i; i < numberOfGenericContextTokens; i++) {
+        for (uint256 i; i < genericContextTokens.length; i++) {
             // Skip if there is already a project context for the token.
             bool skip;
 
-            for (uint256 j; j < numberOfProjectContextTokens; j++) {
+            for (uint256 j; j < projectContextTokens.length; j++) {
                 if (projectContextTokens[j] == genericContextTokens[i]) {
                     skip = true;
                     break;
