@@ -510,10 +510,7 @@ contract JBSwapTerminal is
         });
 
         // Trigger any pre-transfer logic.
-        _beforeTransferFor(address(terminal), TOKEN_OUT, receivedFromSwap);
-
-        // Keep a reference to the amount that'll be paid as a `msg.value`.
-        uint256 payValue = _OUT_IS_NATIVE_TOKEN ? receivedFromSwap : 0;
+        uint256 payValue = _beforeTransferFor(address(terminal), TOKEN_OUT, receivedFromSwap);
 
         // Add to the primary terminal's balance in the resulting token, forwarding along the beneficiary and other
         // arguments.
@@ -609,10 +606,8 @@ contract JBSwapTerminal is
         });
 
         // Trigger any pre-transfer logic.
-        _beforeTransferFor(address(terminal), TOKEN_OUT, receivedFromSwap);
-
         // Keep a reference to the amount that'll be paid as a `msg.value`.
-        uint256 payValue = _OUT_IS_NATIVE_TOKEN ? receivedFromSwap : 0;
+        uint256 payValue = _beforeTransferFor(address(terminal), TOKEN_OUT, receivedFromSwap);
 
         // Pay the primary terminal in the resulting token, forwarding along the beneficiary and other arguments.
         return terminal.pay{value: payValue}({
@@ -726,12 +721,15 @@ contract JBSwapTerminal is
     /// @param token The token being transfered.
     /// @param amount The amount of tokens to transfer, as a fixed point number with the same number of decimals as the
     /// token.
-    function _beforeTransferFor(address to, address token, uint256 amount) internal virtual {
+    /// @return payValue The amount that'll be paid as a `msg.value`.
+    function _beforeTransferFor(address to, address token, uint256 amount) internal virtual returns (uint256) {
         // If the token is the native token, return early.
-        if (_OUT_IS_NATIVE_TOKEN) return;
+        if (_OUT_IS_NATIVE_TOKEN) return amount;
 
         // Otherwise, set the appropriate allowance for the recipient.
         IERC20(token).safeIncreaseAllowance(to, amount);
+
+        return 0;
     }
 
     /// @notice Handles token transfers and swaps for a given project.
