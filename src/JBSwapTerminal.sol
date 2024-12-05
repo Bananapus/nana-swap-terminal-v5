@@ -260,7 +260,7 @@ contract JBSwapTerminal is
     }
 
     /// @notice Empty implementation to satisfy the interface. This terminal has no surplus.
-    function currentSurplusOf(uint256 projectId, uint256 decimals, uint256 currency) external view returns (uint256) {}
+    function currentSurplusOf(uint256 projectId, JBAccountingContext[] memory accountingContexts, uint256 decimals, uint256 currency) external view returns (uint256) {}
 
     /// @notice Returns the default pool for a given project and token or, if a project has no default pool for the
     ///         token, the overal default pool for the token
