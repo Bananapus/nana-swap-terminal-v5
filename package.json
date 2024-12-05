@@ -18,8 +18,8 @@
     "artifacts": "source ./.env && npx sphinx artifacts --org-id 'my-org-id' --project-name 'nana-swap-terminal-testnet'"
   },
   "dependencies": {
-    "@bananapus/core": "^0.0.32",
-    "@bananapus/permission-ids": "^0.0.12",
+    "@bananapus/core": "^0.0.37",
+    "@bananapus/permission-ids": "^0.0.16",
     "@exhausted-pigeon/uniswap-v3-foundry-pool": "^1.0.9",
     "@exhausted-pigeon/uniswap-v3-foundry-quote": "^1.0.0",
     "@openzeppelin/contracts": "^5.0.2",
