@@ -292,6 +292,7 @@ contract TestSwapTerminal_Fork is Test {
     /* /// @notice Test paying a swap terminal in another token, which has an address either bigger or smaller than UNI
     ///         to test the opposite pool token ordering
     function testPayAndSwapOtherTokenOrder(uint256 _amountIn) external {
+        //@TODO: Create another solution for this given PoolTestHelper is causing proptest error.
         _amountIn = bound(_amountIn, 1 ether, 10 ether);
 
         deal(address(_otherTokenIn), address(_sender), _amountIn);
