@@ -1,6 +1,6 @@
 {
   "name": "@bananapus/swap-terminal",
-  "version": "0.0.21",
+  "version": "0.0.22",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -18,11 +18,11 @@
     "artifacts": "source ./.env && npx sphinx artifacts --org-id 'my-org-id' --project-name 'nana-swap-terminal-testnet'"
   },
   "dependencies": {
-    "@bananapus/core": "^0.0.37",
+    "@bananapus/core": "^0.0.38",
     "@bananapus/permission-ids": "^0.0.16",
     "@exhausted-pigeon/uniswap-v3-foundry-pool": "^1.0.9",
     "@exhausted-pigeon/uniswap-v3-foundry-quote": "^1.0.0",
-    "@openzeppelin/contracts": "^5.0.2",
+    "@openzeppelin/contracts": "^5.1.0",
     "@uniswap/permit2": "github:Uniswap/permit2",
     "@uniswap/v3-core": "github:Uniswap/v3-core#0.8",
     "@uniswap/v3-periphery": "github:Uniswap/v3-periphery#0.8"

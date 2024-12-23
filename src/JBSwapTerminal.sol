@@ -262,7 +262,7 @@ contract JBSwapTerminal is
     /// @notice Empty implementation to satisfy the interface. This terminal has no surplus.
     function currentSurplusOf(
         uint256 projectId,
-        JBAccountingContext[] memory accountingContexts,
+        JBAccountingContext[] memory,
         uint256 decimals,
         uint256 currency
     )
