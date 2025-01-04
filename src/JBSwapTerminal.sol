@@ -3,6 +3,7 @@ pragma solidity 0.8.23;
 
 import {JBPermissioned} from "@bananapus/core/src/abstract/JBPermissioned.sol";
 import {IJBDirectory} from "@bananapus/core/src/interfaces/IJBDirectory.sol";
+import {IJBPermissioned} from "@bananapus/core/src/interfaces/IJBPermissioned.sol";
 import {IJBPermissions} from "@bananapus/core/src/interfaces/IJBPermissions.sol";
 import {IJBPermitTerminal} from "@bananapus/core/src/interfaces/IJBPermitTerminal.sol";
 import {IJBProjects} from "@bananapus/core/src/interfaces/IJBProjects.sol";
@@ -306,7 +307,8 @@ contract JBSwapTerminal is
     /// @return A flag indicating if the provided interface ID is supported.
     function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
         return interfaceId == type(IJBTerminal).interfaceId || interfaceId == type(IJBPermitTerminal).interfaceId
-            || interfaceId == type(IERC165).interfaceId;
+            || interfaceId == type(IERC165).interfaceId || interfaceId == type(IUniswapV3SwapCallback).interfaceId
+            || interfaceId == type(IJBPermissioned).interfaceId || interfaceId == type(IJBSwapTerminal).interfaceId;
     }
 
     /// @notice Returns the default twap parameters for a given pool project.
