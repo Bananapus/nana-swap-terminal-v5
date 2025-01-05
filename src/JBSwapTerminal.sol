@@ -426,7 +426,7 @@ contract JBSwapTerminal is
     {}
 
     /// @notice Set a project's default pool and accounting context for the specified token. Only the project's owner,
-    /// an address with `MODIFY_DEFAULT_POOL` permission from the owner or the terminal owner can call this function.
+    /// an address with `ADD_SWAP_TERMINAL_POOL` permission from the owner or the terminal owner can call this function.
     /// @dev The pool should have been deployed by the factory associated to this contract. We don't rely on create2
     /// address
     /// as this terminal might be used on other chain, where the factory bytecode might differ or the main dex be a
