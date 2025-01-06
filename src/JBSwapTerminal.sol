@@ -55,6 +55,10 @@ contract JBSwapTerminal is
     //*********************************************************************//
 
     error JBSwapTerminal_CallerNotPool(address caller);
+    error JBSwapTerminal_InvalidTwapSlippageTolerance(
+        uint256 slippageTolerance, uint256 minSlippageTolerance, uint256 maxSlippageTolerance
+    );
+    error JBSwapTerminal_InvalidTwapWindow(uint256 window, uint256 minWindow, uint256 maxWindow);
     error JBSwapTerminal_SpecifiedSlippageExceeded(uint256 amount, uint256 minimum);
     error JBSwapTerminal_NoDefaultPoolDefined(uint256 projectId, address token);
     error JBSwapTerminal_NoMsgValueAllowed(uint256 value);
@@ -70,6 +74,25 @@ contract JBSwapTerminal is
 
     /// @notice The ID to store default values in.
     uint256 public constant override DEFAULT_PROJECT_ID = 0;
+
+    /// @notice Projects cannot specify a TWAP slippage tolerance larger than this constant (out of `MAX_SLIPPAGE`).
+    /// @dev This prevents TWAP slippage tolerances so high that they would result in highly unfavorable trade
+    /// conditions for the payer unless a quote was specified in the payment metadata.
+    uint256 public constant override MAX_TWAP_SLIPPAGE_TOLERANCE = 9000;
+
+    /// @notice Projects cannot specify a TWAP slippage tolerance smaller than this constant (out of `MAX_SLIPPAGE`).
+    /// @dev This prevents TWAP slippage tolerances so low that the swap always reverts to default behavior unless a
+    /// quote is specified in the payment metadata.
+    uint256 public constant override MIN_TWAP_SLIPPAGE_TOLERANCE = 100;
+
+    /// @notice Projects cannot specify a TWAP window longer than this constant.
+    /// @dev This serves to avoid excessively long TWAP windows that could lead to outdated pricing information and
+    /// higher gas costs due to increased computational requirements.
+    uint256 public constant override MAX_TWAP_WINDOW = 2 days;
+
+    /// @notice Projects cannot specify a TWAP window shorter than this constant.
+    /// @dev This serves to avoid extremely short TWAP windows that could be manipulated or subject to high volatility.
+    uint256 public constant override MIN_TWAP_WINDOW = 2 minutes;
 
     /// @notice The denominator used when calculating TWAP slippage tolerance values.
     uint160 public constant override SLIPPAGE_DENOMINATOR = 10_000;
@@ -542,8 +565,8 @@ contract JBSwapTerminal is
     function addTwapParamsFor(
         uint256 projectId,
         IUniswapV3Pool pool,
-        uint32 twapWindow,
-        uint160 slippageTolerance
+        uint256 twapWindow,
+        uint256 slippageTolerance
     )
         external
         override
@@ -553,6 +576,18 @@ contract JBSwapTerminal is
         projectId == DEFAULT_PROJECT_ID
             ? _checkOwner()
             : _requirePermissionFrom(PROJECTS.ownerOf(projectId), projectId, JBPermissionIds.ADD_SWAP_TERMINAL_TWAP_PARAMS);
+
+        // Make sure the specified window is within reasonable bounds.
+        if (twapWindow < MIN_TWAP_WINDOW || twapWindow > MAX_TWAP_WINDOW) {
+            revert JBSwapTerminal_InvalidTwapWindow(twapWindow, MIN_TWAP_WINDOW, MAX_TWAP_WINDOW);
+        }
+
+        // Make sure the provided TWAP slippage tolerance is within reasonable bounds.
+        if (slippageTolerance < MIN_TWAP_SLIPPAGE_TOLERANCE || slippageTolerance > MAX_TWAP_SLIPPAGE_TOLERANCE) {
+            revert JBSwapTerminal_InvalidTwapSlippageTolerance(
+                slippageTolerance, MIN_TWAP_SLIPPAGE_TOLERANCE, MAX_TWAP_SLIPPAGE_TOLERANCE
+            );
+        }
 
         // Set the TWAP params for the project.
         _twapParamsOf[projectId][pool] = uint256(twapWindow | uint256(slippageTolerance) << 32);
