@@ -392,6 +392,7 @@ contract JBSwapTerminal is
 
             if (oldestObservation == 0) {
                 // Get the current tick from the pool's slot0
+                // slither-disable-next-line unused-return
                 (, int24 tick,,,,,) = pool.slot0();
                 arithmeticMeanTick = tick;
             } else {
