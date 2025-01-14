@@ -861,7 +861,6 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         tokenIn = makeAddr("tokenIn");
         tokenOut = mockTokenOut;
         uint256 amountIn = 10;
-        uint256 amountOut = 1337;
 
         bytes memory quoteMetadata = "";
 
@@ -968,7 +967,7 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         });
     }
 
-    function _addDefaultPoolAndParams(uint32 secondsAgo, uint160 slippageTolerance) internal returns (uint256) {
+    function _addDefaultPoolAndParams(uint32 secondsAgo, uint160 slippageTolerance) internal {
         // Add a default pool
         projectOwner = makeAddr("projectOwner");
 

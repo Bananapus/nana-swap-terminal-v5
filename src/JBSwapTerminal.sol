@@ -3,6 +3,7 @@ pragma solidity 0.8.23;
 
 import {JBPermissioned} from "@bananapus/core/src/abstract/JBPermissioned.sol";
 import {IJBDirectory} from "@bananapus/core/src/interfaces/IJBDirectory.sol";
+import {IJBPermissioned} from "@bananapus/core/src/interfaces/IJBPermissioned.sol";
 import {IJBPermissions} from "@bananapus/core/src/interfaces/IJBPermissions.sol";
 import {IJBPermitTerminal} from "@bananapus/core/src/interfaces/IJBPermitTerminal.sol";
 import {IJBProjects} from "@bananapus/core/src/interfaces/IJBProjects.sol";
@@ -285,7 +286,7 @@ contract JBSwapTerminal is
     /// @notice Empty implementation to satisfy the interface. This terminal has no surplus.
     function currentSurplusOf(
         uint256 projectId,
-        JBAccountingContext[] memory,
+        JBAccountingContext[] memory accountingContexts,
         uint256 decimals,
         uint256 currency
     )
@@ -329,7 +330,8 @@ contract JBSwapTerminal is
     /// @return A flag indicating if the provided interface ID is supported.
     function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
         return interfaceId == type(IJBTerminal).interfaceId || interfaceId == type(IJBPermitTerminal).interfaceId
-            || interfaceId == type(IERC165).interfaceId;
+            || interfaceId == type(IERC165).interfaceId || interfaceId == type(IUniswapV3SwapCallback).interfaceId
+            || interfaceId == type(IJBPermissioned).interfaceId || interfaceId == type(IJBSwapTerminal).interfaceId;
     }
 
     /// @notice Returns the default twap parameters for a given pool project.
@@ -415,6 +417,7 @@ contract JBSwapTerminal is
 
             if (oldestObservation == 0) {
                 // Get the current tick from the pool's slot0
+                // slither-disable-next-line unused-return
                 (, int24 tick,,,,,) = pool.slot0();
                 arithmeticMeanTick = tick;
             } else {
@@ -449,7 +452,7 @@ contract JBSwapTerminal is
     {}
 
     /// @notice Set a project's default pool and accounting context for the specified token. Only the project's owner,
-    /// an address with `MODIFY_DEFAULT_POOL` permission from the owner or the terminal owner can call this function.
+    /// an address with `ADD_SWAP_TERMINAL_POOL` permission from the owner or the terminal owner can call this function.
     /// @dev The pool should have been deployed by the factory associated to this contract. We don't rely on create2
     /// address
     /// as this terminal might be used on other chain, where the factory bytecode might differ or the main dex be a
