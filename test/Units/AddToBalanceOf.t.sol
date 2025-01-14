@@ -66,12 +66,14 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         );
 
         // Add the pool as the project owner
-        vm.prank(projectOwner);
+        vm.startPrank(projectOwner);
         swapTerminal.addDefaultPool(projectId, address(mockWETH), pool);
 
         // Add default twap params
-        vm.prank(projectOwner);
-        swapTerminal.addTwapParamsFor(projectId, pool, 100, 100);
+        swapTerminal.addTwapParamsFor(
+            projectId, pool, swapTerminal.MIN_TWAP_WINDOW(), swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE()
+        );
+        vm.stopPrank();
 
         bytes memory quoteMetadata = _createMetadata(
             JBMetadataResolver.getId("quoteForSwap", address(swapTerminal)), abi.encode(amountOut, pool)
@@ -138,7 +140,9 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
     function test_WhenTokenInIsAnErc20Token(uint256 amountIn, uint256 amountOut) public whenTokenInIsAnErc20Token {
         amountOut = bound(amountOut, 1, type(uint248).max);
 
-        _addDefaultPoolAndParams(100, 100);
+        _addDefaultPoolAndParams(
+            uint32(swapTerminal.MIN_TWAP_WINDOW()), uint160(swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE())
+        );
 
         // Should transfer the token in from the caller to the swap terminal
         mockExpectTransferFrom(caller, address(swapTerminal), tokenIn, amountIn);
@@ -271,7 +275,9 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         // 0 amountIn will not trigger a permit2 use
         amountIn = bound(amountIn, 1, type(uint160).max);
 
-        _addDefaultPoolAndParams(100, 100);
+        _addDefaultPoolAndParams(
+            uint32(swapTerminal.MIN_TWAP_WINDOW()), uint160(swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE())
+        );
 
         // add the permit2 data to the metadata
         bytes memory payMetadata = _createMetadata(
@@ -449,7 +455,9 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
 
         vm.assume(amountIn > 0);
 
-        _addDefaultPoolAndParams(100, 100);
+        _addDefaultPoolAndParams(
+            uint32(swapTerminal.MIN_TWAP_WINDOW()), uint160(swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE())
+        );
 
         bytes memory quoteMetadata = _createMetadata(
             JBMetadataResolver.getId("quoteForSwap", address(swapTerminal)), abi.encode(minAmountOut, pool)
@@ -516,8 +524,8 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
 
         bytes memory quoteMetadata = "";
 
-        uint32 secondsAgo = 100;
-        uint160 slippageTolerance = 100;
+        uint32 secondsAgo = uint32(swapTerminal.MIN_TWAP_WINDOW());
+        uint160 slippageTolerance = uint160(swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE());
 
         // it should use the default pool
         // it should take the other pool token as tokenOut
@@ -641,8 +649,8 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
 
         bytes memory quoteMetadata = "";
 
-        uint32 secondsAgo = 100;
-        uint160 slippageTolerance = 1;
+        uint32 secondsAgo = uint32(swapTerminal.MIN_TWAP_WINDOW());
+        uint160 slippageTolerance = uint160(swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE());
 
         // it should use the default pool
         _addDefaultPoolAndParams(secondsAgo, slippageTolerance);
@@ -777,7 +785,9 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         swapTerminal.addDefaultPool(0, tokenIn, pool);
 
         // Add default twap params
-        swapTerminal.addTwapParamsFor(0, pool, 100, 100);
+        swapTerminal.addTwapParamsFor(
+            0, pool, swapTerminal.MIN_TWAP_WINDOW(), swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE()
+        );
         vm.stopPrank();
 
         // Should transfer the token in from the caller to the swap terminal
@@ -880,7 +890,9 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         amountIn = bound(amountIn, 1, type(uint160).max);
         amountOut = bound(amountOut, 1, type(uint160).max);
 
-        _addDefaultPoolAndParams(100, 100);
+        _addDefaultPoolAndParams(
+            uint32(swapTerminal.MIN_TWAP_WINDOW()), uint160(swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE())
+        );
 
         // Should transfer the token in from the caller to the swap terminal
         mockExpectTransferFrom(caller, address(swapTerminal), tokenIn, amountIn);

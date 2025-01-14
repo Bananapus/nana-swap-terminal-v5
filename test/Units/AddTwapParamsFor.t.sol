@@ -32,6 +32,12 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
         external
         givenTheCallerIsAProjectOwner
     {
+        vm.assume(secondsAgo > swapTerminal.MIN_TWAP_WINDOW() && secondsAgo < swapTerminal.MAX_TWAP_WINDOW());
+        vm.assume(
+            slippageTolerance > swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE()
+                && slippageTolerance < swapTerminal.MAX_TWAP_SLIPPAGE_TOLERANCE()
+        );
+
         swapTerminal.addTwapParamsFor(projectId, pool, secondsAgo, slippageTolerance);
 
         // it should add the twap params to the project
@@ -46,8 +52,8 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
             address(mockJBProjects), abi.encodeCall(IERC721.ownerOf, (projectId + 1)), abi.encode(projectOwner)
         );
 
-        uint32 secondsAgo = 100;
-        uint160 slippageTolerance = 1000;
+        uint32 secondsAgo = uint32(swapTerminal.MIN_TWAP_WINDOW());
+        uint160 slippageTolerance = uint160(swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE());
 
         // Do not give specific or generic permission to the caller
         mockExpectCall(
@@ -80,6 +86,12 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
         external
         givenTheCallerIsNotAProjectOwner
     {
+        vm.assume(secondsAgo > swapTerminal.MIN_TWAP_WINDOW() && secondsAgo < swapTerminal.MAX_TWAP_WINDOW());
+        vm.assume(
+            slippageTolerance > swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE()
+                && slippageTolerance < swapTerminal.MAX_TWAP_SLIPPAGE_TOLERANCE()
+        );
+
         // Give the permission to the caller
         mockExpectCall(
             address(mockJBPermissions),
@@ -140,6 +152,12 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
         givenTheCallerIsTheTerminalOwner
     {
         vm.assume(_projectId != 0 && _projectId != projectId);
+
+        vm.assume(secondsAgo > swapTerminal.MIN_TWAP_WINDOW() && secondsAgo < swapTerminal.MAX_TWAP_WINDOW());
+        vm.assume(
+            slippageTolerance > swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE()
+                && slippageTolerance < swapTerminal.MAX_TWAP_SLIPPAGE_TOLERANCE()
+        );
 
         // Add the twap params as the terminal owner
         swapTerminal.addTwapParamsFor(0, pool, secondsAgo, slippageTolerance);

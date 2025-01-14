@@ -63,12 +63,14 @@ contract JBSwapTerminalpay is UnitFixture {
         );
 
         // Add the pool as the project owner
-        vm.prank(projectOwner);
+        vm.startPrank(projectOwner);
         swapTerminal.addDefaultPool(projectId, address(mockWETH), pool);
 
         // Add default twap params
-        vm.prank(projectOwner);
-        swapTerminal.addTwapParamsFor(projectId, pool, 100, 100);
+        swapTerminal.addTwapParamsFor(
+            projectId, pool, swapTerminal.MIN_TWAP_WINDOW(), swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE()
+        );
+        vm.stopPrank();
 
         vm.deal(caller, msgValue);
         amountOut = bound(amountOut, 1, type(uint248).max);
@@ -141,8 +143,8 @@ contract JBSwapTerminalpay is UnitFixture {
     function test_WhenTokenInIsAnErc20Token(uint256 amountIn, uint256 amountOut) public whenTokenInIsAnErc20Token {
         amountOut = bound(amountOut, 1, type(uint248).max);
 
-        uint32 secondsAgo = 100;
-        uint160 slippageTolerance = 100;
+        uint32 secondsAgo = uint32(swapTerminal.MIN_TWAP_WINDOW());
+        uint160 slippageTolerance = uint160(swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE());
 
         // it should use the default pool
         _addDefaultPoolAndParams(secondsAgo, slippageTolerance);
@@ -280,8 +282,8 @@ contract JBSwapTerminalpay is UnitFixture {
         // 0 amountIn will not trigger a permit2 use
         amountIn = bound(amountIn, 1, type(uint160).max);
 
-        uint32 secondsAgo = 100;
-        uint160 slippageTolerance = 100;
+        uint32 secondsAgo = uint32(swapTerminal.MIN_TWAP_WINDOW());
+        uint160 slippageTolerance = uint160(swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE());
 
         // it should use the default pool
         _addDefaultPoolAndParams(secondsAgo, slippageTolerance);
@@ -457,8 +459,8 @@ contract JBSwapTerminalpay is UnitFixture {
         public
         whenAQuoteIsProvided
     {
-        uint32 secondsAgo = 100;
-        uint160 slippageTolerance = 100;
+        uint32 secondsAgo = uint32(swapTerminal.MIN_TWAP_WINDOW());
+        uint160 slippageTolerance = uint160(swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE());
 
         // it should use the default pool
         // it should take the other pool token as tokenOut
@@ -534,8 +536,8 @@ contract JBSwapTerminalpay is UnitFixture {
 
         bytes memory quoteMetadata = "";
 
-        uint32 secondsAgo = 100;
-        uint160 slippageTolerance = 100;
+        uint32 secondsAgo = uint32(swapTerminal.MIN_TWAP_WINDOW());
+        uint160 slippageTolerance = uint160(swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE());
 
         // it should use the default pool
         // it should take the other pool token as tokenOut
@@ -663,8 +665,8 @@ contract JBSwapTerminalpay is UnitFixture {
 
         bytes memory quoteMetadata = "";
 
-        uint32 secondsAgo = 100;
-        uint160 slippageTolerance = 1;
+        uint32 secondsAgo = uint32(swapTerminal.MIN_TWAP_WINDOW());
+        uint160 slippageTolerance = uint160(swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE());
 
         // it should use the default pool
         _addDefaultPoolAndParams(secondsAgo, slippageTolerance);
@@ -800,7 +802,9 @@ contract JBSwapTerminalpay is UnitFixture {
         swapTerminal.addDefaultPool(0, tokenIn, pool);
 
         // Add default twap params
-        swapTerminal.addTwapParamsFor(0, pool, 100, 100);
+        swapTerminal.addTwapParamsFor(
+            0, pool, swapTerminal.MIN_TWAP_WINDOW(), swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE()
+        );
         vm.stopPrank();
 
         // Should transfer the token in from the caller to the swap terminal
@@ -905,8 +909,8 @@ contract JBSwapTerminalpay is UnitFixture {
         amountIn = bound(amountIn, 1, type(uint256).max); // insure there is at least 1 token in
         amountOut = bound(amountOut, 1, type(uint248).max); // avoid overflow when casting to int
 
-        uint32 secondsAgo = 100;
-        uint160 slippageTolerance = 100;
+        uint32 secondsAgo = uint32(swapTerminal.MIN_TWAP_WINDOW());
+        uint160 slippageTolerance = uint160(swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE());
 
         // it should use the default pool
         _addDefaultPoolAndParams(secondsAgo, slippageTolerance);
