@@ -26,3 +26,5 @@ workspace.code-workspace
 
 backup/
 .secret
+
+publish.sh
