@@ -18,7 +18,7 @@ contract DeployScript is Script, Sphinx {
     CoreDeployment core;
 
     /// @notice tracks the addresses that are required for the chain we are deploying to.
-    address manager = address(0x823b92d6a4b2AED4b15675c7917c9f922ea8ADAD);
+    address manager = address(0x961d4191965C49537c88F764D88318872CE405bE);
     address weth;
     address factory;
     IPermit2 permit2;
