@@ -79,7 +79,7 @@ contract TestSwapTerminal_Fork is Test {
     uint256 internal _projectId = 2;
 
     function setUp() public {
-        vm.createSelectFork("https://eth-sepolia.g.alchemy.com/v2/aqe_TW1SAuXZdaooXMhf1RW0WSAW7XFd", 7_492_530);
+        vm.createSelectFork("https://eth-sepolia.g.alchemy.com/v2/aqe_TW1SAuXZdaooXMhf1RW0WSAW7XFd", 7_638_426);
 
         vm.label(address(UNI), "UNI");
         vm.label(address(WETH), "WETH");
