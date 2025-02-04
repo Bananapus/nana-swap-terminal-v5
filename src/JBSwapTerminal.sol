@@ -100,7 +100,7 @@ contract JBSwapTerminal is
 
     /// @notice The minimum cardinality for a pool to be configured as a default pool.
     /// @dev The cardinality is automatically increased to this number when added as a default pool.
-    uint16 public constant override MIN_DEFAULT_POOL_CARDINALITY = 4;
+    uint16 public constant override MIN_DEFAULT_POOL_CARDINALITY = 10;
 
     //*********************************************************************//
     // ---------------- public immutable stored properties --------------- //
