@@ -10,6 +10,7 @@ interface IJBSwapTerminal {
     function MAX_TWAP_WINDOW() external view returns (uint256);
     function MIN_TWAP_WINDOW() external view returns (uint256);
     function SLIPPAGE_DENOMINATOR() external view returns (uint160);
+    function MIN_DEFAULT_POOL_CARDINALITY() external view returns (uint16);
 
     function addDefaultPool(uint256 projectId, address token, IUniswapV3Pool pool) external;
     function addTwapParamsFor(
