@@ -358,9 +358,6 @@ contract TestSwapTerminal_Fork is Test {
 
         deal(address(UNI), address(_sender), _amountIn);
 
-        uint256 _initialTerminalBalance =
-            _terminalStore.balanceOf(address(_projectTerminal), _projectId, JBConstants.NATIVE_TOKEN);
-
         uint256 _minAmountOut = _uniswapV3ForgeQuoter.getAmountOut(POOL, _amountIn, address(UNI));
 
         vm.prank(_projectOwner);
