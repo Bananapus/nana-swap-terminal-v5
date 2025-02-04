@@ -73,12 +73,12 @@ contract UnitFixture is Test {
     }
 
     // compare 2 uniswap v3 pool addresses
-    function assertEq(IUniswapV3Pool a, IUniswapV3Pool b) internal {
+    function assertEq(IUniswapV3Pool a, IUniswapV3Pool b) internal pure {
         assertEq(address(a), address(b), "pool addresses are not equal");
     }
 
     // compare 2 arrays of accounting contexts
-    function assertEq(JBAccountingContext[] memory a, JBAccountingContext[] memory b) internal {
+    function assertEq(JBAccountingContext[] memory a, JBAccountingContext[] memory b) internal pure {
         assertEq(a.length, b.length, "lengths are not equal");
 
         for (uint256 i; i < a.length; i++) {
@@ -89,7 +89,7 @@ contract UnitFixture is Test {
     }
 
     // check if a is included in b
-    function assertIsIncluded(JBAccountingContext[] memory a, JBAccountingContext[] memory b) internal {
+    function assertIsIncluded(JBAccountingContext[] memory a, JBAccountingContext[] memory b) internal pure {
         for (uint256 i; i < a.length; i++) {
             bool _elementIsIncluded;
             for (uint256 j; j < b.length; j++) {

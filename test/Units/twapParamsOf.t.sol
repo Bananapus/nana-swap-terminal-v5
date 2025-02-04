@@ -52,7 +52,7 @@ contract JBSwapTerminaltwapParamsOf is UnitFixture {
         assertEq(uint192(secondsAgo | uint256(slippageTolerance) << 32), params);
     }
 
-    function test_WhenThereAreNoDefaultParamForThePool() external whenThereAreNoTwapParamsForTheProject {
+    function test_WhenThereAreNoDefaultParamForThePool() external view whenThereAreNoTwapParamsForTheProject {
         // it should return empty values
         (uint32 secondsAgo, uint160 slippageTolerance) = swapTerminal.twapParamsOf(projectId, pool);
 
