@@ -98,6 +98,10 @@ contract JBSwapTerminal is
     /// @notice The denominator used when calculating TWAP slippage tolerance values.
     uint160 public constant override SLIPPAGE_DENOMINATOR = 10_000;
 
+    /// @notice The minimum cardinality for a pool to be configured as a default pool.
+    /// @dev The cardinality is automatically increased to this number when added as a default pool.
+    uint16 public constant override MIN_DEFAULT_POOL_CARDINALITY = 4;
+
     //*********************************************************************//
     // ---------------- public immutable stored properties --------------- //
     //*********************************************************************//
@@ -492,6 +496,9 @@ contract JBSwapTerminal is
                 })
             );
         }
+
+        // Call the pool to increase the cardinality, if the cardinality is already higher this is a no-op.
+        pool.increaseObservationCardinalityNext(MIN_DEFAULT_POOL_CARDINALITY);
 
         // Update the project's pool for the token.
         _poolFor[projectId][token] = pool;
