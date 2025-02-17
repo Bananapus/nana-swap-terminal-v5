@@ -18,7 +18,7 @@ contract DeployScript is Script, Sphinx {
     CoreDeployment core;
 
     /// @notice tracks the addresses that are required for the chain we are deploying to.
-    address manager = address(0x961d4191965C49537c88F764D88318872CE405bE);
+    address manager = address(0x14293560A2dde4fFA136A647b7a2f927b0774AB6); // main jbdao multsig
     address weth;
     address factory;
     IPermit2 permit2;
@@ -28,7 +28,7 @@ contract DeployScript is Script, Sphinx {
 
     function configureSphinx() public override {
         // TODO: Update to contain revnet devs.
-        sphinxConfig.projectName = "nana-swap-terminal-testnet";
+        sphinxConfig.projectName = "nana-swap-terminal";
         sphinxConfig.mainnets = ["ethereum", "optimism", "base", "arbitrum"];
         sphinxConfig.testnets = ["ethereum_sepolia", "optimism_sepolia", "base_sepolia", "arbitrum_sepolia"];
     }
@@ -52,7 +52,7 @@ contract DeployScript is Script, Sphinx {
             weth = 0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9;
             factory = 0x0227628f3F023bb0B980b67D528571c95c6DaC1c;
             // Optimism Mainnet
-        } else if (block.chainid == 420) {
+        } else if (block.chainid == 10) {
             weth = 0x4200000000000000000000000000000000000006;
             factory = 0x1F98431c8aD98523631AE4a59f267346ea31F984;
             // Base Mainnet
