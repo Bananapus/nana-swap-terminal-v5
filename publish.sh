@@ -69,10 +69,10 @@ update_env_var() {
 }
 
 # Update SPHINX_MANAGED_BASE_URL
-update_env_var "SPHINX_MANAGED_BASE_URL" "https://sphinx-backend-staging.up.railway.app"
+update_env_var "SPHINX_MANAGED_BASE_URL" "https://api.sphinx.ba5ed.com"
 
 # Update SPHINX_API_KEY
-update_env_var "SPHINX_API_KEY" "48c06b32-834c-412a-9aee-d6a4e85d5581"
+update_env_var "SPHINX_API_KEY" "ea55ac1d-0588-4cb9-8cc9-592efdc320c1"
 
 echo "Updating npm packages..."
 npx npm-check-updates -u
@@ -80,6 +80,3 @@ npm install
 
 echo "Syncing sphinx.lock"
 npx sphinx sync --org-id ea165b21-7cdc-4d7b-be59-ecdd4c26bee4
-
-echo "Running testnet deployment through sphinx"
-npm run deploy:testnets
