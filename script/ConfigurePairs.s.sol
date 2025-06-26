@@ -24,7 +24,7 @@ contract ConfigurePairs is Script, Sphinx {
 
     uint256 constant ETHEREUM_SEPOLIA = 11_155_111;
     uint256 constant OPTIMISM_SEPOLIA = 11_155_420;
-    uint256 constant BASE_SEPOLIA = 84_531;
+    uint256 constant BASE_SEPOLIA = 84_532;
     uint256 constant ARBITRUM_SEPOLIA = 421_614;
 
     function configureSphinx() public override {
@@ -126,6 +126,41 @@ contract ConfigurePairs is Script, Sphinx {
             IUniswapV3Pool(0xd0b53D9277642d899DF5C87A3966A349A798F224),
             2 minutes,
             100 // 1% slippage tolerance
+        );
+
+        // Testnet pairs.
+        // USDC/ETH (0.3%)
+        configurePairFor(
+            ETHEREUM_SEPOLIA,
+            0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238,
+            IUniswapV3Pool(0xC31a3878E3B0739866F8fC52b97Ae9611aBe427c),
+            2 minutes,
+            500 // 5% slippage tolerance
+        );
+
+        // USDC/ETH (0.3%)
+        configurePairFor(
+            BASE_SEPOLIA,
+            0x036CbD53842c5426634e7929541eC2318f3dCF7e,
+            IUniswapV3Pool(0x46880b404CD35c165EDdefF7421019F8dD25F4Ad),
+            2 minutes,
+            500 // 5% slippage tolerance
+        );
+
+        configurePairFor(
+            OPTIMISM_SEPOLIA,
+            0x5fd84259d66Cd46123540766Be93DFE6D43130D7,
+            IUniswapV3Pool(0x8955C97261722d87D83D00708Bbe5f6B5b4477d6),
+            2 minutes,
+            500 // 5% slippage tolerance
+        );
+
+        configurePairFor(
+            ARBITRUM_SEPOLIA,
+            0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d,
+            IUniswapV3Pool(0x66EEAB70aC52459Dd74C6AD50D578Ef76a441bbf),
+            2 minutes,
+            500 // 5% slippage tolerance
         );
     }
 
