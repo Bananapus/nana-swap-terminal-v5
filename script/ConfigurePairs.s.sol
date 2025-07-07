@@ -42,6 +42,11 @@ contract ConfigurePairs is Script, Sphinx {
     }
 
     function deploy() private sphinx {
+        // NOTE: We decided to pick what felt like sane starting points for the twapWindow and slippageTolerance.
+        // Depending on the size of the pool, the large the pool the lower the slippageTolerance is. For smaller pools
+        // we allow a larger slippageTolerance. Because these large pools are more costly to move the price in (and
+        // maintain), as these have large amounts of volume.
+
         // Configure pairs for the swap terminal.
         // DAI/ETH (0.05%)
         configurePairFor({
