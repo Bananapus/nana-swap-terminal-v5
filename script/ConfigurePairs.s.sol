@@ -13,7 +13,7 @@ contract ConfigurePairs is Script, Sphinx {
     /// @notice tracks the deployment of the swap terminal.
     SwapTerminalDeployment swapTerminal;
 
-    // TODO: Set the projectId we want to configure these for. (or global?).
+    // Set it to be global.
     uint256 projectId = 0;
 
     uint256 constant ETHEREUM_MAINNET = 1;
