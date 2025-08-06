@@ -11,7 +11,7 @@ import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV
 
 import {Script} from "forge-std/Script.sol";
 
-import {JBSwapTerminal, IPermit2, IWETH9} from "./../src/JBSwapTerminal.sol";
+import {IJBSwapTerminal, JBSwapTerminal, IUniswapV3Pool, IPermit2, IWETH9} from "./../src/JBSwapTerminal.sol";
 
 contract DeployUSDCScript is Script, Sphinx {
     /// @notice tracks the deployment of the core contracts for the chain we are deploying to.
@@ -24,11 +24,23 @@ contract DeployUSDCScript is Script, Sphinx {
     address factory;
     IPermit2 permit2;
 
+    uint256 constant ETHEREUM_MAINNET = 1;
+    uint256 constant OPTIMISM_MAINNET = 10;
+    uint256 constant BASE_MAINNET = 8453;
+    uint256 constant ARBITRUM_MAINNET = 42_161;
+
+    uint256 constant ETHEREUM_SEPOLIA = 11_155_111;
+    uint256 constant OPTIMISM_SEPOLIA = 11_155_420;
+    uint256 constant BASE_SEPOLIA = 84_532;
+    uint256 constant ARBITRUM_SEPOLIA = 421_614;
+
+    IJBSwapTerminal swapTerminal;
+
     /// @notice the salts that are used to deploy the contracts.
     bytes32 SWAP_TERMINAL = "JBSwapTerminal";
 
     function configureSphinx() public override {
-        sphinxConfig.projectName = "nana-swap-terminal";
+        sphinxConfig.projectName = "nana-core";
         sphinxConfig.mainnets = ["ethereum", "optimism", "base", "arbitrum"];
         sphinxConfig.testnets = ["ethereum_sepolia", "optimism_sepolia", "base_sepolia", "arbitrum_sepolia"];
     }
@@ -102,27 +114,8 @@ contract DeployUSDCScript is Script, Sphinx {
     }
 
     function deploy() public sphinx {
-        // Checks if this version is already deployed,
-        // if it is then we skip the entire script.
-        if (
-            _isDeployed(
-                SWAP_TERMINAL,
-                type(JBSwapTerminal).creationCode,
-                abi.encode(
-                    core.directory,
-                    core.permissions,
-                    core.projects,
-                    permit2,
-                    address(manager),
-                    IWETH9(weth),
-                    usdc,
-                    factory
-                )
-            )
-        ) return;
-
         // Perform the deployment.
-        new JBSwapTerminal{salt: SWAP_TERMINAL}({
+        swapTerminal = new JBSwapTerminal{salt: SWAP_TERMINAL}({
             projects: core.projects,
             permissions: core.permissions,
             directory: core.directory,
@@ -132,25 +125,48 @@ contract DeployUSDCScript is Script, Sphinx {
             tokenOut: usdc,
             factory: IUniswapV3Factory(factory)
         });
+
+        // USDC/ETH (0.05%)
+        configurePairFor({
+            chainId: ETHEREUM_MAINNET,
+            token: JBConstants.NATIVE_TOKEN,
+            pool: IUniswapV3Pool(0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640),
+            twapWindow: 2 minutes,
+            slippageTolerance: 100 // 1% slippage tolerance
+        });
     }
 
-    function _isDeployed(
-        bytes32 salt,
-        bytes memory creationCode,
-        bytes memory arguments
+    function configurePairFor(
+        uint256 chainId,
+        address token,
+        IUniswapV3Pool pool,
+        uint256 twapWindow,
+        uint256 slippageTolerance
     )
-        internal
-        view
-        returns (bool)
+        private
     {
-        address _deployedTo = vm.computeCreate2Address({
-            salt: salt,
-            initCodeHash: keccak256(abi.encodePacked(creationCode, arguments)),
-            // Arachnid/deterministic-deployment-proxy address.
-            deployer: address(0x4e59b44847b379578588920cA78FbF26c0B4956C)
-        });
+        // No-op if the chainId does not match the current chain.
+        if (block.chainid != chainId) {
+            return;
+        }
 
-        // Return if code is already present at this address.
-        return address(_deployedTo).code.length != 0;
+        // // Sanity check that the token is a deployed contract.
+        // if (token.code.length == 0) {
+        //     revert("Token address is not a contract.");
+        // }
+
+        // Sanity check that the pool is a deployed contract.
+        if (address(pool).code.length == 0) {
+            revert("Pool address is not a contract.");
+        }
+
+        // Add the pair to the swap terminal.
+        swapTerminal.addDefaultPool({projectId: 0, token: token, pool: pool});
+        swapTerminal.addTwapParamsFor({
+            projectId: 0,
+            pool: pool,
+            secondsAgo: twapWindow,
+            slippageTolerance: slippageTolerance
+        });
     }
 }
