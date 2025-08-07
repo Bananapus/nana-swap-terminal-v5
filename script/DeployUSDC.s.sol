@@ -134,6 +134,107 @@ contract DeployUSDCScript is Script, Sphinx {
             twapWindow: 2 minutes,
             slippageTolerance: 100 // 1% slippage tolerance
         });
+
+        // DAI/USDC (0.01%)
+        configurePairFor({
+            chainId: ETHEREUM_MAINNET,
+            // DAI
+            token: address(0x6B175474E89094C44Da98b954EedeAC495271d0F),
+            pool: IUniswapV3Pool(0x5777d92f208679DB4b9778590Fa3CAB3aC9e2168),
+            twapWindow: 2 minutes,
+            slippageTolerance: 100 // 1% slippage tolerance
+        });
+
+        // USDC/USDT (0.01%)
+        configurePairFor({
+            chainId: ETHEREUM_MAINNET,
+            // USDT
+            token: address(0xdAC17F958D2ee523a2206206994597C13D831ec7),
+            pool: IUniswapV3Pool(0x3416cF6C708Da44DB2624D63ea0AAef7113527C6),
+            twapWindow: 30 minutes,
+            slippageTolerance: 100 // 1% slippage tolerance
+        });
+
+        // // USDe/USDC (0.01%)
+        // configurePairFor({
+        //     chainId: ETHEREUM_MAINNET,
+        //     // USDe
+        //     token: address(0x4c9EDD5852cd905f086C759E8383e09bff1E68B3),
+        //     pool: IUniswapV3Pool(0xE6D7EbB9f1a9519dc06D557e03C522d53520e76A),
+        //     twapWindow: 30 minutes,
+        //     slippageTolerance: 100 // 1% slippage tolerance
+        // });
+
+        // USDC/ETH (0.05%)
+        configurePairFor({
+            chainId: ARBITRUM_MAINNET,
+            token: JBConstants.NATIVE_TOKEN,
+            pool: IUniswapV3Pool(0xC6962004f452bE9203591991D15f6b388e09E8D0),
+            twapWindow: 2 minutes,
+            slippageTolerance: 100 // 1% slippage tolerance
+        });
+
+        // USDC/USDT (0.01%)
+        configurePairFor({
+            chainId: ARBITRUM_MAINNET,
+            token: address(0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9),
+            pool: IUniswapV3Pool(0xbE3aD6a5669Dc0B8b12FeBC03608860C31E2eef6),
+            twapWindow: 2 minutes,
+            slippageTolerance: 100 // 1% slippage tolerance
+        });
+
+        // USDC/ETH (0.05%)
+        configurePairFor({
+            chainId: BASE_MAINNET,
+            token: JBConstants.NATIVE_TOKEN,
+            pool: IUniswapV3Pool(0xd0b53D9277642d899DF5C87A3966A349A798F224),
+            twapWindow: 2 minutes,
+            slippageTolerance: 100 // 1% slippage tolerance
+        });
+
+        // USDC/ETH (0.05%)
+        configurePairFor({
+            chainId: OPTIMISM_MAINNET,
+            token: JBConstants.NATIVE_TOKEN,
+            pool: IUniswapV3Pool(0x1fb3cf6e48F1E7B10213E7b6d87D4c073C7Fdb7b),
+            twapWindow: 2 minutes,
+            slippageTolerance: 100 // 1% slippage tolerance
+        });
+
+        // Testnet pairs.
+        // USDC/ETH (0.3%)
+        configurePairFor({
+            chainId: ETHEREUM_SEPOLIA,
+            token: JBConstants.NATIVE_TOKEN,
+            pool: IUniswapV3Pool(0xC31a3878E3B0739866F8fC52b97Ae9611aBe427c),
+            twapWindow: 2 minutes,
+            slippageTolerance: 500 // 5% slippage tolerance
+        });
+
+        // USDC/ETH (0.3%)
+        configurePairFor({
+            chainId: BASE_SEPOLIA,
+            token: JBConstants.NATIVE_TOKEN,
+            pool: IUniswapV3Pool(0x46880b404CD35c165EDdefF7421019F8dD25F4Ad),
+            twapWindow: 2 minutes,
+            slippageTolerance: 500 // 5% slippage tolerance
+        });
+
+        configurePairFor({
+            chainId: OPTIMISM_SEPOLIA,
+            token: JBConstants.NATIVE_TOKEN,
+            pool: IUniswapV3Pool(0x8955C97261722d87D83D00708Bbe5f6B5b4477d6),
+            twapWindow: 2 minutes,
+            slippageTolerance: 500 // 5% slippage tolerance
+        });
+
+        configurePairFor({
+            chainId: ARBITRUM_SEPOLIA,
+            token: JBConstants.NATIVE_TOKEN,
+            pool: IUniswapV3Pool(0x66EEAB70aC52459Dd74C6AD50D578Ef76a441bbf),
+            twapWindow: 2 minutes,
+            slippageTolerance: 500 // 5% slippage tolerance
+        });
     }
 
     function configurePairFor(
