@@ -84,7 +84,7 @@ contract TestUSDCTerminalSwap_Fork is Test {
         JBRulesetMetadata memory _metadata = JBRulesetMetadata({
             reservedPercent: 0,
             cashOutTaxRate: 0,
-            baseCurrency: 3,
+            baseCurrency: JBCurrencyIds.USD,
             pausePay: false,
             pauseCreditTransfers: false,
             allowOwnerMinting: false,
