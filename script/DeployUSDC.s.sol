@@ -11,7 +11,7 @@ import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV
 
 import {Script} from "forge-std/Script.sol";
 
-import {IJBSwapTerminal, JBSwapTerminal, IUniswapV3Pool, IPermit2, IWETH9} from "./../src/JBSwapTerminal.sol";
+import {IJBSwapTerminal, JBSwapTerminal1_1, IUniswapV3Pool, IPermit2, IWETH9} from "./../src/JBSwapTerminal1_1.sol";
 
 contract DeployUSDCScript is Script, Sphinx {
     /// @notice tracks the deployment of the core contracts for the chain we are deploying to.
@@ -115,7 +115,7 @@ contract DeployUSDCScript is Script, Sphinx {
 
     function deploy() public sphinx {
         // Perform the deployment.
-        swapTerminal = new JBSwapTerminal{salt: SWAP_TERMINAL}({
+        swapTerminal = new JBSwapTerminal1_1{salt: SWAP_TERMINAL}({
             projects: core.projects,
             permissions: core.permissions,
             directory: core.directory,
