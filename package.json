@@ -1,6 +1,6 @@
 {
   "name": "@bananapus/swap-terminal",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -15,12 +15,14 @@
     "coverage": "forge coverage --match-path \"./src/*.sol\" --report lcov --report summary",
     "deploy:mainnets": "source ./.env && npx sphinx propose ./script/Deploy.s.sol --networks mainnets",
     "deploy:testnets": "source ./.env && npx sphinx propose ./script/Deploy.s.sol --networks testnets",
+    "deploy:mainnets:usdc": "source ./.env && npx sphinx propose ./script/DeployUSDC.s.sol --networks mainnets",
+    "deploy:testnets:usdc": "source ./.env && npx sphinx propose ./script/DeployUSDC.s.sol --networks testnets",
     "configure:mainnets": "source ./.env && npx sphinx propose ./script/ConfigurePairs.s.sol --networks mainnets",
     "configure:testnets": "source ./.env && npx sphinx propose ./script/ConfigurePairs.s.sol --networks testnets",
     "artifacts": "source ./.env && npx sphinx artifacts --org-id 'ea165b21-7cdc-4d7b-be59-ecdd4c26bee4' --project-name 'nana-swap-terminal'"
   },
   "dependencies": {
-    "@bananapus/core": "^1.0.0",
+    "@bananapus/core": "^1.0.6",
     "@bananapus/permission-ids": "^0.0.17",
     "@exhausted-pigeon/uniswap-v3-foundry-pool": "^1.0.9",
     "@exhausted-pigeon/uniswap-v3-foundry-quote": "^1.0.0",
