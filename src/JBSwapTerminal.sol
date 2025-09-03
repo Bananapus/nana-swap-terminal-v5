@@ -475,6 +475,9 @@ contract JBSwapTerminal is
         // Keep a reference to the normalized token out, which wraps the native token if needed.
         address normalizedTokenOut = _normalizedTokenOut();
 
+        // Keep a reference to the normalized token, which wraps the native token if needed.
+        address normalizedTokenIn = token == JBConstants.NATIVE_TOKEN ? address(WETH) : token;
+
         // Keep a reference to whether the token is being swapped into or out of the pool.
         bool zeroForOne = token < normalizedTokenOut;
 
@@ -482,16 +485,16 @@ contract JBSwapTerminal is
         // Factory stores both directions, future proofing
         if (
             FACTORY.getPool({
-                tokenA: zeroForOne ? token : normalizedTokenOut,
-                tokenB: zeroForOne ? normalizedTokenOut : token,
+                tokenA: zeroForOne ? normalizedTokenIn : normalizedTokenOut,
+                tokenB: zeroForOne ? normalizedTokenOut : normalizedTokenIn,
                 fee: pool.fee()
             }) != address(pool)
         ) {
             revert JBSwapTerminal_WrongPool(
                 address(pool),
                 FACTORY.getPool({
-                    tokenA: zeroForOne ? token : normalizedTokenOut,
-                    tokenB: zeroForOne ? normalizedTokenOut : token,
+                    tokenA: zeroForOne ? normalizedTokenIn : normalizedTokenOut,
+                    tokenB: zeroForOne ? normalizedTokenOut : normalizedTokenIn,
                     fee: pool.fee()
                 })
             );
@@ -501,15 +504,17 @@ contract JBSwapTerminal is
         pool.increaseObservationCardinalityNext(MIN_DEFAULT_POOL_CARDINALITY);
 
         // Store the token as having an accounting context.
-        if (_poolFor[projectId][token] == IUniswapV3Pool(address(0))) _tokensWithAContext[projectId].push(token);
+        if (_poolFor[projectId][normalizedTokenIn] == IUniswapV3Pool(address(0))) {
+            _tokensWithAContext[projectId].push(token);
+        }
 
         // Update the project's pool for the token.
-        _poolFor[projectId][token] = pool;
+        _poolFor[projectId][normalizedTokenIn] = pool;
 
         // Update the project's accounting context for the token.
         _accountingContextFor[projectId][token] = JBAccountingContext({
             token: token,
-            decimals: IERC20Metadata(token).decimals(),
+            decimals: token == JBConstants.NATIVE_TOKEN ? 18 : IERC20Metadata(token).decimals(),
             currency: uint32(uint160(token))
         });
     }
