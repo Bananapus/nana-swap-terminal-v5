@@ -18,7 +18,7 @@ contract DeployUSDCScript is Script, Sphinx {
     CoreDeployment core;
 
     /// @notice tracks the addresses that are required for the chain we are deploying to.
-    address manager = address(0x14293560A2dde4fFA136A647b7a2f927b0774AB6); // main jbdao multsig
+    address manager = address(0x80a8F7a4bD75b539CE26937016Df607fdC9ABeb5); // `nana-core-v5` multisig.
     address weth;
     address usdc;
     address factory;
@@ -40,7 +40,7 @@ contract DeployUSDCScript is Script, Sphinx {
     bytes32 SWAP_TERMINAL = "JBSwapTerminal";
 
     function configureSphinx() public override {
-        sphinxConfig.projectName = "nana-core";
+        sphinxConfig.projectName = "nana-core-v5";
         sphinxConfig.mainnets = ["ethereum", "optimism", "base", "arbitrum"];
         sphinxConfig.testnets = ["ethereum_sepolia", "optimism_sepolia", "base_sepolia", "arbitrum_sepolia"];
     }
@@ -49,7 +49,7 @@ contract DeployUSDCScript is Script, Sphinx {
         // Get the deployment addresses for the nana CORE for this chain.
         // We want to do this outside of the `sphinx` modifier.
         core = CoreDeploymentLib.getDeployment(
-            vm.envOr("NANA_CORE_DEPLOYMENT_PATH", string("node_modules/@bananapus/core/deployments/"))
+            vm.envOr("NANA_CORE_DEPLOYMENT_PATH", string("node_modules/@bananapus/core-v5/deployments/"))
         );
 
         // Get the permit2 that the multiterminal also makes use of.
