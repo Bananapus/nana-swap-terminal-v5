@@ -4,7 +4,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Bananapus/nana-swap-terminal"
+    "url": "git+https://github.com/Bananapus/nana-swap-terminal-v5"
   },
   "engines": {
     "node": ">=20.0.0"
