@@ -12,34 +12,34 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "../../src/JBSwapTerminal.sol";
 import {IWETH9} from "../../src/interfaces/IWETH9.sol";
 
-import {MetadataResolverHelper} from "@bananapus/core/test/helpers/MetadataResolverHelper.sol";
-import {JBMultiTerminal} from "@bananapus/core/src/JBMultiTerminal.sol";
+import {MetadataResolverHelper} from "@bananapus/core-v5/test/helpers/MetadataResolverHelper.sol";
+import {JBMultiTerminal} from "@bananapus/core-v5/src/JBMultiTerminal.sol";
 
-import {JBTokens} from "@bananapus/core/src/JBTokens.sol";
+import {JBTokens} from "@bananapus/core-v5/src/JBTokens.sol";
 
-import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
-import {IJBProjects} from "@bananapus/core/src/interfaces/IJBProjects.sol";
-import {IJBPermissions} from "@bananapus/core/src/interfaces/IJBPermissions.sol";
-import {IJBDirectory} from "@bananapus/core/src/interfaces/IJBDirectory.sol";
-import {IJBTerminalStore} from "@bananapus/core/src/interfaces/IJBTerminalStore.sol";
+import {IJBController} from "@bananapus/core-v5/src/interfaces/IJBController.sol";
+import {IJBProjects} from "@bananapus/core-v5/src/interfaces/IJBProjects.sol";
+import {IJBPermissions} from "@bananapus/core-v5/src/interfaces/IJBPermissions.sol";
+import {IJBDirectory} from "@bananapus/core-v5/src/interfaces/IJBDirectory.sol";
+import {IJBTerminalStore} from "@bananapus/core-v5/src/interfaces/IJBTerminalStore.sol";
 
-import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
+import {JBConstants} from "@bananapus/core-v5/src/libraries/JBConstants.sol";
 
-import {JBRulesetMetadata} from "@bananapus/core/src/structs/JBRulesetMetadata.sol";
-import {JBRulesetMetadataResolver} from "@bananapus/core/src/libraries/JBRulesetMetadataResolver.sol";
-import {JBRuleset} from "@bananapus/core/src/structs/JBRuleset.sol";
+import {JBRulesetMetadata} from "@bananapus/core-v5/src/structs/JBRulesetMetadata.sol";
+import {JBRulesetMetadataResolver} from "@bananapus/core-v5/src/libraries/JBRulesetMetadataResolver.sol";
+import {JBRuleset} from "@bananapus/core-v5/src/structs/JBRuleset.sol";
 
-import {JBRulesetConfig} from "@bananapus/core/src/structs/JBRulesetConfig.sol";
+import {JBRulesetConfig} from "@bananapus/core-v5/src/structs/JBRulesetConfig.sol";
 
-import {JBSplitGroup} from "@bananapus/core/src/structs/JBSplitGroup.sol";
+import {JBSplitGroup} from "@bananapus/core-v5/src/structs/JBSplitGroup.sol";
 
-import {JBFundAccessLimitGroup} from "@bananapus/core/src/structs/JBFundAccessLimitGroup.sol";
+import {JBFundAccessLimitGroup} from "@bananapus/core-v5/src/structs/JBFundAccessLimitGroup.sol";
 
-import {IJBRulesetApprovalHook} from "@bananapus/core/src/interfaces/IJBRulesetApprovalHook.sol";
+import {IJBRulesetApprovalHook} from "@bananapus/core-v5/src/interfaces/IJBRulesetApprovalHook.sol";
 
 import {MockERC20} from "../helper/MockERC20.sol";
 
-import "@bananapus/core/script/helpers/CoreDeploymentLib.sol";
+import "@bananapus/core-v5/script/helpers/CoreDeploymentLib.sol";
 
 import "forge-std/Test.sol";
 
