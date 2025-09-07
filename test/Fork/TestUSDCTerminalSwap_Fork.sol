@@ -4,16 +4,16 @@ pragma solidity ^0.8.6;
 import "forge-std/Test.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
-import {IJBTerminal} from "@bananapus/core/src/interfaces/IJBTerminal.sol";
+import {IJBTerminal} from "@bananapus/core-v5/src/interfaces/IJBTerminal.sol";
 import {JBSwapTerminal, IUniswapV3Pool, IPermit2, IWETH9} from "src/JBSwapTerminal.sol";
-import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
-import {JBRulesetMetadata} from "@bananapus/core/src/structs/JBRulesetMetadata.sol";
-import {JBRulesetConfig} from "@bananapus/core/src/structs/JBRulesetConfig.sol";
-import {JBSplitGroup} from "@bananapus/core/src/structs/JBRulesetConfig.sol";
+import {JBConstants} from "@bananapus/core-v5/src/libraries/JBConstants.sol";
+import {JBRulesetMetadata} from "@bananapus/core-v5/src/structs/JBRulesetMetadata.sol";
+import {JBRulesetConfig} from "@bananapus/core-v5/src/structs/JBRulesetConfig.sol";
+import {JBSplitGroup} from "@bananapus/core-v5/src/structs/JBRulesetConfig.sol";
 
-import /* {*} from */ "@bananapus/core/test/helpers/TestBaseWorkflow.sol";
+import /* {*} from */ "@bananapus/core-v5/test/helpers/TestBaseWorkflow.sol";
 
-import "@bananapus/core/script/helpers/CoreDeploymentLib.sol";
+import "@bananapus/core-v5/script/helpers/CoreDeploymentLib.sol";
 import "script/helpers/SwapTerminalDeploymentLib.sol";
 
 contract TestUSDCTerminalSwap_Fork is Test {
@@ -48,7 +48,7 @@ contract TestUSDCTerminalSwap_Fork is Test {
 
         // Fetch the latest core deployments on this network.
         core = CoreDeploymentLib.getDeployment(
-            vm.envOr("NANA_CORE_DEPLOYMENT_PATH", string("node_modules/@bananapus/core/deployments/"))
+            vm.envOr("NANA_CORE_DEPLOYMENT_PATH", string("node_modules/@bananapus/core-v5/deployments/"))
         );
 
         // Get the permit2 that the multiterminal also makes use of.

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import "@bananapus/core/script/helpers/CoreDeploymentLib.sol";
-import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
+import "@bananapus/core-v5/script/helpers/CoreDeploymentLib.sol";
+import {JBConstants} from "@bananapus/core-v5/src/libraries/JBConstants.sol";
 import {IERC20, IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 import {Sphinx} from "@sphinx-labs/contracts/SphinxPlugin.sol";

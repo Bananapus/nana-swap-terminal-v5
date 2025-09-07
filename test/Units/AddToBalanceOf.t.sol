@@ -2,7 +2,7 @@
 pragma solidity ^0.8.17;
 
 import "../helper/UnitFixture.sol";
-import {JBMetadataResolver} from "@bananapus/core/src/libraries/JBMetadataResolver.sol";
+import {JBMetadataResolver} from "@bananapus/core-v5/src/libraries/JBMetadataResolver.sol";
 import {
     IUniswapV3PoolActions,
     IUniswapV3PoolImmutables,
