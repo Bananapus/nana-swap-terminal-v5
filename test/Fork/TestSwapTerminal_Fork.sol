@@ -87,7 +87,7 @@ contract TestSwapTerminal_Fork is Test {
 
         // Fetch the latest core deployments on this network
         core = CoreDeploymentLib.getDeployment(
-            vm.envOr("NANA_CORE_DEPLOYMENT_PATH", string("node_modules/@bananapus/core/deployments/"))
+            vm.envOr("NANA_CORE_DEPLOYMENT_PATH", string("node_modules/@bananapus/core-v5/deployments/"))
         );
 
         _controller = core.controller;
