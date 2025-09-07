@@ -27,7 +27,7 @@ contract ConfigurePairs is Script, Sphinx {
     uint256 constant ARBITRUM_SEPOLIA = 421_614;
 
     function configureSphinx() public override {
-        sphinxConfig.projectName = "nana-core";
+        sphinxConfig.projectName = "nana-swap-terminal-v5";
         sphinxConfig.mainnets = ["ethereum", "optimism", "base", "arbitrum"];
         sphinxConfig.testnets = ["ethereum_sepolia", "optimism_sepolia", "base_sepolia", "arbitrum_sepolia"];
     }

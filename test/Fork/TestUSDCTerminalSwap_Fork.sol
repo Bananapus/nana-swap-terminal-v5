@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import {IJBTerminal} from "@bananapus/core-v5/src/interfaces/IJBTerminal.sol";
-import {JBSwapTerminal1_1, IUniswapV3Pool, IPermit2, IWETH9} from "src/JBSwapTerminal1_1.sol";
+import {JBSwapTerminal, IUniswapV3Pool, IPermit2, IWETH9} from "src/JBSwapTerminal.sol";
 import {JBConstants} from "@bananapus/core-v5/src/libraries/JBConstants.sol";
 import {JBRulesetMetadata} from "@bananapus/core-v5/src/structs/JBRulesetMetadata.sol";
 import {JBRulesetConfig} from "@bananapus/core-v5/src/structs/JBRulesetConfig.sol";
@@ -21,7 +21,7 @@ contract TestUSDCTerminalSwap_Fork is Test {
     CoreDeployment core;
 
     /// @notice tracks the deployment of the swap terminal contracts for the chain.
-    JBSwapTerminal1_1 swapTerminal;
+    JBSwapTerminal swapTerminal;
 
     // USDC contract address on base mainnet.
     address constant USDC = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913;
@@ -55,7 +55,7 @@ contract TestUSDCTerminalSwap_Fork is Test {
         permit2 = core.terminal.PERMIT2();
 
         // Deploy a new swapTerminal that can take in ETH and output USDC.
-        swapTerminal = new JBSwapTerminal1_1({
+        swapTerminal = new JBSwapTerminal({
             projects: core.projects,
             permissions: core.permissions,
             directory: core.directory,
