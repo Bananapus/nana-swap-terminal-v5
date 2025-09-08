@@ -28,36 +28,35 @@ contract JBSwapTerminaltwapParamsOf is UnitFixture {
         );
     }
 
-    function test_WhenThereAreTwapParams(uint192 params) external {
-        ForTest_SwapTerminal(payable(swapTerminal)).forTest_forceAddTwapParams(projectId, pool, params);
+    function test_WhenThereIsATwapWindow(uint192 window) external {
+        ForTest_SwapTerminal(payable(swapTerminal)).forTest_forceAddTwapWindow(projectId, pool, window);
 
         // it should return the params
-        (uint32 secondsAgo, uint160 slippageTolerance) = swapTerminal.twapParamsOf(projectId, pool);
+        uint256 secondsAgo = swapTerminal.twapWindowOf(projectId, pool);
 
-        assertEq(uint192(secondsAgo | uint256(slippageTolerance) << 32), params);
+        assertEq(secondsAgo, window);
     }
 
     modifier whenThereAreNoTwapParamsForTheProject() {
         _;
     }
 
-    function test_WhenThereAreDefaultParamForThePool(uint192 params) external whenThereAreNoTwapParamsForTheProject {
-        ForTest_SwapTerminal(payable(swapTerminal)).forTest_forceAddTwapParams(
-            swapTerminal.DEFAULT_PROJECT_ID(), pool, params
+    function test_WhenThereAreDefaultParamForThePool(uint192 window) external whenThereAreNoTwapParamsForTheProject {
+        ForTest_SwapTerminal(payable(swapTerminal)).forTest_forceAddTwapWindow(
+            swapTerminal.DEFAULT_PROJECT_ID(), pool, window
         );
 
         // it should return the default params
-        (uint32 secondsAgo, uint160 slippageTolerance) = swapTerminal.twapParamsOf(projectId, pool);
+        uint256 secondsAgo = swapTerminal.twapWindowOf(projectId, pool);
 
-        assertEq(uint192(secondsAgo | uint256(slippageTolerance) << 32), params);
+        assertEq(secondsAgo, window);
     }
 
     function test_WhenThereAreNoDefaultParamForThePool() external view whenThereAreNoTwapParamsForTheProject {
         // it should return empty values
-        (uint32 secondsAgo, uint160 slippageTolerance) = swapTerminal.twapParamsOf(projectId, pool);
+        uint256 secondsAgo = swapTerminal.twapWindowOf(projectId, pool);
 
         assertEq(secondsAgo, 0);
-        assertEq(slippageTolerance, 0);
     }
 }
 
@@ -75,7 +74,7 @@ contract ForTest_SwapTerminal is JBSwapTerminal {
         JBSwapTerminal(directory, permissions, projects, permit2, owner, weth, tokenOut, uniswapFactory)
     {}
 
-    function forTest_forceAddTwapParams(uint256 projectId, IUniswapV3Pool pool, uint256 params) public {
-        _twapParamsOf[projectId][pool] = params;
+    function forTest_forceAddTwapWindow(uint256 projectId, IUniswapV3Pool pool, uint256 window) public {
+        _twapWindowOf[projectId][pool] = window;
     }
 }

@@ -26,25 +26,19 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
     }
 
     function test_WhenSettingTwapParamsOfItsProject(
-        uint32 secondsAgo,
-        uint160 slippageTolerance
+        uint32 secondsAgo
     )
         external
         givenTheCallerIsAProjectOwner
     {
         vm.assume(secondsAgo > swapTerminal.MIN_TWAP_WINDOW() && secondsAgo < swapTerminal.MAX_TWAP_WINDOW());
-        vm.assume(
-            slippageTolerance > swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE()
-                && slippageTolerance < swapTerminal.MAX_TWAP_SLIPPAGE_TOLERANCE()
-        );
 
-        swapTerminal.addTwapParamsFor(projectId, pool, secondsAgo, slippageTolerance);
+        swapTerminal.addTwapParamsFor(projectId, pool, secondsAgo);
 
         // it should add the twap params to the project
-        (uint256 twapSecondsAgo, uint256 twapSlippageTolerance) = swapTerminal.twapParamsOf(projectId, pool); // implicit
+        uint256 twapSecondsAgo = swapTerminal.twapWindowOf(projectId, pool); // implicit
 
         assertEq(twapSecondsAgo, secondsAgo);
-        assertEq(twapSlippageTolerance, slippageTolerance);
     }
 
     function test_RevertWhen_SettingTwapParamsToAnotherProject() external givenTheCallerIsAProjectOwner {
@@ -53,7 +47,6 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
         );
 
         uint32 secondsAgo = uint32(swapTerminal.MIN_TWAP_WINDOW());
-        uint160 slippageTolerance = uint160(swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE());
 
         // Do not give specific or generic permission to the caller
         mockExpectCall(
@@ -71,7 +64,7 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
                 JBPermissioned.JBPermissioned_Unauthorized.selector, address(0), caller, projectId + 1, 27
             )
         );
-        swapTerminal.addTwapParamsFor(projectId + 1, pool, secondsAgo, slippageTolerance);
+        swapTerminal.addTwapParamsFor(projectId + 1, pool, secondsAgo);
     }
 
     modifier givenTheCallerIsNotAProjectOwner() {
@@ -80,17 +73,12 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
     }
 
     function test_WhenTheCallerHasTheRole(
-        uint32 secondsAgo,
-        uint160 slippageTolerance
+        uint32 secondsAgo
     )
         external
         givenTheCallerIsNotAProjectOwner
     {
         vm.assume(secondsAgo > swapTerminal.MIN_TWAP_WINDOW() && secondsAgo < swapTerminal.MAX_TWAP_WINDOW());
-        vm.assume(
-            slippageTolerance > swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE()
-                && slippageTolerance < swapTerminal.MAX_TWAP_SLIPPAGE_TOLERANCE()
-        );
 
         // Give the permission to the caller
         mockExpectCall(
@@ -104,18 +92,17 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
 
         // Add the  twap params as permissioned caller
         vm.prank(caller);
-        swapTerminal.addTwapParamsFor(projectId, pool, secondsAgo, slippageTolerance);
+        swapTerminal.addTwapParamsFor(projectId, pool, secondsAgo);
 
         // it should add the twap params to the project
-        (uint256 twapSecondsAgo, uint256 twapSlippageTolerance) = swapTerminal.twapParamsOf(projectId, pool); // implicit
-            // upcast
+        uint256 twapSecondsAgo = swapTerminal.twapWindowOf(projectId, pool); // implicit
+
+        // upcast
         assertEq(twapSecondsAgo, secondsAgo);
-        assertEq(twapSlippageTolerance, slippageTolerance);
     }
 
     function test_RevertWhen_TheCallerHasNoRole() external givenTheCallerIsNotAProjectOwner {
         uint32 secondsAgo = 100;
-        uint160 slippageTolerance = 1000;
 
         // Do not give specific or generic permission to the caller
         mockExpectCall(
@@ -134,7 +121,7 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
                 JBPermissioned.JBPermissioned_Unauthorized.selector, projectOwner, caller, projectId, 27
             )
         );
-        swapTerminal.addTwapParamsFor(projectId, pool, secondsAgo, slippageTolerance);
+        swapTerminal.addTwapParamsFor(projectId, pool, secondsAgo);
     }
 
     modifier givenTheCallerIsTheTerminalOwner() {
@@ -145,8 +132,7 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
 
     function test_WhenAddingDefaultParamsForAPool(
         uint256 _projectId,
-        uint32 secondsAgo,
-        uint160 slippageTolerance
+        uint32 secondsAgo
     )
         external
         givenTheCallerIsTheTerminalOwner
@@ -154,13 +140,9 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
         vm.assume(_projectId != 0 && _projectId != projectId);
 
         vm.assume(secondsAgo > swapTerminal.MIN_TWAP_WINDOW() && secondsAgo < swapTerminal.MAX_TWAP_WINDOW());
-        vm.assume(
-            slippageTolerance > swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE()
-                && slippageTolerance < swapTerminal.MAX_TWAP_SLIPPAGE_TOLERANCE()
-        );
 
         // Add the twap params as the terminal owner
-        swapTerminal.addTwapParamsFor(0, pool, secondsAgo, slippageTolerance);
+        swapTerminal.addTwapParamsFor(0, pool, secondsAgo);
 
         // Add twap params for a specific project, as the project owner
         mockExpectCall(address(mockJBProjects), abi.encodeCall(IERC721.ownerOf, (projectId)), abi.encode(projectOwner));
@@ -168,23 +150,20 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
         vm.stopPrank();
         vm.prank(projectOwner);
         swapTerminal.addTwapParamsFor(
-            projectId, pool, secondsAgo > 1 ? secondsAgo - 1 : 2, slippageTolerance > 1 ? slippageTolerance - 1 : 2
+            projectId, pool, secondsAgo > 1 ? secondsAgo - 1 : 2
         );
 
         // it should not be used if a project has specific twap params
-        (uint256 twapSecondsAgo, uint256 twapSlippageTolerance) = swapTerminal.twapParamsOf(projectId, pool);
+        uint256 twapSecondsAgo = swapTerminal.twapWindowOf(projectId, pool);
         assertEq(twapSecondsAgo, secondsAgo > 1 ? secondsAgo - 1 : 2);
-        assertEq(twapSlippageTolerance, slippageTolerance > 1 ? slippageTolerance - 1 : 2);
 
         // it should add the twap params to the project
-        (twapSecondsAgo, twapSlippageTolerance) = swapTerminal.twapParamsOf(_projectId, pool); // implicit upcast
+        twapSecondsAgo = swapTerminal.twapWindowOf(_projectId, pool); // implicit upcast
         assertEq(twapSecondsAgo, secondsAgo);
-        assertEq(twapSlippageTolerance, slippageTolerance);
     }
 
     function test_RevertWhen_SettingTheParamsOfAProject() external givenTheCallerIsTheTerminalOwner {
         uint32 secondsAgo = 100;
-        uint160 slippageTolerance = 1000;
 
         // Do not give specific or generic permission to the caller
         mockExpectCall(
@@ -204,6 +183,6 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
                 JBPermissioned.JBPermissioned_Unauthorized.selector, address(0), caller, projectId, 27
             )
         );
-        swapTerminal.addTwapParamsFor(projectId, pool, secondsAgo, slippageTolerance);
+        swapTerminal.addTwapParamsFor(projectId, pool, secondsAgo);
     }
 }

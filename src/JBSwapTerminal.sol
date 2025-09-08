@@ -20,6 +20,7 @@ import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {mulDiv} from "@prb/math/src/Common.sol";
 import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 import {IAllowanceTransfer} from "@uniswap/permit2/src/interfaces/IAllowanceTransfer.sol";
 import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
@@ -56,9 +57,6 @@ contract JBSwapTerminal is
     //*********************************************************************//
 
     error JBSwapTerminal_CallerNotPool(address caller);
-    error JBSwapTerminal_InvalidTwapSlippageTolerance(
-        uint256 slippageTolerance, uint256 minSlippageTolerance, uint256 maxSlippageTolerance
-    );
     error JBSwapTerminal_InvalidTwapWindow(uint256 window, uint256 minWindow, uint256 maxWindow);
     error JBSwapTerminal_SpecifiedSlippageExceeded(uint256 amount, uint256 minimum);
     error JBSwapTerminal_NoDefaultPoolDefined(uint256 projectId, address token);
@@ -76,16 +74,6 @@ contract JBSwapTerminal is
     /// @notice The ID to store default values in.
     uint256 public constant override DEFAULT_PROJECT_ID = 0;
 
-    /// @notice Projects cannot specify a TWAP slippage tolerance larger than this constant (out of `MAX_SLIPPAGE`).
-    /// @dev This prevents TWAP slippage tolerances so high that they would result in highly unfavorable trade
-    /// conditions for the payer unless a quote was specified in the payment metadata.
-    uint256 public constant override MAX_TWAP_SLIPPAGE_TOLERANCE = 9000;
-
-    /// @notice Projects cannot specify a TWAP slippage tolerance smaller than this constant (out of `MAX_SLIPPAGE`).
-    /// @dev This prevents TWAP slippage tolerances so low that the swap always reverts to default behavior unless a
-    /// quote is specified in the payment metadata.
-    uint256 public constant override MIN_TWAP_SLIPPAGE_TOLERANCE = 100;
-
     /// @notice Projects cannot specify a TWAP window longer than this constant.
     /// @dev This serves to avoid excessively long TWAP windows that could lead to outdated pricing information and
     /// higher gas costs due to increased computational requirements.
@@ -97,6 +85,10 @@ contract JBSwapTerminal is
 
     /// @notice The denominator used when calculating TWAP slippage tolerance values.
     uint160 public constant override SLIPPAGE_DENOMINATOR = 10_000;
+
+    /// @notice The minimum slippage tolerance allowed.
+    /// @dev This serves to avoid extremely low slippage tolerances that could result in failed swaps.
+    uint256 public constant override MIN_SLIPPAGE_TOLERANCE = 350; //1050;
 
     /// @notice The minimum cardinality for a pool to be configured as a default pool.
     /// @dev The cardinality is automatically increased to this number when added as a default pool.
@@ -134,8 +126,9 @@ contract JBSwapTerminal is
     /// @dev    If so, the token out should be unwrapped before being sent to the next terminal
     bool internal immutable _OUT_IS_NATIVE_TOKEN;
 
+
     //*********************************************************************//
-    // --------------------- internal stored properties ------------------ //
+    // -------------------- internal stored properties ------------------- //
     //*********************************************************************//
 
     /// @notice A mapping which stores accounting contexts to use for a given project ID and token.
@@ -157,10 +150,11 @@ contract JBSwapTerminal is
     /// @custom:param projectId The ID of the project to get the tokens with a context for.
     mapping(uint256 projectId => address[]) internal _tokensWithAContext;
 
-    /// @notice The twap params for each project's pools.
-    /// @custom:param projectId The ID of the project to get the TWAP parameters for.
+    /// @notice The twap window for each project's pools.
+    /// @custom:param projectId The ID of the project to get the TWAP window for.
     /// @custom:param pool The pool to get the TWAP parameters for.
-    mapping(uint256 projectId => mapping(IUniswapV3Pool pool => uint256 params)) internal _twapParamsOf;
+    mapping(uint256 projectId => mapping(IUniswapV3Pool pool => uint256 params)) internal _twapWindowOf;
+
 
     //*********************************************************************//
     // -------------------------- constructor ---------------------------- //
@@ -341,18 +335,16 @@ contract JBSwapTerminal is
     /// @notice Returns the default twap parameters for a given pool project.
     /// @param projectId The ID of the project to retrieve TWAP parameters for.
     /// @return twapWindow The period of time in the past to calculate the TWAP from.
-    /// @return slippageTolerance The maximum allowed slippage tolerance when calculating the TWAP, as a fraction out of
-    /// `SLIPPAGE_DENOMINATOR`.
-    function twapParamsOf(uint256 projectId, IUniswapV3Pool pool) public view returns (uint32, uint160) {
-        // Get a reference to the swap params for the provided project.
-        uint256 twapParams = _twapParamsOf[projectId][pool];
+    function twapWindowOf(uint256 projectId, IUniswapV3Pool pool) public view returns (uint256) {
+        // Get a reference to the twap window for the provided project.
+        uint256 twapWindow = _twapWindowOf[projectId][pool];
 
         // Check the default if needed.
-        if (twapParams == 0) {
-            twapParams = _twapParamsOf[DEFAULT_PROJECT_ID][pool];
+        if (twapWindow == 0) {
+            twapWindow = _twapWindowOf[DEFAULT_PROJECT_ID][pool];
         }
 
-        return (uint32(twapParams), uint160(twapParams >> 32));
+        return twapWindow;
     }
 
     //*********************************************************************//
@@ -410,7 +402,7 @@ contract JBSwapTerminal is
             (minAmountOut) = abi.decode(quote, (uint256));
         } else {
             // Get a quote based on the pool's TWAP, including a default slippage maximum.
-            (uint32 twapWindow, uint160 slippageTolerance) = twapParamsOf(projectId, pool);
+            uint256 twapWindow = _twapWindowOf[projectId][pool];
 
             // Use the oldest observation if it's less than the twapWindow.
             uint32 oldestObservation = OracleLibrary.getOldestObservationSecondsAgo(address(pool));
@@ -419,15 +411,33 @@ contract JBSwapTerminal is
             // Keep a reference to the TWAP tick.
             int24 arithmeticMeanTick;
 
+            // Keep a reference to the liquidity.
+            uint128 liquidity;
+
             if (oldestObservation == 0) {
                 // Get the current tick from the pool's slot0
                 // slither-disable-next-line unused-return
-                (, int24 tick,,,,,) = pool.slot0();
-                arithmeticMeanTick = tick;
+                (, arithmeticMeanTick,,,,,) = pool.slot0();
+                liquidity = pool.liquidity();
             } else {
                 //slither-disable-next-line unused-return
-                (arithmeticMeanTick,) = OracleLibrary.consult(address(pool), twapWindow);
+                (arithmeticMeanTick, liquidity) = OracleLibrary.consult(address(pool), uint32(twapWindow));
             }
+
+            // If there's no liquidity, return an empty quote.
+            if (liquidity == 0) return (0, pool);
+
+            // Calculate the slippage tolerance.
+            uint256 slippageTolerance = _getSlippageTolerance({
+                amountIn: amount,
+                liquidity: liquidity,
+                tokenOut: normalizedTokenOut,
+                tokenIn: normalizedTokenIn,
+                arithmeticMeanTick: arithmeticMeanTick
+            });
+
+            // If the slippage tolerance is the maximum, return an empty quote.
+            if (slippageTolerance >= SLIPPAGE_DENOMINATOR) return (0, pool);
 
             // Get a quote based on this TWAP tick.
             minAmountOut = OracleLibrary.getQuoteAtTick({
@@ -440,6 +450,58 @@ contract JBSwapTerminal is
             // Return the lowest acceptable return based on the TWAP and its parameters.
             minAmountOut -= (minAmountOut * slippageTolerance) / SLIPPAGE_DENOMINATOR;
         }
+    }
+
+       /// @notice Get the slippage tolerance for a given amount in and liquidity.
+    /// @param amountIn The amount in to get the slippage tolerance for.
+    /// @param liquidity The liquidity to get the slippage tolerance for.
+    /// @param tokenOut The outgoing token to get the slippage tolerance for.
+    /// @param tokenIn The incoming token to get the slippage tolerance for.
+    /// @param arithmeticMeanTick The arithmetic mean tick to get the slippage tolerance for.
+    /// @return slippageTolerance The slippage tolerance for the given amount in and liquidity.
+    function _getSlippageTolerance(
+        uint256 amountIn,
+        uint128 liquidity,
+        address tokenOut,
+        address tokenIn,
+        int24 arithmeticMeanTick
+    )
+        internal
+        pure
+        returns (uint256)
+    {
+        // Direction: is tokenIn token0?
+        (address token0,) = tokenOut < tokenIn ? (tokenOut, tokenIn) : (tokenIn, tokenOut);
+        bool zeroForOne = (tokenIn == token0);
+
+        // sqrtP in Q96 from the TWAP tick
+        uint160 sqrtP = TickMath.getSqrtRatioAtTick(arithmeticMeanTick);
+
+        // If the sqrtP is 0, there's no valid price so we'll return the maximum slippage tolerance.
+        if (sqrtP == 0) return SLIPPAGE_DENOMINATOR;
+
+        // Approximate % of range liquidity consumed by the swap (in bps)
+        // Base impact estimate before √P normalization.
+        // Formula: base ≈ 2 * 10_000 * (amountIn / liquidity)
+        // `amountIn / liquidity` → fraction of liquidity consumed by this trade
+        // `2` → price (P) moves ~2x the fractional move in √P
+        // `10_000` → convert to basis points (bps)
+        // So `20_000` = 2 * 10_000 gives us the result directly in bps.
+        uint256 base = mulDiv(amountIn, 2 * SLIPPAGE_DENOMINATOR, uint256(liquidity));
+
+        // Compute final slippage tolerance (bps), normalized by √P
+        uint256 slippageTolerance =
+            zeroForOne ? mulDiv(base, uint256(sqrtP), uint256(1) << 96) : mulDiv(base, uint256(1) << 96, uint256(sqrtP));
+
+        /// If base ≥ 10,000 bps (100%), the trade would consume
+        /// nearly all liquidity in the current range → our linear
+        /// slippage estimate is invalid. Return max to signal fallback.
+        if (slippageTolerance > SLIPPAGE_DENOMINATOR) return SLIPPAGE_DENOMINATOR;
+        // If base is 0, the swap amount is tiny compared to the liquidity, so we'll return a higher slippage tolerance.
+        else if (slippageTolerance == 0) return MIN_SLIPPAGE_TOLERANCE * 3;
+        /// If base < MIN_SLIPPAGE_TOLERANCE, return the min.
+        else if (slippageTolerance < MIN_SLIPPAGE_TOLERANCE) return MIN_SLIPPAGE_TOLERANCE;
+        else return slippageTolerance;
     }
 
     //*********************************************************************//
@@ -575,13 +637,11 @@ contract JBSwapTerminal is
     /// an address with `MODIFY_TWAP_PARAMS` permission from the owner  or the terminal owner can call this function.
     /// @param projectId The ID of the project to set the TWAP-based quote rules for.
     /// @param twapWindow The period of time over which the TWAP is calculated, in seconds.
-    /// @param slippageTolerance The maximum spread allowed between the amount received and the TWAP (as a fraction out
     /// of `SLIPPAGE_DENOMINATOR`).
     function addTwapParamsFor(
         uint256 projectId,
         IUniswapV3Pool pool,
-        uint256 twapWindow,
-        uint256 slippageTolerance
+        uint256 twapWindow
     )
         external
         override
@@ -597,15 +657,8 @@ contract JBSwapTerminal is
             revert JBSwapTerminal_InvalidTwapWindow(twapWindow, MIN_TWAP_WINDOW, MAX_TWAP_WINDOW);
         }
 
-        // Make sure the provided TWAP slippage tolerance is within reasonable bounds.
-        if (slippageTolerance < MIN_TWAP_SLIPPAGE_TOLERANCE || slippageTolerance > MAX_TWAP_SLIPPAGE_TOLERANCE) {
-            revert JBSwapTerminal_InvalidTwapSlippageTolerance(
-                slippageTolerance, MIN_TWAP_SLIPPAGE_TOLERANCE, MAX_TWAP_SLIPPAGE_TOLERANCE
-            );
-        }
-
         // Set the TWAP params for the project.
-        _twapParamsOf[projectId][pool] = uint256(twapWindow | uint256(slippageTolerance) << 32);
+        _twapWindowOf[projectId][pool] = twapWindow;
     }
 
     /// @notice Empty implementation to satisfy the interface.

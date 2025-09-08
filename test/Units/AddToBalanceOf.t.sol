@@ -71,7 +71,7 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
 
         // Add default twap params
         swapTerminal.addTwapParamsFor(
-            projectId, pool, swapTerminal.MIN_TWAP_WINDOW(), swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE()
+            projectId, pool, swapTerminal.MIN_TWAP_WINDOW()
         );
         vm.stopPrank();
 
@@ -141,7 +141,7 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         amountOut = bound(amountOut, 1, type(uint248).max);
 
         _addDefaultPoolAndParams(
-            uint32(swapTerminal.MIN_TWAP_WINDOW()), uint160(swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE())
+            uint32(swapTerminal.MIN_TWAP_WINDOW())
         );
 
         // Should transfer the token in from the caller to the swap terminal
@@ -276,7 +276,7 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         amountIn = bound(amountIn, 1, type(uint160).max);
 
         _addDefaultPoolAndParams(
-            uint32(swapTerminal.MIN_TWAP_WINDOW()), uint160(swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE())
+            uint32(swapTerminal.MIN_TWAP_WINDOW())
         );
 
         // add the permit2 data to the metadata
@@ -456,7 +456,7 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         vm.assume(amountIn > 0);
 
         _addDefaultPoolAndParams(
-            uint32(swapTerminal.MIN_TWAP_WINDOW()), uint160(swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE())
+            uint32(swapTerminal.MIN_TWAP_WINDOW())
         );
 
         bytes memory quoteMetadata = _createMetadata(
@@ -525,11 +525,10 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         bytes memory quoteMetadata = "";
 
         uint32 secondsAgo = uint32(swapTerminal.MIN_TWAP_WINDOW());
-        uint160 slippageTolerance = uint160(swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE());
 
         // it should use the default pool
         // it should take the other pool token as tokenOut
-        _addDefaultPoolAndParams(secondsAgo, slippageTolerance);
+        _addDefaultPoolAndParams(secondsAgo);
 
         uint32[] memory timeframeArray = new uint32[](2);
         timeframeArray[0] = secondsAgo;
@@ -650,10 +649,9 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         bytes memory quoteMetadata = "";
 
         uint32 secondsAgo = uint32(swapTerminal.MIN_TWAP_WINDOW());
-        uint160 slippageTolerance = uint160(swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE());
 
         // it should use the default pool
-        _addDefaultPoolAndParams(secondsAgo, slippageTolerance);
+        _addDefaultPoolAndParams(secondsAgo);
 
         uint32[] memory timeframeArray = new uint32[](2);
         timeframeArray[0] = secondsAgo;
@@ -786,7 +784,7 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
 
         // Add default twap params
         swapTerminal.addTwapParamsFor(
-            0, pool, swapTerminal.MIN_TWAP_WINDOW(), swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE()
+            0, pool, swapTerminal.MIN_TWAP_WINDOW()
         );
         vm.stopPrank();
 
@@ -890,7 +888,7 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         amountOut = bound(amountOut, 1, type(uint160).max);
 
         _addDefaultPoolAndParams(
-            uint32(swapTerminal.MIN_TWAP_WINDOW()), uint160(swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE())
+            uint32(swapTerminal.MIN_TWAP_WINDOW())
         );
 
         // Should transfer the token in from the caller to the swap terminal
@@ -967,7 +965,7 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         });
     }
 
-    function _addDefaultPoolAndParams(uint32 secondsAgo, uint160 slippageTolerance) internal {
+    function _addDefaultPoolAndParams(uint32 secondsAgo) internal {
         // Add a default pool
         projectOwner = makeAddr("projectOwner");
 
@@ -999,7 +997,7 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
 
         // Add default twap params
         vm.prank(projectOwner);
-        swapTerminal.addTwapParamsFor(projectId, pool, secondsAgo, slippageTolerance);
+        swapTerminal.addTwapParamsFor(projectId, pool, secondsAgo);
     }
 
     function _computeTwapAmountOut(
