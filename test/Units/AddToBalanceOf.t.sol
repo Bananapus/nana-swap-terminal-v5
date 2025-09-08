@@ -70,9 +70,7 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         swapTerminal.addDefaultPool(projectId, address(mockWETH), pool);
 
         // Add default twap params
-        swapTerminal.addTwapParamsFor(
-            projectId, pool, swapTerminal.MIN_TWAP_WINDOW()
-        );
+        swapTerminal.addTwapParamsFor(projectId, pool, swapTerminal.MIN_TWAP_WINDOW());
         vm.stopPrank();
 
         bytes memory quoteMetadata = _createMetadata(
@@ -140,9 +138,7 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
     function test_WhenTokenInIsAnErc20Token(uint256 amountIn, uint256 amountOut) public whenTokenInIsAnErc20Token {
         amountOut = bound(amountOut, 1, type(uint248).max);
 
-        _addDefaultPoolAndParams(
-            uint32(swapTerminal.MIN_TWAP_WINDOW())
-        );
+        _addDefaultPoolAndParams(uint32(swapTerminal.MIN_TWAP_WINDOW()));
 
         // Should transfer the token in from the caller to the swap terminal
         mockExpectTransferFrom(caller, address(swapTerminal), tokenIn, amountIn);
@@ -275,9 +271,7 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         // 0 amountIn will not trigger a permit2 use
         amountIn = bound(amountIn, 1, type(uint160).max);
 
-        _addDefaultPoolAndParams(
-            uint32(swapTerminal.MIN_TWAP_WINDOW())
-        );
+        _addDefaultPoolAndParams(uint32(swapTerminal.MIN_TWAP_WINDOW()));
 
         // add the permit2 data to the metadata
         bytes memory payMetadata = _createMetadata(
@@ -455,9 +449,7 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
 
         vm.assume(amountIn > 0);
 
-        _addDefaultPoolAndParams(
-            uint32(swapTerminal.MIN_TWAP_WINDOW())
-        );
+        _addDefaultPoolAndParams(uint32(swapTerminal.MIN_TWAP_WINDOW()));
 
         bytes memory quoteMetadata = _createMetadata(
             JBMetadataResolver.getId("quoteForSwap", address(swapTerminal)), abi.encode(minAmountOut, pool)
@@ -783,9 +775,7 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         swapTerminal.addDefaultPool(0, tokenIn, pool);
 
         // Add default twap params
-        swapTerminal.addTwapParamsFor(
-            0, pool, swapTerminal.MIN_TWAP_WINDOW()
-        );
+        swapTerminal.addTwapParamsFor(0, pool, swapTerminal.MIN_TWAP_WINDOW());
         vm.stopPrank();
 
         // Should transfer the token in from the caller to the swap terminal
@@ -887,9 +877,7 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         amountIn = bound(amountIn, 1, type(uint160).max);
         amountOut = bound(amountOut, 1, type(uint160).max);
 
-        _addDefaultPoolAndParams(
-            uint32(swapTerminal.MIN_TWAP_WINDOW())
-        );
+        _addDefaultPoolAndParams(uint32(swapTerminal.MIN_TWAP_WINDOW()));
 
         // Should transfer the token in from the caller to the swap terminal
         mockExpectTransferFrom(caller, address(swapTerminal), tokenIn, amountIn);

@@ -154,7 +154,8 @@ contract JBSwapTerminalRegistry is IJBSwapTerminalRegistry, JBPermissioned, Owna
     //*********************************************************************//
 
     function supportsInterface(bytes4 interfaceId) public pure override returns (bool) {
-        return interfaceId == type(IJBSwapTerminalRegistry).interfaceId || interfaceId == type(IJBTerminal).interfaceId || interfaceId == type(IERC165).interfaceId;
+        return interfaceId == type(IJBSwapTerminalRegistry).interfaceId || interfaceId == type(IJBTerminal).interfaceId
+            || interfaceId == type(IERC165).interfaceId;
     }
 
     //*********************************************************************//
@@ -238,7 +239,8 @@ contract JBSwapTerminalRegistry is IJBSwapTerminalRegistry, JBPermissioned, Owna
     }
 
     /// @notice Lock a terminal for a project.
-    /// @dev Only the project's owner or an address with the `JBPermissionIds.ADD_SWAP_TERMINAL_POOL` permission from the
+    /// @dev Only the project's owner or an address with the `JBPermissionIds.ADD_SWAP_TERMINAL_POOL` permission from
+    /// the
     /// owner can lock a terminal for a project.
     /// @param projectId The ID of the project to lock the terminal for.
     function lockTerminalFor(uint256 projectId) external {
@@ -339,7 +341,8 @@ contract JBSwapTerminalRegistry is IJBSwapTerminalRegistry, JBPermissioned, Owna
     }
 
     /// @notice Set the terminal for a project.
-    /// @dev Only the project's owner or an address with the `JBPermissionIds.ADD_SWAP_TERMINAL_POOL` permission from the
+    /// @dev Only the project's owner or an address with the `JBPermissionIds.ADD_SWAP_TERMINAL_POOL` permission from
+    /// the
     /// owner can set the terminal for a project.
     /// @param projectId The ID of the project to set the terminal for.
     /// @param terminal The terminal to set for the project.

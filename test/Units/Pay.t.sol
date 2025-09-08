@@ -67,9 +67,7 @@ contract JBSwapTerminalpay is UnitFixture {
         swapTerminal.addDefaultPool(projectId, address(mockWETH), pool);
 
         // Add default twap params
-        swapTerminal.addTwapParamsFor(
-            projectId, pool, swapTerminal.MIN_TWAP_WINDOW()
-        );
+        swapTerminal.addTwapParamsFor(projectId, pool, swapTerminal.MIN_TWAP_WINDOW());
         vm.stopPrank();
 
         vm.deal(caller, msgValue);
@@ -797,9 +795,7 @@ contract JBSwapTerminalpay is UnitFixture {
         swapTerminal.addDefaultPool(0, tokenIn, pool);
 
         // Add default twap params
-        swapTerminal.addTwapParamsFor(
-            0, pool, swapTerminal.MIN_TWAP_WINDOW()
-        );
+        swapTerminal.addTwapParamsFor(0, pool, swapTerminal.MIN_TWAP_WINDOW());
         vm.stopPrank();
 
         // Should transfer the token in from the caller to the swap terminal

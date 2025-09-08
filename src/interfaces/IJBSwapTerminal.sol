@@ -14,10 +14,5 @@ interface IJBSwapTerminal {
     function twapWindowOf(uint256 projectId, IUniswapV3Pool pool) external view returns (uint256);
 
     function addDefaultPool(uint256 projectId, address token, IUniswapV3Pool pool) external;
-    function addTwapParamsFor(
-        uint256 projectId,
-        IUniswapV3Pool pool,
-        uint256 secondsAgo
-    )
-        external;
+    function addTwapParamsFor(uint256 projectId, IUniswapV3Pool pool, uint256 secondsAgo) external;
 }

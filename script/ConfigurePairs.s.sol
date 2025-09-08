@@ -151,14 +151,7 @@ contract ConfigurePairs is Script, Sphinx {
         });
     }
 
-    function configurePairFor(
-        uint256 chainId,
-        address token,
-        IUniswapV3Pool pool,
-        uint256 twapWindow
-    )
-        private
-    {
+    function configurePairFor(uint256 chainId, address token, IUniswapV3Pool pool, uint256 twapWindow) private {
         // No-op if the chainId does not match the current chain.
         if (block.chainid != chainId) {
             return;
@@ -176,10 +169,6 @@ contract ConfigurePairs is Script, Sphinx {
 
         // Add the pair to the swap terminal.
         swapTerminal.swap_terminal.addDefaultPool({projectId: projectId, token: token, pool: pool});
-        swapTerminal.swap_terminal.addTwapParamsFor({
-            projectId: projectId,
-            pool: pool,
-            secondsAgo: twapWindow
-        });
+        swapTerminal.swap_terminal.addTwapParamsFor({projectId: projectId, pool: pool, secondsAgo: twapWindow});
     }
 }

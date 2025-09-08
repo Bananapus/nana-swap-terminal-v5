@@ -25,12 +25,7 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
         _;
     }
 
-    function test_WhenSettingTwapParamsOfItsProject(
-        uint32 secondsAgo
-    )
-        external
-        givenTheCallerIsAProjectOwner
-    {
+    function test_WhenSettingTwapParamsOfItsProject(uint32 secondsAgo) external givenTheCallerIsAProjectOwner {
         vm.assume(secondsAgo > swapTerminal.MIN_TWAP_WINDOW() && secondsAgo < swapTerminal.MAX_TWAP_WINDOW());
 
         swapTerminal.addTwapParamsFor(projectId, pool, secondsAgo);
@@ -72,12 +67,7 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
         _;
     }
 
-    function test_WhenTheCallerHasTheRole(
-        uint32 secondsAgo
-    )
-        external
-        givenTheCallerIsNotAProjectOwner
-    {
+    function test_WhenTheCallerHasTheRole(uint32 secondsAgo) external givenTheCallerIsNotAProjectOwner {
         vm.assume(secondsAgo > swapTerminal.MIN_TWAP_WINDOW() && secondsAgo < swapTerminal.MAX_TWAP_WINDOW());
 
         // Give the permission to the caller
@@ -149,9 +139,7 @@ contract JBSwapTerminaladdTwapParamsFor is UnitFixture {
 
         vm.stopPrank();
         vm.prank(projectOwner);
-        swapTerminal.addTwapParamsFor(
-            projectId, pool, secondsAgo > 1 ? secondsAgo - 1 : 2
-        );
+        swapTerminal.addTwapParamsFor(projectId, pool, secondsAgo > 1 ? secondsAgo - 1 : 2);
 
         // it should not be used if a project has specific twap params
         uint256 twapSecondsAgo = swapTerminal.twapWindowOf(projectId, pool);

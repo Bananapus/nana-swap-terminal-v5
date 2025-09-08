@@ -126,7 +126,6 @@ contract JBSwapTerminal is
     /// @dev    If so, the token out should be unwrapped before being sent to the next terminal
     bool internal immutable _OUT_IS_NATIVE_TOKEN;
 
-
     //*********************************************************************//
     // -------------------- internal stored properties ------------------- //
     //*********************************************************************//
@@ -154,7 +153,6 @@ contract JBSwapTerminal is
     /// @custom:param projectId The ID of the project to get the TWAP window for.
     /// @custom:param pool The pool to get the TWAP parameters for.
     mapping(uint256 projectId => mapping(IUniswapV3Pool pool => uint256 params)) internal _twapWindowOf;
-
 
     //*********************************************************************//
     // -------------------------- constructor ---------------------------- //
@@ -452,7 +450,7 @@ contract JBSwapTerminal is
         }
     }
 
-       /// @notice Get the slippage tolerance for a given amount in and liquidity.
+    /// @notice Get the slippage tolerance for a given amount in and liquidity.
     /// @param amountIn The amount in to get the slippage tolerance for.
     /// @param liquidity The liquidity to get the slippage tolerance for.
     /// @param tokenOut The outgoing token to get the slippage tolerance for.
@@ -638,14 +636,7 @@ contract JBSwapTerminal is
     /// @param projectId The ID of the project to set the TWAP-based quote rules for.
     /// @param twapWindow The period of time over which the TWAP is calculated, in seconds.
     /// of `SLIPPAGE_DENOMINATOR`).
-    function addTwapParamsFor(
-        uint256 projectId,
-        IUniswapV3Pool pool,
-        uint256 twapWindow
-    )
-        external
-        override
-    {
+    function addTwapParamsFor(uint256 projectId, IUniswapV3Pool pool, uint256 twapWindow) external override {
         // Only the project owner can set the default twap params for a pool, and only project owners can set the
         // params for their projects.
         projectId == DEFAULT_PROJECT_ID
