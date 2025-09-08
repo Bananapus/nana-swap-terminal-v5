@@ -478,7 +478,7 @@ contract JBSwapTerminal is
     {
         // Direction: is tokenIn token0?
         (address token0,) = tokenOut < tokenIn ? (tokenOut, tokenIn) : (tokenIn, tokenOut);
-        bool zeroForOne = (tokenIn == token0);
+        bool zeroForOne = tokenIn == token0;
 
         // sqrtP in Q96 from the TWAP tick
         uint160 sqrtP = TickMath.getSqrtRatioAtTick(arithmeticMeanTick);
