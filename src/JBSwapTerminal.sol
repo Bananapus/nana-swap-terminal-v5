@@ -490,9 +490,10 @@ contract JBSwapTerminal is
         uint256 slippageTolerance =
             zeroForOne ? mulDiv(base, uint256(sqrtP), uint256(1) << 96) : mulDiv(base, uint256(1) << 96, uint256(sqrtP));
 
-        /// slippage estimate is invalid. Return max to signal fallback.
-        if (slippageTolerance > 2 * SLIPPAGE_DENOMINATOR) return SLIPPAGE_DENOMINATOR;
-        // Adjust the slippage tolerance to be reasonable given the ranges.
+        //test Adjust the slippage tolerance to be reasonable given the ranges.
+        if (slippageTolerance > 3 * SLIPPAGE_DENOMINATOR) return SLIPPAGE_DENOMINATOR * 88 / 100;
+        else if (slippageTolerance > 2 * SLIPPAGE_DENOMINATOR) return SLIPPAGE_DENOMINATOR * 6 / 10;
+        else if (slippageTolerance > 12_000) return slippageTolerance / 3;
         else if (slippageTolerance > 3000) return slippageTolerance / 2;
         else if (slippageTolerance > 2000) return slippageTolerance * 2 / 3;
         else if (slippageTolerance > 1000) return slippageTolerance * 3 / 4;
