@@ -86,10 +86,6 @@ contract JBSwapTerminal is
     /// @notice The denominator used when calculating TWAP slippage tolerance values.
     uint160 public constant override SLIPPAGE_DENOMINATOR = 10_000;
 
-    /// @notice A low slippage tolerance that needs a buffer.
-    /// @dev This serves to avoid low slippage tolerances that could result in failed swaps.
-    uint256 public constant override LOW_SLIPPAGE_TOLERANCE = 300;
-
     /// @notice The uncertain slippage tolerance allowed.
     /// @dev This serves to avoid extremely low slippage tolerances that could result in failed swaps.
     uint256 public constant override UNCERTAIN_SLIPPAGE_TOLERANCE = 1050;
@@ -499,16 +495,14 @@ contract JBSwapTerminal is
         uint256 slippageTolerance =
             zeroForOne ? mulDiv(base, uint256(sqrtP), uint256(1) << 96) : mulDiv(base, uint256(1) << 96, uint256(sqrtP));
 
-        /// If base ≥ 10,000 bps (100%), the trade would consume
-        /// nearly all liquidity in the current range → our linear
         /// slippage estimate is invalid. Return max to signal fallback.
-        if (slippageTolerance > SLIPPAGE_DENOMINATOR) return SLIPPAGE_DENOMINATOR;
-        // If base is 0, the swap amount is tiny compared to the liquidity, so we'll return a higher slippage tolerance
-        // that the returned amount will be highly influenced by the different between the spot and twap prices.
-        else if (slippageTolerance == 0) return UNCERTAIN_SLIPPAGE_TOLERANCE;
-        // If the slippage tolerance is less than the low slippage tolerance, add the buffe.
-        else if (slippageTolerance < LOW_SLIPPAGE_TOLERANCE) return slippageTolerance + SLIPPAGE_TOLERANCE_BUFFER;
-        else return slippageTolerance;
+        if (slippageTolerance > 2 * SLIPPAGE_DENOMINATOR) return SLIPPAGE_DENOMINATOR;
+        else if (slippageTolerance > 3000) return slippageTolerance / 2;
+        else if (slippageTolerance > 2000) return slippageTolerance * 2 / 3;
+        else if (slippageTolerance > 1000) return slippageTolerance * 3 / 4;
+        else if (slippageTolerance > 300) return slippageTolerance;
+        else if (slippageTolerance > 0) return slippageTolerance + 100;
+        else return UNCERTAIN_SLIPPAGE_TOLERANCE;
     }
 
     //*********************************************************************//
