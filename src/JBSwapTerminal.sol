@@ -483,12 +483,7 @@ contract JBSwapTerminal is
         if (sqrtP == 0) return SLIPPAGE_DENOMINATOR;
 
         // Approximate % of range liquidity consumed by the swap (in bps)
-        // Base impact estimate before √P normalization.
-        // Formula: base ≈ 2 * 10_000 * (amountIn / liquidity)
-        // `amountIn / liquidity` → fraction of liquidity consumed by this trade
-        // `2` → price (P) moves ~2x the fractional move in √P
-        // `10_000` → convert to basis points (bps)
-        // So `20_000` = 2 * 10_000 gives us the result directly in bps.
+        // Multiply by 2 to to amplify the results and prevent results on the low end from rounding to zero.
         uint256 base = mulDiv(amountIn, 2 * SLIPPAGE_DENOMINATOR, uint256(liquidity));
 
         // Compute final slippage tolerance (bps), normalized by √P
@@ -497,6 +492,7 @@ contract JBSwapTerminal is
 
         /// slippage estimate is invalid. Return max to signal fallback.
         if (slippageTolerance > 2 * SLIPPAGE_DENOMINATOR) return SLIPPAGE_DENOMINATOR;
+        // Adjust the slippage tolerance to be reasonable given the ranges.
         else if (slippageTolerance > 3000) return slippageTolerance / 2;
         else if (slippageTolerance > 2000) return slippageTolerance * 2 / 3;
         else if (slippageTolerance > 1000) return slippageTolerance * 3 / 4;
