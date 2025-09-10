@@ -41,7 +41,7 @@ contract DeployUSDCScript is Script, Sphinx {
     bytes32 SWAP_TERMINAL = "JBSwapTerminal";
 
     function configureSphinx() public override {
-        sphinxConfig.projectName = "nana-core-v5";
+        sphinxConfig.projectName = "nana-swap-terminal-v5";
         sphinxConfig.mainnets = ["ethereum", "optimism", "base", "arbitrum"];
         sphinxConfig.testnets = ["ethereum_sepolia", "optimism_sepolia", "base_sepolia", "arbitrum_sepolia"];
     }
