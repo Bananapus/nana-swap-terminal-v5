@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 import "../../src/JBSwapTerminal.sol";
+import "../../src/JBSwapTerminalRegistry.sol";
 
 /// @notice Deploy the swap terminal and create the mocks
 contract UnitFixture is Test {
@@ -21,6 +22,7 @@ contract UnitFixture is Test {
     address public terminalOwner;
 
     JBSwapTerminal public swapTerminal;
+    JBSwapTerminalRegistry public swapTerminalRegistry;
 
     function setUp() public virtual {
         // -- create random addresses --
@@ -47,6 +49,10 @@ contract UnitFixture is Test {
             mockTokenOut,
             mockUniswapFactory
         );
+
+        // -- deploy the swap terminal registry --
+        swapTerminalRegistry =
+            new JBSwapTerminalRegistry(mockJBPermissions, mockJBProjects, swapTerminal, mockPermit2, terminalOwner);
     }
 
     // test helpers:

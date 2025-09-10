@@ -72,7 +72,7 @@ contract TestUSDCTerminalSwap_Fork is Test {
         // Configure the pool
         vm.startPrank(manager);
         swapTerminal.addDefaultPool({projectId: 0, token: JBConstants.NATIVE_TOKEN, pool: POOL});
-        swapTerminal.addTwapParamsFor({projectId: 0, pool: POOL, twapWindow: 2 minutes, slippageTolerance: 100});
+        swapTerminal.addTwapParamsFor({projectId: 0, pool: POOL, twapWindow: 2 minutes});
         vm.stopPrank();
 
         vm.label(address(USDC), "USDC");

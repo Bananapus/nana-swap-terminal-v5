@@ -67,9 +67,7 @@ contract JBSwapTerminalpay is UnitFixture {
         swapTerminal.addDefaultPool(projectId, address(mockWETH), pool);
 
         // Add default twap params
-        swapTerminal.addTwapParamsFor(
-            projectId, pool, swapTerminal.MIN_TWAP_WINDOW(), swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE()
-        );
+        swapTerminal.addTwapParamsFor(projectId, pool, swapTerminal.MIN_TWAP_WINDOW());
         vm.stopPrank();
 
         vm.deal(caller, msgValue);
@@ -125,7 +123,8 @@ contract JBSwapTerminalpay is UnitFixture {
         // minReturnedTokens is used for the next terminal minAmountOut (where tokenOut is actually becoming the
         // tokenIn,meaning the minReturned insure a min 1:1 token ratio is the next terminal)
         vm.prank(caller);
-        swapTerminal.pay{value: msgValue}({
+        // Call through the terminal registry.
+        swapTerminalRegistry.pay{value: msgValue}({
             projectId: projectId,
             token: tokenIn,
             amount: amountIn, // should be discarded
@@ -144,13 +143,25 @@ contract JBSwapTerminalpay is UnitFixture {
         amountOut = bound(amountOut, 1, type(uint248).max);
 
         uint32 secondsAgo = uint32(swapTerminal.MIN_TWAP_WINDOW());
-        uint160 slippageTolerance = uint160(swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE());
 
         // it should use the default pool
-        _addDefaultPoolAndParams(secondsAgo, slippageTolerance);
+        _addDefaultPoolAndParams(secondsAgo);
 
-        // Should transfer the token in from the caller to the swap terminal
-        mockExpectTransferFrom(caller, address(swapTerminal), tokenIn, amountIn);
+        // Should transfer from registry to swap terminal.
+        mockExpectTransferFrom(caller, address(swapTerminalRegistry), tokenIn, amountIn);
+
+        // Allowance is initially set to be `0`, the terminalRegistry then increases it to the amount it wants to
+        // forward (amountIn).
+        bytes[] memory allowances = new bytes[](2);
+        allowances[0] = abi.encode(0);
+        allowances[1] = abi.encode(amountIn);
+        vm.mockCalls(
+            tokenIn,
+            abi.encodeCall(IERC20.allowance, (address(swapTerminalRegistry), address(swapTerminal))),
+            allowances
+        );
+
+        mockExpectCall(tokenIn, abi.encodeCall(IERC20.balanceOf, address(swapTerminal)), abi.encode(amountIn));
 
         bytes memory quoteMetadata = _createMetadata(
             JBMetadataResolver.getId("quoteForSwap", address(swapTerminal)), abi.encode(amountOut, pool)
@@ -208,7 +219,7 @@ contract JBSwapTerminalpay is UnitFixture {
         // minReturnedTokens is used for the next terminal minAmountOut (where tokenOut is actually becoming the
         // tokenIn, meaning the minReturned insure a min 1:1 token ratio is the next terminal)
         vm.prank(caller);
-        swapTerminal.pay{value: 0}({
+        swapTerminalRegistry.pay{value: 0}({
             projectId: projectId,
             token: tokenIn,
             amount: amountIn,
@@ -283,10 +294,9 @@ contract JBSwapTerminalpay is UnitFixture {
         amountIn = bound(amountIn, 1, type(uint160).max);
 
         uint32 secondsAgo = uint32(swapTerminal.MIN_TWAP_WINDOW());
-        uint160 slippageTolerance = uint160(swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE());
 
         // it should use the default pool
-        _addDefaultPoolAndParams(secondsAgo, slippageTolerance);
+        _addDefaultPoolAndParams(secondsAgo);
 
         // add the permit2 data to the metadata
         bytes memory payMetadata = _createMetadata(
@@ -387,6 +397,130 @@ contract JBSwapTerminalpay is UnitFixture {
         });
     }
 
+    function test_WhenPermit2ThroughRegistry(uint256 amountIn, uint256 amountOut) public {
+        amountOut = bound(amountOut, 1, type(uint248).max);
+        // 0 amountIn will not trigger a permit2 use
+        amountIn = bound(amountIn, 1, type(uint160).max);
+
+        uint32 secondsAgo = uint32(swapTerminal.MIN_TWAP_WINDOW());
+
+        // it should use the default pool
+        _addDefaultPoolAndParams(secondsAgo);
+
+        // add the permit2 data to the metadata
+        bytes memory payMetadata = _createMetadata(
+            JBMetadataResolver.getId("quoteForSwap", address(swapTerminal)), abi.encode(amountOut, pool)
+        );
+
+        JBSingleAllowance memory context =
+            JBSingleAllowance({sigDeadline: 0, amount: uint160(amountIn), expiration: 0, nonce: 0, signature: ""});
+
+        payMetadata = JBMetadataResolver.addToMetadata(
+            payMetadata, JBMetadataResolver.getId("permit2", address(swapTerminalRegistry)), abi.encode(context)
+        );
+
+        // it should use the permit2 call
+        mockExpectCall(
+            address(mockPermit2),
+            abi.encodeWithSelector(
+                bytes4(keccak256("permit(address,((address,uint160,uint48,uint48),address,uint256),bytes)")),
+                caller,
+                IAllowanceTransfer.PermitSingle({
+                    details: IAllowanceTransfer.PermitDetails({
+                        token: tokenIn,
+                        amount: uint160(amountIn),
+                        expiration: 0,
+                        nonce: 0
+                    }),
+                    spender: address(swapTerminalRegistry),
+                    sigDeadline: 0
+                }),
+                ""
+            ),
+            ""
+        );
+
+        mockExpectCall(
+            address(mockPermit2),
+            abi.encodeWithSelector(
+                bytes4(keccak256("transferFrom(address,address,uint160,address)")),
+                caller,
+                address(swapTerminalRegistry),
+                uint160(amountIn),
+                tokenIn
+            ),
+            ""
+        );
+
+        // no allowance granted outside of permit2
+        mockExpectCall(
+            tokenIn, abi.encodeCall(IERC20.allowance, (caller, address(swapTerminalRegistry))), abi.encode(0)
+        );
+
+        // Allowance is initially set to be `0`, the terminalRegistry then increases it to the amount it wants to
+        // forward (amountIn).
+        bytes[] memory allowances = new bytes[](2);
+        allowances[0] = abi.encode(0);
+        allowances[1] = abi.encode(amountIn);
+        vm.mockCalls(
+            tokenIn,
+            abi.encodeCall(IERC20.allowance, (address(swapTerminalRegistry), address(swapTerminal))),
+            allowances
+        );
+
+        mockExpectCall(tokenIn, abi.encodeCall(IERC20.balanceOf, (address(swapTerminalRegistry))), abi.encode(amountIn));
+
+        mockExpectCall(tokenIn, abi.encodeCall(IERC20.balanceOf, (address(swapTerminal))), abi.encode(amountIn));
+
+        // Mock the swap - this is where we make most of the tests
+        mockExpectCall(
+            address(pool),
+            abi.encodeCall(
+                IUniswapV3PoolActions.swap,
+                (
+                    address(swapTerminal),
+                    tokenIn < tokenOut,
+                    // it should use amountIn as amount in
+                    int256(amountIn),
+                    tokenIn < tokenOut ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1,
+                    // it should use tokenIn
+                    // it should set inIsNativeToken to false
+                    abi.encode(projectId, tokenIn)
+                )
+            ),
+            // 0 for 1 => amount0 is the token in (positive), amount1 is the token out (negative/owed to the pool), and
+            // vice versa
+            tokenIn < tokenOut ? abi.encode(amountIn, -int256(amountOut)) : abi.encode(-int256(amountOut), amountIn)
+        );
+
+        mockExpectCall(
+            address(mockJBDirectory),
+            abi.encodeCall(IJBDirectory.primaryTerminalOf, (projectId, tokenOut)),
+            abi.encode(nextTerminal)
+        );
+
+        mockExpectSafeApprove(tokenOut, address(swapTerminal), nextTerminal, amountOut);
+        // Mock the call to the next terminal, using the token out as new token in
+        mockExpectCall(
+            nextTerminal,
+            abi.encodeCall(IJBTerminal.pay, (projectId, tokenOut, amountOut, beneficiary, amountOut, "", payMetadata)),
+            abi.encode(1337)
+        );
+
+        // minReturnedTokens is used for the next terminal minAmountOut (where tokenOut is actually becoming the
+        // tokenIn, meaning the minReturned insure a min 1:1 token ratio is the next terminal)
+        vm.prank(caller);
+        swapTerminalRegistry.pay{value: 0}({
+            projectId: projectId,
+            token: tokenIn,
+            amount: amountIn,
+            beneficiary: beneficiary,
+            minReturnedTokens: amountOut,
+            memo: "",
+            metadata: payMetadata
+        });
+    }
+
     function test_RevertWhen_ThePermit2AllowanceIsLessThanTheAmountIn(uint256 amountIn)
         public
         whenTokenInIsAnErc20Token
@@ -460,11 +594,10 @@ contract JBSwapTerminalpay is UnitFixture {
         whenAQuoteIsProvided
     {
         uint32 secondsAgo = uint32(swapTerminal.MIN_TWAP_WINDOW());
-        uint160 slippageTolerance = uint160(swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE());
 
         // it should use the default pool
         // it should take the other pool token as tokenOut
-        _addDefaultPoolAndParams(secondsAgo, slippageTolerance);
+        _addDefaultPoolAndParams(secondsAgo);
 
         minAmountOut = bound(minAmountOut, 1, type(uint256).max);
         amountReceived = bound(amountReceived, 0, minAmountOut - 1);
@@ -537,11 +670,10 @@ contract JBSwapTerminalpay is UnitFixture {
         bytes memory quoteMetadata = "";
 
         uint32 secondsAgo = uint32(swapTerminal.MIN_TWAP_WINDOW());
-        uint160 slippageTolerance = uint160(swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE());
 
         // it should use the default pool
         // it should take the other pool token as tokenOut
-        _addDefaultPoolAndParams(secondsAgo, slippageTolerance);
+        _addDefaultPoolAndParams(secondsAgo);
 
         uint32[] memory timeframeArray = new uint32[](2);
         timeframeArray[0] = secondsAgo;
@@ -666,10 +798,9 @@ contract JBSwapTerminalpay is UnitFixture {
         bytes memory quoteMetadata = "";
 
         uint32 secondsAgo = uint32(swapTerminal.MIN_TWAP_WINDOW());
-        uint160 slippageTolerance = uint160(swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE());
 
         // it should use the default pool
-        _addDefaultPoolAndParams(secondsAgo, slippageTolerance);
+        _addDefaultPoolAndParams(secondsAgo);
 
         uint32[] memory timeframeArray = new uint32[](2);
         timeframeArray[0] = secondsAgo;
@@ -802,9 +933,7 @@ contract JBSwapTerminalpay is UnitFixture {
         swapTerminal.addDefaultPool(0, tokenIn, pool);
 
         // Add default twap params
-        swapTerminal.addTwapParamsFor(
-            0, pool, swapTerminal.MIN_TWAP_WINDOW(), swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE()
-        );
+        swapTerminal.addTwapParamsFor(0, pool, swapTerminal.MIN_TWAP_WINDOW());
         vm.stopPrank();
 
         // Should transfer the token in from the caller to the swap terminal
@@ -910,10 +1039,9 @@ contract JBSwapTerminalpay is UnitFixture {
         amountOut = bound(amountOut, 1, type(uint248).max); // avoid overflow when casting to int
 
         uint32 secondsAgo = uint32(swapTerminal.MIN_TWAP_WINDOW());
-        uint160 slippageTolerance = uint160(swapTerminal.MIN_TWAP_SLIPPAGE_TOLERANCE());
 
         // it should use the default pool
-        _addDefaultPoolAndParams(secondsAgo, slippageTolerance);
+        _addDefaultPoolAndParams(secondsAgo);
 
         // Should transfer the token in from the caller to the swap terminal
         mockExpectTransferFrom(caller, address(swapTerminal), tokenIn, amountIn);
@@ -1066,7 +1194,7 @@ contract JBSwapTerminalpay is UnitFixture {
         });
     }
 
-    function _addDefaultPoolAndParams(uint32 secondsAgo, uint160 slippageTolerance) internal {
+    function _addDefaultPoolAndParams(uint32 secondsAgo) internal {
         // Add a default pool
         projectOwner = makeAddr("projectOwner");
 
@@ -1098,7 +1226,7 @@ contract JBSwapTerminalpay is UnitFixture {
 
         // Add default twap params
         vm.prank(projectOwner);
-        swapTerminal.addTwapParamsFor(projectId, pool, secondsAgo, slippageTolerance);
+        swapTerminal.addTwapParamsFor(projectId, pool, secondsAgo);
     }
 
     function _computeTwapAmountOut(
