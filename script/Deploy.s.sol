@@ -12,6 +12,7 @@ import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV
 import {Script} from "forge-std/Script.sol";
 
 import {JBSwapTerminal, IPermit2, IWETH9} from "./../src/JBSwapTerminal.sol";
+import {JBSwapTerminalRegistry} from "./../src/JBSwapTerminalRegistry.sol";
 
 contract DeployScript is Script, Sphinx {
     /// @notice tracks the deployment of the core contracts for the chain we are deploying to.
@@ -87,28 +88,8 @@ contract DeployScript is Script, Sphinx {
     }
 
     function deploy() public sphinx {
-        // Checks if this version is already deployed,
-        // if it is then we skip the entire script.
-        if (
-            _isDeployed(
-                SWAP_TERMINAL,
-                type(JBSwapTerminal).creationCode,
-                abi.encode(
-                    core.directory,
-                    core.permissions,
-                    core.projects,
-                    permit2,
-                    address(manager),
-                    IWETH9(weth),
-                    JBConstants.NATIVE_TOKEN,
-                    factory,
-                    trustedForwarder
-                )
-            )
-        ) return;
-
         // Perform the deployment.
-        new JBSwapTerminal{salt: SWAP_TERMINAL}({
+        JBSwapTerminal ethTerminal = new JBSwapTerminal{salt: SWAP_TERMINAL}({
             projects: core.projects,
             permissions: core.permissions,
             directory: core.directory,
@@ -119,6 +100,10 @@ contract DeployScript is Script, Sphinx {
             factory: IUniswapV3Factory(factory),
             trustedForwarder: trustedForwarder
         });
+
+        new JBSwapTerminalRegistry{salt: SWAP_TERMINAL}(
+            core.permissions, core.projects, ethTerminal, permit2, safeAddress(), trustedForwarder
+        );
     }
 
     function _isDeployed(
