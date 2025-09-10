@@ -52,8 +52,9 @@ contract UnitFixture is Test {
         );
 
         // -- deploy the swap terminal registry --
-        swapTerminalRegistry =
-            new JBSwapTerminalRegistry(mockJBPermissions, mockJBProjects, swapTerminal, mockPermit2, terminalOwner, address(0));
+        swapTerminalRegistry = new JBSwapTerminalRegistry(
+            mockJBPermissions, mockJBProjects, swapTerminal, mockPermit2, terminalOwner, address(0)
+        );
     }
 
     // test helpers:
