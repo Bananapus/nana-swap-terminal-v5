@@ -90,10 +90,6 @@ contract JBSwapTerminal is
     /// @dev This serves to avoid extremely low slippage tolerances that could result in failed swaps.
     uint256 public constant override UNCERTAIN_SLIPPAGE_TOLERANCE = 1050;
 
-    /// @notice A buffer to add to the low slippage tolerance.
-    /// @dev This serves to avoid low slippage tolerances that could result in failed swaps.
-    uint256 public constant override SLIPPAGE_TOLERANCE_BUFFER = 100;
-
     /// @notice The minimum cardinality for a pool to be configured as a default pool.
     /// @dev The cardinality is automatically increased to this number when added as a default pool.
     uint16 public constant override MIN_DEFAULT_POOL_CARDINALITY = 10;
