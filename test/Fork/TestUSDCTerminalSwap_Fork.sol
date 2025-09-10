@@ -64,7 +64,7 @@ contract TestUSDCTerminalSwap_Fork is Test {
             weth: IWETH9(WETH),
             tokenOut: USDC,
             factory: IUniswapV3Factory(FACTORY),
-            trustedForwarder: address(0)
+            trustedForwarder: trustedForwarder
         });
 
         // Create a project that accepts USDC.
