@@ -147,7 +147,7 @@ contract ForTest_SwapTerminal is JBSwapTerminal {
         address tokenOut,
         IUniswapV3Factory uniswapFactory
     )
-        JBSwapTerminal(directory, permissions, projects, permit2, owner, weth, tokenOut, uniswapFactory)
+        JBSwapTerminal(directory, permissions, projects, permit2, owner, weth, tokenOut, uniswapFactory, address(0))
     {}
 
     function forTest_forceAddAccountingContexts(uint256 projectId, JBAccountingContext[] memory contexts) public {

@@ -118,7 +118,7 @@ contract TestSwapTerminal_Fork is Test {
         vm.label(_projectOwner, "projectOwner");
 
         _swapTerminal = new JBSwapTerminal(
-            _directory, _permissions, _projects, _permit2, _owner, WETH, JBConstants.NATIVE_TOKEN, factory
+            _directory, _permissions, _projects, _permit2, _owner, WETH, JBConstants.NATIVE_TOKEN, factory, address(0)
         );
         vm.label(address(_swapTerminal), "swapTerminal");
 

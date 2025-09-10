@@ -9,6 +9,7 @@ import {IJBSwapTerminal} from "../../src/interfaces/IJBSwapTerminal.sol";
 import {SphinxConstants, NetworkInfo} from "@sphinx-labs/contracts/SphinxConstants.sol";
 
 struct SwapTerminalDeployment {
+    IJBSwapTerminal registry;
     IJBSwapTerminal swap_terminal;
     IJBSwapTerminal usdc_swap_terminal;
 }
@@ -44,6 +45,10 @@ library SwapTerminalDeploymentLib {
         view
         returns (SwapTerminalDeployment memory deployment)
     {
+        deployment.swap_terminal = IJBSwapTerminal(
+            payable(_getDeploymentAddress(path, "nana-swap-terminal", network_name, "JBSwapTerminalRegistry"))
+        );
+
         deployment.swap_terminal =
             IJBSwapTerminal(payable(_getDeploymentAddress(path, "nana-swap-terminal", network_name, "JBSwapTerminal")));
 

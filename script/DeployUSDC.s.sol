@@ -11,7 +11,11 @@ import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV
 
 import {Script} from "forge-std/Script.sol";
 
-import {IJBSwapTerminal, JBSwapTerminal, IUniswapV3Pool, IPermit2, IWETH9} from "./../src/JBSwapTerminal.sol";
+import {
+    IJBSwapTerminal, JBSwapTerminal, IUniswapV3Pool, IPermit2, IWETH9, IJBTerminal
+} from "./../src/JBSwapTerminal.sol";
+
+import {JBSwapTerminalRegistry} from "./../src/JBSwapTerminalRegistry.sol";
 
 contract DeployUSDCScript is Script, Sphinx {
     /// @notice tracks the deployment of the core contracts for the chain we are deploying to.
@@ -23,6 +27,7 @@ contract DeployUSDCScript is Script, Sphinx {
     address usdc;
     address factory;
     IPermit2 permit2;
+    address trustedForwarder;
 
     uint256 constant ETHEREUM_MAINNET = 1;
     uint256 constant OPTIMISM_MAINNET = 10;
@@ -40,7 +45,7 @@ contract DeployUSDCScript is Script, Sphinx {
     bytes32 SWAP_TERMINAL = "JBSwapTerminal";
 
     function configureSphinx() public override {
-        sphinxConfig.projectName = "nana-core-v5";
+        sphinxConfig.projectName = "nana-swap-terminal-v5";
         sphinxConfig.mainnets = ["ethereum", "optimism", "base", "arbitrum"];
         sphinxConfig.testnets = ["ethereum_sepolia", "optimism_sepolia", "base_sepolia", "arbitrum_sepolia"];
     }
@@ -54,6 +59,8 @@ contract DeployUSDCScript is Script, Sphinx {
 
         // Get the permit2 that the multiterminal also makes use of.
         permit2 = core.terminal.PERMIT2();
+
+        trustedForwarder = core.permissions.trustedForwarder();
 
         // Ethereum Mainnet
         if (block.chainid == 1) {
@@ -123,8 +130,18 @@ contract DeployUSDCScript is Script, Sphinx {
             owner: address(manager),
             weth: IWETH9(weth),
             tokenOut: usdc,
-            factory: IUniswapV3Factory(factory)
+            factory: IUniswapV3Factory(factory),
+            trustedForwarder: trustedForwarder
         });
+
+        new JBSwapTerminalRegistry{salt: SWAP_TERMINAL}(
+            core.permissions,
+            core.projects,
+            IJBTerminal(address(swapTerminal)),
+            permit2,
+            safeAddress(),
+            trustedForwarder
+        );
 
         // USDC/ETH (0.05%)
         configurePairFor({
