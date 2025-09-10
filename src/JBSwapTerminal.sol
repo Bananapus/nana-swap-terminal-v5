@@ -439,7 +439,7 @@ contract JBSwapTerminal is
             });
 
             // If the slippage tolerance is the maximum, return an empty quote.
-            if (slippageTolerance >= SLIPPAGE_DENOMINATOR) return (0, pool);
+            if (slippageTolerance == SLIPPAGE_DENOMINATOR) return (0, pool);
 
             // Get a quote based on this TWAP tick.
             minAmountOut = OracleLibrary.getQuoteAtTick({
