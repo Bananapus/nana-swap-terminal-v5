@@ -1,13 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
-import {IAllowanceTransfer} from "@uniswap/permit2/src/interfaces/IAllowanceTransfer.sol";
 import {JBPermissioned} from "@bananapus/core-v5/src/abstract/JBPermissioned.sol";
 import {IJBPermissions} from "@bananapus/core-v5/src/interfaces/IJBPermissions.sol";
 import {IJBProjects} from "@bananapus/core-v5/src/interfaces/IJBProjects.sol";
@@ -18,10 +11,20 @@ import {JBConstants} from "@bananapus/core-v5/src/libraries/JBConstants.sol";
 import {JBAccountingContext} from "@bananapus/core-v5/src/structs/JBAccountingContext.sol";
 import {JBSingleAllowance} from "@bananapus/core-v5/src/structs/JBSingleAllowance.sol";
 import {JBPermissionIds} from "@bananapus/permission-ids-v5/src/JBPermissionIds.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+
+import {Context} from "@openzeppelin/contracts/utils/Context.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import {ERC2771Context} from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
+import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
+import {IAllowanceTransfer} from "@uniswap/permit2/src/interfaces/IAllowanceTransfer.sol";
 
 import {IJBSwapTerminalRegistry} from "./interfaces/IJBSwapTerminalRegistry.sol";
 
-contract JBSwapTerminalRegistry is IJBSwapTerminalRegistry, JBPermissioned, Ownable {
+contract JBSwapTerminalRegistry is IJBSwapTerminalRegistry, JBPermissioned, Ownable, ERC2771Context {
     // A library that adds default safety checks to ERC20 functionality.
     using SafeERC20 for IERC20;
 
@@ -73,14 +76,17 @@ contract JBSwapTerminalRegistry is IJBSwapTerminalRegistry, JBPermissioned, Owna
     /// @param startingTerminal The starting terminal to use.
     /// @param permit2 The permit2 utility.
     /// @param owner The owner of the contract.
+    /// @param trustedForwarder The trusted forwarder for the contract.
     constructor(
         IJBPermissions permissions,
         IJBProjects projects,
         IJBTerminal startingTerminal,
         IPermit2 permit2,
-        address owner
+        address owner,
+        address trustedForwarder
     )
         JBPermissioned(permissions)
+        ERC2771Context(trustedForwarder)
         Ownable(owner)
     {
         PROJECTS = projects;
@@ -156,6 +162,27 @@ contract JBSwapTerminalRegistry is IJBSwapTerminalRegistry, JBPermissioned, Owna
     function supportsInterface(bytes4 interfaceId) public pure override returns (bool) {
         return interfaceId == type(IJBSwapTerminalRegistry).interfaceId || interfaceId == type(IJBTerminal).interfaceId
             || interfaceId == type(IERC165).interfaceId;
+    }
+
+    //*********************************************************************//
+    // -------------------------- internal views ------------------------- //
+    //*********************************************************************//
+
+    /// @dev `ERC-2771` specifies the context as being a single address (20 bytes).
+    function _contextSuffixLength() internal view override(ERC2771Context, Context) returns (uint256) {
+        return super._contextSuffixLength();
+    }
+
+    /// @notice The calldata. Preferred to use over `msg.data`.
+    /// @return calldata The `msg.data` of this call.
+    function _msgData() internal view override(ERC2771Context, Context) returns (bytes calldata) {
+        return ERC2771Context._msgData();
+    }
+
+    /// @notice The message's sender. Preferred to use over `msg.sender`.
+    /// @return sender The address which sent this call.
+    function _msgSender() internal view override(ERC2771Context, Context) returns (address sender) {
+        return ERC2771Context._msgSender();
     }
 
     //*********************************************************************//
@@ -407,12 +434,12 @@ contract JBSwapTerminalRegistry is IJBSwapTerminalRegistry, JBPermissioned, Owna
                 sigDeadline: allowance.sigDeadline
             });
 
-            try PERMIT2.permit({owner: msg.sender, permitSingle: permitSingle, signature: allowance.signature}) {}
+            try PERMIT2.permit({owner: _msgSender(), permitSingle: permitSingle, signature: allowance.signature}) {}
                 catch {}
         }
 
-        // Transfer the tokens from the `msg.sender` to this terminal.
-        _transferFor({from: msg.sender, to: payable(address(this)), token: token, amount: amount});
+        // Transfer the tokens from the `_msgSender()` to this terminal.
+        _transferFrom({from: _msgSender(), to: payable(address(this)), token: token, amount: amount});
 
         // The amount actually received.
         return IERC20(token).balanceOf(address(this));
@@ -440,7 +467,7 @@ contract JBSwapTerminalRegistry is IJBSwapTerminalRegistry, JBPermissioned, Owna
     /// @param token The address of the token being transfered.
     /// @param amount The amount of tokens to transfer, as a fixed point number with the same number of decimals as the
     /// token.
-    function _transferFor(address from, address payable to, address token, uint256 amount) internal virtual {
+    function _transferFrom(address from, address payable to, address token, uint256 amount) internal virtual {
         if (from == address(this)) {
             // If the token is native token, assume the `sendValue` standard.
             if (token == JBConstants.NATIVE_TOKEN) return Address.sendValue(to, amount);

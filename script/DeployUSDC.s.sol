@@ -23,6 +23,7 @@ contract DeployUSDCScript is Script, Sphinx {
     address usdc;
     address factory;
     IPermit2 permit2;
+    address trustedForwarder;
 
     uint256 constant ETHEREUM_MAINNET = 1;
     uint256 constant OPTIMISM_MAINNET = 10;
@@ -48,12 +49,12 @@ contract DeployUSDCScript is Script, Sphinx {
     function run() public {
         // Get the deployment addresses for the nana CORE for this chain.
         // We want to do this outside of the `sphinx` modifier.
-        core = CoreDeploymentLib.getDeployment(
-            vm.envOr("NANA_CORE_DEPLOYMENT_PATH", string("node_modules/@bananapus/core-v5/deployments/"))
-        );
+        core = CoreDeploymentLib.getDeployment(vm.envOr("NANA_CORE_DEPLOYMENT_PATH", string("deployments/")));
 
         // Get the permit2 that the multiterminal also makes use of.
         permit2 = core.terminal.PERMIT2();
+
+        trustedForwarder = core.permissions.trustedForwarder();
 
         // Ethereum Mainnet
         if (block.chainid == 1) {
@@ -123,7 +124,8 @@ contract DeployUSDCScript is Script, Sphinx {
             owner: address(manager),
             weth: IWETH9(weth),
             tokenOut: usdc,
-            factory: IUniswapV3Factory(factory)
+            factory: IUniswapV3Factory(factory),
+            trustedForwarder: address(0)
         });
 
         // USDC/ETH (0.05%)

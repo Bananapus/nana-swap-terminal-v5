@@ -15,10 +15,12 @@ import {JBAccountingContext} from "@bananapus/core-v5/src/structs/JBAccountingCo
 import {JBSingleAllowance} from "@bananapus/core-v5/src/structs/JBSingleAllowance.sol";
 import {JBPermissionIds} from "@bananapus/permission-ids-v5/src/JBPermissionIds.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ERC2771Context} from "@openzeppelin/contracts/metatx/ERC2771Context.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {mulDiv} from "@prb/math/src/Common.sol";
 import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
@@ -44,6 +46,7 @@ import {IWETH9} from "./interfaces/IWETH9.sol";
 contract JBSwapTerminal is
     JBPermissioned,
     Ownable,
+    ERC2771Context,
     IJBTerminal,
     IJBPermitTerminal,
     IJBSwapTerminal,
@@ -166,6 +169,7 @@ contract JBSwapTerminal is
     /// @param weth A contract which wraps the native token.
     /// @param tokenOut The token which flows out of this terminal (JBConstants.NATIVE_TOKEN for the chain native token)
     /// @param factory A factory which creates Uniswap V3 pools.
+    /// @param trustedForwarder The trusted forwarder for the contract.
     constructor(
         IJBDirectory directory,
         IJBPermissions permissions,
@@ -174,9 +178,11 @@ contract JBSwapTerminal is
         address owner,
         IWETH9 weth,
         address tokenOut,
-        IUniswapV3Factory factory
+        IUniswapV3Factory factory,
+        address trustedForwarder
     )
         JBPermissioned(permissions)
+        ERC2771Context(trustedForwarder)
         Ownable(owner)
     {
         if (tokenOut == address(0)) revert JBSwapTerminal_ZeroToken();
@@ -348,6 +354,23 @@ contract JBSwapTerminal is
     //*********************************************************************//
     // -------------------------- internal views ------------------------- //
     //*********************************************************************//
+
+    /// @dev `ERC-2771` specifies the context as being a single address (20 bytes).
+    function _contextSuffixLength() internal view override(ERC2771Context, Context) returns (uint256) {
+        return super._contextSuffixLength();
+    }
+
+    /// @notice The calldata. Preferred to use over `msg.data`.
+    /// @return calldata The `msg.data` of this call.
+    function _msgData() internal view override(ERC2771Context, Context) returns (bytes calldata) {
+        return ERC2771Context._msgData();
+    }
+
+    /// @notice The message's sender. Preferred to use over `msg.sender`.
+    /// @return sender The address which sent this call.
+    function _msgSender() internal view override(ERC2771Context, Context) returns (address sender) {
+        return ERC2771Context._msgSender();
+    }
 
     /// @notice Returns the token that flows out of this terminal, wrapped as an ERC-20 if needed.
     /// @dev If the token out is the chain native token (ETH on mainnet), wrapped ETH is returned
@@ -810,7 +833,7 @@ contract JBSwapTerminal is
         }
 
         // Transfer the tokens from the `msg.sender` to this terminal.
-        _transferFor({from: msg.sender, to: payable(address(this)), token: token, amount: amount});
+        _transferFrom({from: msg.sender, to: payable(address(this)), token: token, amount: amount});
 
         // The amount actually received.
         return IERC20(token).balanceOf(address(this));
@@ -888,7 +911,7 @@ contract JBSwapTerminal is
                 WETH.withdraw(leftover);
             }
 
-            _transferFor(address(this), payable(msg.sender), tokenIn, leftover);
+            _transferFrom({from: address(this), to: payable(msg.sender), token: tokenIn, amount: leftover});
         }
 
         return amountToSend;
@@ -941,7 +964,7 @@ contract JBSwapTerminal is
     /// @param token The address of the token being transfered.
     /// @param amount The amount of tokens to transfer, as a fixed point number with the same number of decimals as the
     /// token.
-    function _transferFor(address from, address payable to, address token, uint256 amount) internal virtual {
+    function _transferFrom(address from, address payable to, address token, uint256 amount) internal virtual {
         if (from == address(this)) {
             // If the token is native token, assume the `sendValue` standard.
             if (token == JBConstants.NATIVE_TOKEN) return Address.sendValue(to, amount);

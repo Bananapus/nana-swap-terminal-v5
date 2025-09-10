@@ -21,6 +21,7 @@ contract DeployScript is Script, Sphinx {
     address manager = address(0x80a8F7a4bD75b539CE26937016Df607fdC9ABeb5); // `nana-core-v5` multisig.
     address weth;
     address factory;
+    address trustedForwarder;
     IPermit2 permit2;
 
     /// @notice the salts that are used to deploy the contracts.
@@ -35,12 +36,13 @@ contract DeployScript is Script, Sphinx {
     function run() public {
         // Get the deployment addresses for the nana CORE for this chain.
         // We want to do this outside of the `sphinx` modifier.
-        core = CoreDeploymentLib.getDeployment(
-            vm.envOr("NANA_CORE_DEPLOYMENT_PATH", string("node_modules/@bananapus/core-v5/deployments/"))
-        );
+        core = CoreDeploymentLib.getDeployment(vm.envOr("NANA_CORE_DEPLOYMENT_PATH", string("deployments/")));
 
         // Get the permit2 that the multiterminal also makes use of.
         permit2 = core.terminal.PERMIT2();
+
+        // We use the same trusted forwarder as the core deployment.
+        trustedForwarder = core.permissions.trustedForwarder();
 
         // Ethereum Mainnet
         if (block.chainid == 1) {
@@ -97,7 +99,8 @@ contract DeployScript is Script, Sphinx {
                     address(manager),
                     IWETH9(weth),
                     JBConstants.NATIVE_TOKEN,
-                    factory
+                    factory,
+                    trustedForwarder
                 )
             )
         ) return;
@@ -111,7 +114,8 @@ contract DeployScript is Script, Sphinx {
             owner: address(manager),
             weth: IWETH9(weth),
             tokenOut: JBConstants.NATIVE_TOKEN,
-            factory: IUniswapV3Factory(factory)
+            factory: IUniswapV3Factory(factory),
+            trustedForwarder: trustedForwarder
         });
     }
 

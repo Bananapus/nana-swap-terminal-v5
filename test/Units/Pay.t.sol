@@ -903,7 +903,8 @@ contract JBSwapTerminalpay is UnitFixture {
             terminalOwner,
             mockWETH,
             tokenOut,
-            mockUniswapFactory
+            mockUniswapFactory,
+            address(0)
         );
 
         // Add a default pool
