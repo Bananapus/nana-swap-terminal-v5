@@ -11,8 +11,8 @@ import {SphinxConstants, NetworkInfo} from "@sphinx-labs/contracts/SphinxConstan
 struct SwapTerminalDeployment {
     IJBSwapTerminal registry;
     IJBSwapTerminal swap_terminal;
-    IJBSwapTerminal usdc_swap_terminal;
 }
+// IJBSwapTerminal usdc_swap_terminal;
 
 library SwapTerminalDeploymentLib {
     // Cheat code address, 0x7109709ECfa91a80626fF3989D68f67F5b1DD12D.
@@ -46,15 +46,16 @@ library SwapTerminalDeploymentLib {
         returns (SwapTerminalDeployment memory deployment)
     {
         deployment.swap_terminal = IJBSwapTerminal(
-            payable(_getDeploymentAddress(path, "nana-swap-terminal", network_name, "JBSwapTerminalRegistry"))
+            payable(_getDeploymentAddress(path, "nana-swap-terminal-v5", network_name, "JBSwapTerminalRegistry"))
         );
 
-        deployment.swap_terminal =
-            IJBSwapTerminal(payable(_getDeploymentAddress(path, "nana-swap-terminal", network_name, "JBSwapTerminal")));
-
-        deployment.usdc_swap_terminal = IJBSwapTerminal(
-            payable(_getDeploymentAddress(path, "nana-swap-terminal", network_name, "JBSwapTerminal1_1"))
+        deployment.swap_terminal = IJBSwapTerminal(
+            payable(_getDeploymentAddress(path, "nana-swap-terminal-v5", network_name, "JBSwapTerminal"))
         );
+
+        // deployment.usdc_swap_terminal = IJBSwapTerminal(
+        //     payable(_getDeploymentAddress(path, "nana-swap-terminal-v5", network_name, "JBSwapTerminal1_1"))
+        // );
     }
 
     /// @notice Get the address of a contract that was deployed by the Deploy script.
