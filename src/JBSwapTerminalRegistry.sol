@@ -73,14 +73,12 @@ contract JBSwapTerminalRegistry is IJBSwapTerminalRegistry, JBPermissioned, Owna
 
     /// @param permissions The permissions contract.
     /// @param projects The project registry.
-    /// @param startingTerminal The starting terminal to use.
     /// @param permit2 The permit2 utility.
     /// @param owner The owner of the contract.
     /// @param trustedForwarder The trusted forwarder for the contract.
     constructor(
         IJBPermissions permissions,
         IJBProjects projects,
-        IJBTerminal startingTerminal,
         IPermit2 permit2,
         address owner,
         address trustedForwarder
@@ -90,7 +88,6 @@ contract JBSwapTerminalRegistry is IJBSwapTerminalRegistry, JBPermissioned, Owna
         Ownable(owner)
     {
         PROJECTS = projects;
-        defaultTerminal = startingTerminal;
         PERMIT2 = permit2;
     }
 

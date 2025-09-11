@@ -121,6 +121,10 @@ contract DeployUSDCScript is Script, Sphinx {
     }
 
     function deploy() public sphinx {
+        JBSwapTerminalRegistry registry = new JBSwapTerminalRegistry{salt: SWAP_TERMINAL}(
+            core.permissions, core.projects, permit2, safeAddress(), trustedForwarder
+        );
+
         // Perform the deployment.
         swapTerminal = new JBSwapTerminal{salt: SWAP_TERMINAL}({
             projects: core.projects,
@@ -134,14 +138,8 @@ contract DeployUSDCScript is Script, Sphinx {
             trustedForwarder: trustedForwarder
         });
 
-        new JBSwapTerminalRegistry{salt: SWAP_TERMINAL}(
-            core.permissions,
-            core.projects,
-            IJBTerminal(address(swapTerminal)),
-            permit2,
-            safeAddress(),
-            trustedForwarder
-        );
+        // Set the terminal as the default in the registry.
+        registry.setDefaultTerminal(IJBTerminal(address(swapTerminal)));
 
         // USDC/ETH (0.05%)
         configurePairFor({

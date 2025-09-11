@@ -88,6 +88,10 @@ contract DeployScript is Script, Sphinx {
     }
 
     function deploy() public sphinx {
+        JBSwapTerminalRegistry registry = new JBSwapTerminalRegistry{salt: SWAP_TERMINAL}(
+            core.permissions, core.projects, permit2, safeAddress(), trustedForwarder
+        );
+
         // Perform the deployment.
         JBSwapTerminal ethTerminal = new JBSwapTerminal{salt: SWAP_TERMINAL}({
             projects: core.projects,
@@ -101,9 +105,8 @@ contract DeployScript is Script, Sphinx {
             trustedForwarder: trustedForwarder
         });
 
-        new JBSwapTerminalRegistry{salt: SWAP_TERMINAL}(
-            core.permissions, core.projects, ethTerminal, permit2, safeAddress(), trustedForwarder
-        );
+        // Set the terminal as the default in the registry.
+        registry.setDefaultTerminal(ethTerminal);
     }
 
     function _isDeployed(
