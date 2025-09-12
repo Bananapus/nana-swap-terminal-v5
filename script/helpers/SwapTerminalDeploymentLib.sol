@@ -45,7 +45,7 @@ library SwapTerminalDeploymentLib {
         view
         returns (SwapTerminalDeployment memory deployment)
     {
-        deployment.swap_terminal = IJBSwapTerminal(
+        deployment.registry = IJBSwapTerminal(
             payable(_getDeploymentAddress(path, "nana-swap-terminal-v5", network_name, "JBSwapTerminalRegistry"))
         );
 
