@@ -1,8 +1,8 @@
 # JBSwapTerminal
-[Git Source](https://github.com/Bananapus/nana-swap-terminal/blob/4a28a64a13cddc45d16438f876b10e41975e1a79/src/JBSwapTerminal.sol)
+[Git Source](https://github.com/Bananapus/nana-swap-terminal-v5/blob/7a817baa29705288afdaa7c9853735b3b6130173/src/JBSwapTerminal.sol)
 
 **Inherits:**
-JBPermissioned, Ownable, IJBTerminal, IJBPermitTerminal, [IJBSwapTerminal](/src/interfaces/IJBSwapTerminal.sol/interface.IJBSwapTerminal.md), IUniswapV3SwapCallback
+JBPermissioned, Ownable, ERC2771Context, IJBTerminal, IJBPermitTerminal, [IJBSwapTerminal](/src/interfaces/IJBSwapTerminal.sol/interface.IJBSwapTerminal.md), IUniswapV3SwapCallback
 
 The `JBSwapTerminal` accepts payments in any token. When the `JBSwapTerminal` is paid, it uses a Uniswap
 pool to exchange the tokens it received for tokens that another one of its project's terminals can accept. Then, it
@@ -26,30 +26,6 @@ The ID to store default values in.
 
 ```solidity
 uint256 public constant override DEFAULT_PROJECT_ID = 0;
-```
-
-
-### MAX_TWAP_SLIPPAGE_TOLERANCE
-Projects cannot specify a TWAP slippage tolerance larger than this constant (out of `MAX_SLIPPAGE`).
-
-*This prevents TWAP slippage tolerances so high that they would result in highly unfavorable trade
-conditions for the payer unless a quote was specified in the payment metadata.*
-
-
-```solidity
-uint256 public constant override MAX_TWAP_SLIPPAGE_TOLERANCE = 9000;
-```
-
-
-### MIN_TWAP_SLIPPAGE_TOLERANCE
-Projects cannot specify a TWAP slippage tolerance smaller than this constant (out of `MAX_SLIPPAGE`).
-
-*This prevents TWAP slippage tolerances so low that the swap always reverts to default behavior unless a
-quote is specified in the payment metadata.*
-
-
-```solidity
-uint256 public constant override MIN_TWAP_SLIPPAGE_TOLERANCE = 100;
 ```
 
 
@@ -82,6 +58,17 @@ The denominator used when calculating TWAP slippage tolerance values.
 
 ```solidity
 uint160 public constant override SLIPPAGE_DENOMINATOR = 10_000;
+```
+
+
+### UNCERTAIN_SLIPPAGE_TOLERANCE
+The uncertain slippage tolerance allowed.
+
+*This serves to avoid extremely low slippage tolerances that could result in failed swaps.*
+
+
+```solidity
+uint256 public constant override UNCERTAIN_SLIPPAGE_TOLERANCE = 1050;
 ```
 
 
@@ -201,12 +188,12 @@ mapping(uint256 projectId => address[]) internal _tokensWithAContext;
 ```
 
 
-### _twapParamsOf
-The twap params for each project's pools.
+### _twapWindowOf
+The twap window for each project's pools.
 
 
 ```solidity
-mapping(uint256 projectId => mapping(IUniswapV3Pool pool => uint256 params)) internal _twapParamsOf;
+mapping(uint256 projectId => mapping(IUniswapV3Pool pool => uint256 params)) internal _twapWindowOf;
 ```
 
 
@@ -223,9 +210,11 @@ constructor(
     address owner,
     IWETH9 weth,
     address tokenOut,
-    IUniswapV3Factory factory
+    IUniswapV3Factory factory,
+    address trustedForwarder
 )
     JBPermissioned(permissions)
+    ERC2771Context(trustedForwarder)
     Ownable(owner);
 ```
 **Parameters**
@@ -240,6 +229,7 @@ constructor(
 |`weth`|`IWETH9`|A contract which wraps the native token.|
 |`tokenOut`|`address`|The token which flows out of this terminal (JBConstants.NATIVE_TOKEN for the chain native token)|
 |`factory`|`IUniswapV3Factory`|A factory which creates Uniswap V3 pools.|
+|`trustedForwarder`|`address`|The trusted forwarder for the contract.|
 
 
 ### accountingContextForTokenOf
@@ -365,13 +355,13 @@ function supportsInterface(bytes4 interfaceId) public view virtual override retu
 |`<none>`|`bool`|A flag indicating if the provided interface ID is supported.|
 
 
-### twapParamsOf
+### twapWindowOf
 
 Returns the default twap parameters for a given pool project.
 
 
 ```solidity
-function twapParamsOf(uint256 projectId, IUniswapV3Pool pool) public view returns (uint32, uint160);
+function twapWindowOf(uint256 projectId, IUniswapV3Pool pool) public view returns (uint256);
 ```
 **Parameters**
 
@@ -384,8 +374,46 @@ function twapParamsOf(uint256 projectId, IUniswapV3Pool pool) public view return
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`uint32`|twapWindow The period of time in the past to calculate the TWAP from.|
-|`<none>`|`uint160`|slippageTolerance The maximum allowed slippage tolerance when calculating the TWAP, as a fraction out of `SLIPPAGE_DENOMINATOR`.|
+|`<none>`|`uint256`|twapWindow The period of time in the past to calculate the TWAP from.|
+
+
+### _contextSuffixLength
+
+*`ERC-2771` specifies the context as being a single address (20 bytes).*
+
+
+```solidity
+function _contextSuffixLength() internal view override(ERC2771Context, Context) returns (uint256);
+```
+
+### _msgData
+
+The calldata. Preferred to use over `msg.data`.
+
+
+```solidity
+function _msgData() internal view override(ERC2771Context, Context) returns (bytes calldata);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`bytes`|calldata The `msg.data` of this call.|
+
+
+### _msgSender
+
+The message's sender. Preferred to use over `msg.sender`.
+
+
+```solidity
+function _msgSender() internal view override(ERC2771Context, Context) returns (address sender);
+```
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`sender`|`address`|The address which sent this call.|
 
 
 ### _normalizedTokenOut
@@ -438,6 +466,40 @@ function _pickPoolAndQuote(
 |----|----|-----------|
 |`minAmountOut`|`uint256`|The minimum amount of tokens to receive from the swap.|
 |`pool`|`IUniswapV3Pool`|The pool to perform the swap in.|
+
+
+### _getSlippageTolerance
+
+Get the slippage tolerance for a given amount in and liquidity.
+
+
+```solidity
+function _getSlippageTolerance(
+    uint256 amountIn,
+    uint128 liquidity,
+    address tokenOut,
+    address tokenIn,
+    int24 arithmeticMeanTick
+)
+    internal
+    pure
+    returns (uint256);
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`amountIn`|`uint256`|The amount in to get the slippage tolerance for.|
+|`liquidity`|`uint128`|The liquidity to get the slippage tolerance for.|
+|`tokenOut`|`address`|The outgoing token to get the slippage tolerance for.|
+|`tokenIn`|`address`|The incoming token to get the slippage tolerance for.|
+|`arithmeticMeanTick`|`int24`|The arithmetic mean tick to get the slippage tolerance for.|
+
+**Returns**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`<none>`|`uint256`|slippageTolerance The slippage tolerance for the given amount in and liquidity.|
 
 
 ### addAccountingContextsFor
@@ -518,14 +580,7 @@ an address with `MODIFY_TWAP_PARAMS` permission from the owner  or the terminal 
 
 
 ```solidity
-function addTwapParamsFor(
-    uint256 projectId,
-    IUniswapV3Pool pool,
-    uint256 twapWindow,
-    uint256 slippageTolerance
-)
-    external
-    override;
+function addTwapParamsFor(uint256 projectId, IUniswapV3Pool pool, uint256 twapWindow) external override;
 ```
 **Parameters**
 
@@ -533,8 +588,7 @@ function addTwapParamsFor(
 |----|----|-----------|
 |`projectId`|`uint256`|The ID of the project to set the TWAP-based quote rules for.|
 |`pool`|`IUniswapV3Pool`||
-|`twapWindow`|`uint256`|The period of time over which the TWAP is calculated, in seconds.|
-|`slippageTolerance`|`uint256`|The maximum spread allowed between the amount received and the TWAP (as a fraction out of `SLIPPAGE_DENOMINATOR`).|
+|`twapWindow`|`uint256`|The period of time over which the TWAP is calculated, in seconds. of `SLIPPAGE_DENOMINATOR`).|
 
 
 ### migrateBalanceOf
@@ -739,13 +793,13 @@ function _swap(
 |`amountOut`|`uint256`|The amount of tokens received from the swap.|
 
 
-### _transferFor
+### _transferFrom
 
 Transfers tokens.
 
 
 ```solidity
-function _transferFor(address from, address payable to, address token, uint256 amount) internal virtual;
+function _transferFrom(address from, address payable to, address token, uint256 amount) internal virtual;
 ```
 **Parameters**
 
@@ -762,14 +816,6 @@ function _transferFor(address from, address payable to, address token, uint256 a
 
 ```solidity
 error JBSwapTerminal_CallerNotPool(address caller);
-```
-
-### JBSwapTerminal_InvalidTwapSlippageTolerance
-
-```solidity
-error JBSwapTerminal_InvalidTwapSlippageTolerance(
-    uint256 slippageTolerance, uint256 minSlippageTolerance, uint256 maxSlippageTolerance
-);
 ```
 
 ### JBSwapTerminal_InvalidTwapWindow
