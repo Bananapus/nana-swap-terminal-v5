@@ -43,7 +43,7 @@ import {IWETH9} from "./interfaces/IWETH9.sol";
 /// oracle for the project's default pool for that token (set by the project's owner).
 /// @custom:metadata-id-used quoteForSwap and permit2
 /// @custom:benediction DEVS BENEDICAT ET PROTEGAT CONTRACTVS MEAM
-contract JBSwapTerminal is
+contract JBSwapTerminalV5_1 is
     JBPermissioned,
     Ownable,
     ERC2771Context,
@@ -423,7 +423,7 @@ contract JBSwapTerminal is
             (minAmountOut) = abi.decode(quote, (uint256));
         } else {
             // Get a quote based on the pool's TWAP, including a default slippage maximum.
-            uint256 twapWindow = _twapWindowOf[projectId][pool];
+            uint256 twapWindow = twapWindowOf(projectId, pool);
 
             // Use the oldest observation if it's less than the twapWindow.
             uint32 oldestObservation = OracleLibrary.getOldestObservationSecondsAgo(address(pool));
