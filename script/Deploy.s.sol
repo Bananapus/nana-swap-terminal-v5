@@ -93,7 +93,7 @@ contract DeployScript is Script, Sphinx {
         );
 
         // Perform the deployment.
-        JBSwapTerminal ethTerminal = new JBSwapTerminal{salt: SWAP_TERMINAL}({
+        JBSwapTerminal nativeTerminal = new JBSwapTerminal{salt: SWAP_TERMINAL}({
             projects: core.projects,
             permissions: core.permissions,
             directory: core.directory,
@@ -106,7 +106,7 @@ contract DeployScript is Script, Sphinx {
         });
 
         // Set the terminal as the default in the registry.
-        registry.setDefaultTerminal(ethTerminal);
+        registry.setDefaultTerminal(nativeTerminal);
     }
 
     function _isDeployed(

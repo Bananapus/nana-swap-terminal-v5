@@ -5,14 +5,16 @@ import {stdJson} from "forge-std/Script.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 import {IJBSwapTerminal} from "../../src/interfaces/IJBSwapTerminal.sol";
+import {IJBSwapTerminalRegistry} from "../../src/interfaces/IJBSwapTerminalRegistry.sol";
 
 import {SphinxConstants, NetworkInfo} from "@sphinx-labs/contracts/SphinxConstants.sol";
 
 struct SwapTerminalDeployment {
-    IJBSwapTerminal registry;
+    IJBSwapTerminalRegistry native_registry;
+    IJBSwapTerminalRegistry usdc_registry;
+    /// @deprecated
     IJBSwapTerminal swap_terminal;
 }
-// IJBSwapTerminal usdc_swap_terminal;
 
 library SwapTerminalDeploymentLib {
     // Cheat code address, 0x7109709ECfa91a80626fF3989D68f67F5b1DD12D.
@@ -45,17 +47,13 @@ library SwapTerminalDeploymentLib {
         view
         returns (SwapTerminalDeployment memory deployment)
     {
-        deployment.registry = IJBSwapTerminal(
+        deployment.native_registry = IJBSwapTerminalRegistry(
             payable(_getDeploymentAddress(path, "nana-swap-terminal-v5", network_name, "JBSwapTerminalRegistry"))
         );
 
-        deployment.swap_terminal = IJBSwapTerminal(
-            payable(_getDeploymentAddress(path, "nana-swap-terminal-v5", network_name, "JBSwapTerminal"))
+        deployment.usdc_registry = IJBSwapTerminalRegistry(
+            payable(_getDeploymentAddress(path, "nana-swap-terminal-v5", network_name, "JBSwapTerminalUSDCRegistry"))
         );
-
-        // deployment.usdc_swap_terminal = IJBSwapTerminal(
-        //     payable(_getDeploymentAddress(path, "nana-swap-terminal-v5", network_name, "JBSwapTerminal1_1"))
-        // );
     }
 
     /// @notice Get the address of a contract that was deployed by the Deploy script.
