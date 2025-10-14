@@ -124,22 +124,22 @@ contract DeployScript is Script, Sphinx {
 
     function deploy() public sphinx {
         // Deploy and configure both the terminals.
-        JBSwapTerminal5_1 ethTerminal = deployAndConfigureETH();
+        JBSwapTerminal5_1 nativeTerminal = deployAndConfigureNative();
         JBSwapTerminal5_1 usdcTerminal = deployAndConfigureUSDC();
 
         // Set the default terminals.
-        swapTerminal.native_registry.setDefaultTerminal(ethTerminal);
+        swapTerminal.native_registry.setDefaultTerminal(nativeTerminal);
         swapTerminal.usdc_registry.setDefaultTerminal(usdcTerminal);
 
         // Both registries get both terminals added to them, in case a project accidentally uses the eth registry
         // instead of a usdc one they can switch (and other way around).
-        swapTerminal.usdc_registry.allowTerminal(ethTerminal);
+        swapTerminal.usdc_registry.allowTerminal(nativeTerminal);
         swapTerminal.native_registry.allowTerminal(usdcTerminal);
     }
 
-    function deployAndConfigureETH() internal returns (JBSwapTerminal5_1) {
+    function deployAndConfigureNative() internal returns (JBSwapTerminal5_1) {
         // Perform the deployment.
-        JBSwapTerminal5_1 ethTerminal = new JBSwapTerminal5_1{salt: SWAP_TERMINAL}({
+        JBSwapTerminal5_1 nativeTerminal = new JBSwapTerminal5_1{salt: SWAP_TERMINAL}({
             projects: core.projects,
             permissions: core.permissions,
             directory: core.directory,
@@ -155,7 +155,7 @@ contract DeployScript is Script, Sphinx {
         // DAI/ETH (0.05%)
         configurePairFor({
             chainId: ETHEREUM_MAINNET,
-            terminal: ethTerminal,
+            terminal: nativeTerminal,
             token: 0x6B175474E89094C44Da98b954EedeAC495271d0F,
             pool: IUniswapV3Pool(0x60594a405d53811d3BC4766596EFD80fd545A270),
             twapWindow: 10 minutes
@@ -163,7 +163,7 @@ contract DeployScript is Script, Sphinx {
         // USDC/ETH (0.05%)
         configurePairFor({
             chainId: ETHEREUM_MAINNET,
-            terminal: ethTerminal,
+            terminal: nativeTerminal,
             token: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48,
             pool: IUniswapV3Pool(0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640),
             twapWindow: 2 minutes
@@ -171,7 +171,7 @@ contract DeployScript is Script, Sphinx {
         // USDT/ETH (0.05%)
         configurePairFor({
             chainId: ETHEREUM_MAINNET,
-            terminal: ethTerminal,
+            terminal: nativeTerminal,
             token: 0xdAC17F958D2ee523a2206206994597C13D831ec7,
             pool: IUniswapV3Pool(0x11b815efB8f581194ae79006d24E0d814B7697F6),
             twapWindow: 2 minutes
@@ -180,7 +180,7 @@ contract DeployScript is Script, Sphinx {
         // ETH/DAI (0.3%)
         configurePairFor({
             chainId: ARBITRUM_MAINNET,
-            terminal: ethTerminal,
+            terminal: nativeTerminal,
             token: 0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1,
             pool: IUniswapV3Pool(0xA961F0473dA4864C5eD28e00FcC53a3AAb056c1b),
             twapWindow: 5 minutes
@@ -188,7 +188,7 @@ contract DeployScript is Script, Sphinx {
         // ETH/USDC (0.05%)
         configurePairFor({
             chainId: ARBITRUM_MAINNET,
-            terminal: ethTerminal,
+            terminal: nativeTerminal,
             token: 0xaf88d065e77c8cC2239327C5EDb3A432268e5831,
             pool: IUniswapV3Pool(0xC6962004f452bE9203591991D15f6b388e09E8D0),
             twapWindow: 5 minutes
@@ -196,7 +196,7 @@ contract DeployScript is Script, Sphinx {
         // ETH/USDT (0.05%)
         configurePairFor({
             chainId: ARBITRUM_MAINNET,
-            terminal: ethTerminal,
+            terminal: nativeTerminal,
             token: 0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9,
             pool: IUniswapV3Pool(0x641C00A822e8b671738d32a431a4Fb6074E5c79d),
             twapWindow: 5 minutes
@@ -205,7 +205,7 @@ contract DeployScript is Script, Sphinx {
         // ETH/DAI (0.3%)
         configurePairFor({
             chainId: OPTIMISM_MAINNET,
-            terminal: ethTerminal,
+            terminal: nativeTerminal,
             token: 0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1,
             pool: IUniswapV3Pool(0x03aF20bDAaFfB4cC0A521796a223f7D85e2aAc31),
             twapWindow: 30 minutes
@@ -213,7 +213,7 @@ contract DeployScript is Script, Sphinx {
         // USDC/ETH (0.05%)
         configurePairFor({
             chainId: OPTIMISM_MAINNET,
-            terminal: ethTerminal,
+            terminal: nativeTerminal,
             token: 0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85,
             pool: IUniswapV3Pool(0x1fb3cf6e48F1E7B10213E7b6d87D4c073C7Fdb7b),
             twapWindow: 30 minutes
@@ -221,7 +221,7 @@ contract DeployScript is Script, Sphinx {
         // USDT/ETH (0.05%)
         configurePairFor({
             chainId: OPTIMISM_MAINNET,
-            terminal: ethTerminal,
+            terminal: nativeTerminal,
             token: 0x94b008aA00579c1307B0EF2c499aD98a8ce58e58,
             pool: IUniswapV3Pool(0xc858A329Bf053BE78D6239C4A4343B8FbD21472b),
             twapWindow: 30 minutes
@@ -230,7 +230,7 @@ contract DeployScript is Script, Sphinx {
         // ETH/USDC (0.05%)
         configurePairFor({
             chainId: BASE_MAINNET,
-            terminal: ethTerminal,
+            terminal: nativeTerminal,
             token: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913,
             pool: IUniswapV3Pool(0xd0b53D9277642d899DF5C87A3966A349A798F224),
             twapWindow: 2 minutes
@@ -240,7 +240,7 @@ contract DeployScript is Script, Sphinx {
         // USDC/ETH (0.3%)
         configurePairFor({
             chainId: ETHEREUM_SEPOLIA,
-            terminal: ethTerminal,
+            terminal: nativeTerminal,
             token: 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238,
             pool: IUniswapV3Pool(0xC31a3878E3B0739866F8fC52b97Ae9611aBe427c),
             twapWindow: 2 minutes
@@ -249,7 +249,7 @@ contract DeployScript is Script, Sphinx {
         // USDC/ETH (0.3%)
         configurePairFor({
             chainId: BASE_SEPOLIA,
-            terminal: ethTerminal,
+            terminal: nativeTerminal,
             token: 0x036CbD53842c5426634e7929541eC2318f3dCF7e,
             pool: IUniswapV3Pool(0x46880b404CD35c165EDdefF7421019F8dD25F4Ad),
             twapWindow: 2 minutes
@@ -257,7 +257,7 @@ contract DeployScript is Script, Sphinx {
 
         configurePairFor({
             chainId: OPTIMISM_SEPOLIA,
-            terminal: ethTerminal,
+            terminal: nativeTerminal,
             token: 0x5fd84259d66Cd46123540766Be93DFE6D43130D7,
             pool: IUniswapV3Pool(0x8955C97261722d87D83D00708Bbe5f6B5b4477d6),
             twapWindow: 2 minutes
@@ -265,13 +265,13 @@ contract DeployScript is Script, Sphinx {
 
         configurePairFor({
             chainId: ARBITRUM_SEPOLIA,
-            terminal: ethTerminal,
+            terminal: nativeTerminal,
             token: 0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d,
             pool: IUniswapV3Pool(0x66EEAB70aC52459Dd74C6AD50D578Ef76a441bbf),
             twapWindow: 2 minutes
         });
 
-        return ethTerminal;
+        return nativeTerminal;
     }
 
     function configurePairFor(
