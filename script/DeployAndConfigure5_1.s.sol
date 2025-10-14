@@ -128,13 +128,13 @@ contract DeployScript is Script, Sphinx {
         JBSwapTerminalV5_1 usdcTerminal = deployAndConfigureUSDC();
 
         // Set the default terminals.
-        swapTerminal.eth_registry.setDefaultTerminal(ethTerminal);
+        swapTerminal.native_registry.setDefaultTerminal(ethTerminal);
         swapTerminal.usdc_registry.setDefaultTerminal(usdcTerminal);
 
         // Both registries get both terminals added to them, in case a project accidentally uses the eth registry
         // instead of a usdc one they can switch (and other way around).
         swapTerminal.usdc_registry.allowTerminal(ethTerminal);
-        swapTerminal.usdc_registry.allowTerminal(usdcTerminal);
+        swapTerminal.native_registry.allowTerminal(usdcTerminal);
     }
 
     function deployAndConfigureETH() internal returns (JBSwapTerminalV5_1) {

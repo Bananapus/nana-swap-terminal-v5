@@ -10,7 +10,7 @@ import {IJBSwapTerminalRegistry} from "../../src/interfaces/IJBSwapTerminalRegis
 import {SphinxConstants, NetworkInfo} from "@sphinx-labs/contracts/SphinxConstants.sol";
 
 struct SwapTerminalDeployment {
-    IJBSwapTerminalRegistry eth_registry;
+    IJBSwapTerminalRegistry native_registry;
     IJBSwapTerminalRegistry usdc_registry;
     /// @deprecated
     IJBSwapTerminal swap_terminal;
@@ -47,7 +47,7 @@ library SwapTerminalDeploymentLib {
         view
         returns (SwapTerminalDeployment memory deployment)
     {
-        deployment.eth_registry = IJBSwapTerminalRegistry(
+        deployment.native_registry = IJBSwapTerminalRegistry(
             payable(_getDeploymentAddress(path, "nana-swap-terminal-v5", network_name, "JBSwapTerminalRegistry"))
         );
 
