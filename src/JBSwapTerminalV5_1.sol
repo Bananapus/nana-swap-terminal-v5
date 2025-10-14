@@ -43,7 +43,7 @@ import {IWETH9} from "./interfaces/IWETH9.sol";
 /// oracle for the project's default pool for that token (set by the project's owner).
 /// @custom:metadata-id-used quoteForSwap and permit2
 /// @custom:benediction DEVS BENEDICAT ET PROTEGAT CONTRACTVS MEAM
-contract JBSwapTerminalV5_1 is
+contract JBSwapTerminal5_1 is
     JBPermissioned,
     Ownable,
     ERC2771Context,
