@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.23;
+pragma solidity 0.8.26;
 
 import "@bananapus/core-v5/script/helpers/CoreDeploymentLib.sol";
 import {JBConstants} from "@bananapus/core-v5/src/libraries/JBConstants.sol";
@@ -7,7 +7,7 @@ import {IERC20, IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extens
 
 import {Sphinx} from "@sphinx-labs/contracts/SphinxPlugin.sol";
 
-import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
+import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 
 import {Script} from "forge-std/Script.sol";
 
@@ -21,7 +21,7 @@ contract DeployScript is Script, Sphinx {
     /// @notice tracks the addresses that are required for the chain we are deploying to.
     address manager = address(0x80a8F7a4bD75b539CE26937016Df607fdC9ABeb5); // `nana-core-v5` multisig.
     address weth;
-    address factory;
+    address poolManager;
     address trustedForwarder;
     IPermit2 permit2;
 
@@ -47,38 +47,39 @@ contract DeployScript is Script, Sphinx {
         // We use the same trusted forwarder as the core deployment.
         trustedForwarder = core.permissions.trustedForwarder();
 
+        // Uniswap V4 PoolManager addresses per chain.
         // Ethereum Mainnet
         if (block.chainid == 1) {
             weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-            factory = 0x1F98431c8aD98523631AE4a59f267346ea31F984;
+            poolManager = 0x000000000004444c5dc75cB358380D2e3dE08A90;
             // Ethereum Sepolia
         } else if (block.chainid == 11_155_111) {
             weth = 0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9;
-            factory = 0x0227628f3F023bb0B980b67D528571c95c6DaC1c;
+            poolManager = 0x000000000004444c5dc75cB358380D2e3dE08A90;
             // Optimism Mainnet
         } else if (block.chainid == 10) {
             weth = 0x4200000000000000000000000000000000000006;
-            factory = 0x1F98431c8aD98523631AE4a59f267346ea31F984;
+            poolManager = 0x9a13f98cb987694c9f086b1f5eb990eea8264ec3;
             // Base Mainnet
         } else if (block.chainid == 8453) {
             weth = 0x4200000000000000000000000000000000000006;
-            factory = 0x33128a8fC17869897dcE68Ed026d694621f6FDfD;
+            poolManager = 0x498581ff718922c3f8e6a244956af099b2652b2b;
             // Optimism Sepolia
         } else if (block.chainid == 11_155_420) {
             weth = 0x4200000000000000000000000000000000000006;
-            factory = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24;
+            poolManager = 0x000000000004444c5dc75cB358380D2e3dE08A90;
             // Base sepolia
         } else if (block.chainid == 84_532) {
             weth = 0x4200000000000000000000000000000000000006;
-            factory = 0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24;
+            poolManager = 0x000000000004444c5dc75cB358380D2e3dE08A90;
             // Arbitrum Mainnet
         } else if (block.chainid == 42_161) {
             weth = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
-            factory = 0x1F98431c8aD98523631AE4a59f267346ea31F984;
+            poolManager = 0x360e68faccca8ca495c1b759fd9eee466db9fb32;
             // Arbitrum Sepolia
         } else if (block.chainid == 421_614) {
             weth = 0x980B62Da83eFf3D4576C647993b0c1D7faf17c73;
-            factory = 0x248AB79Bbb9bC29bB72f7Cd42F17e054Fc40188e;
+            poolManager = 0x000000000004444c5dc75cB358380D2e3dE08A90;
         } else {
             revert("Invalid RPC / no juice contracts deployed on this network");
         }
@@ -94,14 +95,14 @@ contract DeployScript is Script, Sphinx {
 
         // Perform the deployment.
         JBSwapTerminal ethTerminal = new JBSwapTerminal{salt: SWAP_TERMINAL}({
-            projects: core.projects,
-            permissions: core.permissions,
             directory: core.directory,
+            permissions: core.permissions,
+            projects: core.projects,
             permit2: permit2,
             owner: address(manager),
             weth: IWETH9(weth),
             tokenOut: JBConstants.NATIVE_TOKEN,
-            factory: IUniswapV3Factory(factory),
+            poolManager: IPoolManager(poolManager),
             trustedForwarder: trustedForwarder
         });
 
