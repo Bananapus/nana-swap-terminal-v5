@@ -364,9 +364,9 @@ contract JBSwapTerminal is
 
         bool zeroForOne = normalizedTokenIn < normalizedTokenOut;
         uint160 sqrtP = TickMath.getSqrtPriceAtTick(arithmeticMeanTick);
-        uint256 impactBps = JBSwapLib.calculateImpact(amount, meanLiquidity, sqrtP, zeroForOne);
+        uint256 impact = JBSwapLib.calculateImpact(amount, meanLiquidity, sqrtP, zeroForOne);
         uint256 poolFeeBps = uint256(key.fee) / 100;
-        uint256 slippageTolerance = JBSwapLib.getSlippageTolerance(impactBps, poolFeeBps);
+        uint256 slippageTolerance = JBSwapLib.getSlippageTolerance(impact, poolFeeBps);
 
         if (slippageTolerance >= SLIPPAGE_DENOMINATOR) return 0;
 
@@ -436,9 +436,9 @@ contract JBSwapTerminal is
             // Calculate impact and slippage.
             bool zeroForOne = normalizedTokenIn < normalizedTokenOut;
             uint160 sqrtP = TickMath.getSqrtPriceAtTick(arithmeticMeanTick);
-            uint256 impactBps = JBSwapLib.calculateImpact(amount, meanLiquidity, sqrtP, zeroForOne);
+            uint256 impact = JBSwapLib.calculateImpact(amount, meanLiquidity, sqrtP, zeroForOne);
             uint256 poolFeeBps = uint256(key.fee) / 100;
-            uint256 slippageTolerance = JBSwapLib.getSlippageTolerance(impactBps, poolFeeBps);
+            uint256 slippageTolerance = JBSwapLib.getSlippageTolerance(impact, poolFeeBps);
 
             // If max slippage, return 0.
             if (slippageTolerance >= SLIPPAGE_DENOMINATOR) return (0, key);

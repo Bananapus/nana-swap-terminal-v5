@@ -693,36 +693,36 @@ contract V4SwapTerminalTest is Test {
     // =====================================================================
 
     /// @notice Deterministic formula regression at known fee tiers and key points.
+    /// @dev Impact values are scaled by IMPACT_PRECISION (1e18) / old_amplifier (1e5) = 1e13.
+    ///      The sigmoid shape is identical; only the zero-impact behavior changed.
     function test_slippageFormulaRegression() public pure {
-        // impactBps=0 always returns UNCERTAIN_TOLERANCE
-        assertEq(JBSwapLib.getSlippageTolerance(0, 0), 1050);
-        assertEq(JBSwapLib.getSlippageTolerance(0, 30), 1050);
-        assertEq(JBSwapLib.getSlippageTolerance(0, 10000), 1050);
+        // impact=0 returns minSlippage (not the old UNCERTAIN_TOLERANCE of 1050).
+        // This is the key fix: negligible swaps in deep pools get tight tolerance.
+        assertEq(JBSwapLib.getSlippageTolerance(0, 0), 200, "impact=0,fee=0 -> minSlippage=200");
+        assertEq(JBSwapLib.getSlippageTolerance(0, 30), 200, "impact=0,fee=30 -> minSlippage=200");
+        assertEq(JBSwapLib.getSlippageTolerance(0, 3000), 3100, "impact=0,fee=3000 -> minSlippage=3100");
+        assertEq(JBSwapLib.getSlippageTolerance(0, 10000), 8800, "impact=0,fee=10000 -> MAX_SLIPPAGE");
 
+        // Scaled impact values (old 5000 bps = 5000 * 1e13 = 5e16 in new scale)
         // poolFeeBps=30: minSlippage=200, range=8600
-        assertEq(JBSwapLib.getSlippageTolerance(5000, 30), 4500);
-        assertEq(JBSwapLib.getSlippageTolerance(1, 30), 201);
+        assertEq(JBSwapLib.getSlippageTolerance(5e16, 30), 4500);
+        assertEq(JBSwapLib.getSlippageTolerance(1e13, 30), 201);
 
         // poolFeeBps=500 (5%): minSlippage=600, range=8200
-        assertEq(JBSwapLib.getSlippageTolerance(5000, 500), 4700);
+        assertEq(JBSwapLib.getSlippageTolerance(5e16, 500), 4700);
 
         // poolFeeBps=3000 (30%): minSlippage=3100, range=5700
-        assertEq(JBSwapLib.getSlippageTolerance(5000, 3000), 5950);
+        assertEq(JBSwapLib.getSlippageTolerance(5e16, 3000), 5950);
 
-        // poolFeeBps >= 8700: capped at MAX_SLIPPAGE (was underflow bug)
-        assertEq(JBSwapLib.getSlippageTolerance(1, 8700), 8800);
-        assertEq(JBSwapLib.getSlippageTolerance(5000, 9999), 8800);
-        assertEq(JBSwapLib.getSlippageTolerance(1, type(uint256).max), 8800);
+        // poolFeeBps >= 8700: capped at MAX_SLIPPAGE
+        assertEq(JBSwapLib.getSlippageTolerance(1e13, 8700), 8800);
+        assertEq(JBSwapLib.getSlippageTolerance(5e16, 9999), 8800);
+        assertEq(JBSwapLib.getSlippageTolerance(1e13, type(uint256).max), 8800);
     }
 
     /// @notice Fuzz: never reverts, always in [minSlippage, MAX_SLIPPAGE].
-    function testFuzz_slippageBounds(uint256 impactBps, uint256 poolFeeBps) public pure {
-        uint256 tolerance = JBSwapLib.getSlippageTolerance(impactBps, poolFeeBps);
-
-        if (impactBps == 0) {
-            assertEq(tolerance, 1050);
-            return;
-        }
+    function testFuzz_slippageBounds(uint256 impact, uint256 poolFeeBps) public pure {
+        uint256 tolerance = JBSwapLib.getSlippageTolerance(impact, poolFeeBps);
 
         uint256 minSlippage;
         if (poolFeeBps >= 8800) {
@@ -779,12 +779,9 @@ contract V4SwapTerminalTest is Test {
         uint256 impact = JBSwapLib.calculateImpact(amountIn, liquidity, sqrtP, zeroForOne);
         uint256 tolerance = JBSwapLib.getSlippageTolerance(impact, poolFeeBps);
 
-        if (impact == 0) {
-            assertEq(tolerance, 1050);
-        } else {
-            assertLe(tolerance, 8800);
-            assertGe(tolerance, 200);
-        }
+        assertLe(tolerance, 8800, "Above MAX_SLIPPAGE");
+        // minSlippage is at least 200 (floor)
+        assertGe(tolerance, 200, "Below absolute floor");
     }
 
     // =====================================================================
@@ -963,13 +960,15 @@ contract V4SwapTerminalTest is Test {
     }
 
     /// @notice Deterministic multi-fee-tier monotonicity.
+    /// @dev Impact values scaled to match IMPACT_PRECISION (1e13 per old bps).
     function test_slippageMultiFeeTiers() public pure {
         uint256[7] memory fees = [uint256(1), 5, 30, 100, 500, 3000, 10000];
 
         for (uint256 f = 0; f < fees.length; f++) {
             uint256 poolFeeBps = fees[f];
             uint256 prevTol = 0;
-            for (uint256 impact = 1; impact <= 20_000; impact += 100) {
+            // Scale: old range [1..20000 bps] -> new [1e13..20000e13]
+            for (uint256 impact = 1e13; impact <= 20_000e13; impact += 100e13) {
                 uint256 tol = JBSwapLib.getSlippageTolerance(impact, poolFeeBps);
                 assertGe(tol, prevTol, "Not monotonic");
                 assertLe(tol, 8800, "Exceeds MAX_SLIPPAGE");
