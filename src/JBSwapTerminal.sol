@@ -420,7 +420,15 @@ contract JBSwapTerminal is
 
         // If there's a quote, use it.
         if (exists) {
-            // If there is a quote, use it for the swap config.
+            // M-4 NOTE: The user-provided quote is accepted without a TWAP floor. This is by design:
+            // - The quote comes from the payer (msg.sender) who is spending their own funds. A low minAmountOut
+            //   only harms the payer themselves (via sandwich attacks), not the project.
+            // - Frontends/aggregators typically fetch real-time quotes from Uniswap's Quoter contract, which are
+            //   more accurate than TWAP. Enforcing a TWAP floor could cause legitimate swaps to revert if the
+            //   TWAP is stale or has been manipulated upward.
+            // - Protocol-internal flows (e.g., payouts via JBMultiTerminal._sendPayoutToSplit) do NOT include a
+            //   quoteForSwap in metadata, so they always use the TWAP-based fallback below.
+            // - This pattern is consistent with the JBBuybackHook's "quote" metadata and standard DEX routers.
             (minAmountOut) = abi.decode(quote, (uint256));
         } else {
             // Get a quote based on the pool's TWAP, including a default slippage maximum.
