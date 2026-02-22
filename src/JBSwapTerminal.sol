@@ -72,6 +72,12 @@ contract JBSwapTerminal is
     error JBSwapTerminal_ZeroToken();
 
     //*********************************************************************//
+    // -------------------------- custom events -------------------------- //
+    //*********************************************************************//
+
+    event Permit2AllowanceFailed(address indexed token, address indexed owner, bytes reason);
+
+    //*********************************************************************//
     // ------------------------- public constants ------------------------ //
     //*********************************************************************//
 
@@ -824,7 +830,9 @@ contract JBSwapTerminal is
             });
 
             try PERMIT2.permit({owner: msg.sender, permitSingle: permitSingle, signature: allowance.signature}) {}
-                catch {}
+                catch (bytes memory reason) {
+                    emit Permit2AllowanceFailed(token, msg.sender, reason);
+                }
         }
 
         // Transfer the tokens from the `msg.sender` to this terminal.
