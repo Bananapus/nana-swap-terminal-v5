@@ -59,9 +59,9 @@ contract JBSwapTerminalRegistry is IJBSwapTerminalRegistry, JBPermissioned, Owna
     /// @custom:param projectId The ID of the project to get the locked hook for.
     mapping(uint256 projectId => bool) public override hasLockedTerminal;
 
-    /// @notice The terminal for the given project.
+    /// @notice The terminal explicitly set for the given project.
     /// @custom:param projectId The ID of the project to get the terminal for.
-    mapping(uint256 projectId => IJBTerminal) public override terminalOf;
+    mapping(uint256 projectId => IJBTerminal) internal _terminalOf;
 
     /// @notice The address of each project's token.
     /// @custom:param projectId The ID of the project the token belongs to.
@@ -95,6 +95,14 @@ contract JBSwapTerminalRegistry is IJBSwapTerminalRegistry, JBPermissioned, Owna
     // ------------------------- external views -------------------------- //
     //*********************************************************************//
 
+    /// @notice The terminal for the given project, or the default terminal if none is set.
+    /// @param projectId The ID of the project to get the terminal for.
+    /// @return terminal The terminal for the project.
+    function terminalOf(uint256 projectId) external view override returns (IJBTerminal terminal) {
+        terminal = _terminalOf[projectId];
+        if (terminal == IJBTerminal(address(0))) terminal = defaultTerminal;
+    }
+
     /// @notice Get the accounting context for the specified project ID and token.
     /// @dev Accounting contexts are set up in `addDefaultPool(...)`.
     /// @param projectId The ID of the project to get the accounting context for.
@@ -109,10 +117,8 @@ contract JBSwapTerminalRegistry is IJBSwapTerminalRegistry, JBPermissioned, Owna
         override
         returns (JBAccountingContext memory context)
     {
-        // Get the terminal for the project.
-        IJBTerminal terminal = terminalOf[projectId];
-
-        // If the terminal is not set, use the default terminal.
+        // Get the terminal for the project (falls back to default).
+        IJBTerminal terminal = _terminalOf[projectId];
         if (terminal == IJBTerminal(address(0))) terminal = defaultTerminal;
 
         // Get the accounting context for the token.
@@ -130,10 +136,8 @@ contract JBSwapTerminalRegistry is IJBSwapTerminalRegistry, JBPermissioned, Owna
         override
         returns (JBAccountingContext[] memory contexts)
     {
-        // Get the terminal for the project.
-        IJBTerminal terminal = terminalOf[projectId];
-
-        // If the terminal is not set, use the default terminal.
+        // Get the terminal for the project (falls back to default).
+        IJBTerminal terminal = _terminalOf[projectId];
         if (terminal == IJBTerminal(address(0))) terminal = defaultTerminal;
 
         // Get the accounting context for the token.
@@ -218,10 +222,8 @@ contract JBSwapTerminalRegistry is IJBSwapTerminalRegistry, JBPermissioned, Owna
         payable
         override
     {
-        // Get a reference to the project's primary terminal for the destination token that is being swapped into.
-        IJBTerminal terminal = terminalOf[projectId];
-
-        // If the terminal is not set, use the default terminal.
+        // Get the terminal for the project (falls back to default).
+        IJBTerminal terminal = _terminalOf[projectId];
         if (terminal == IJBTerminal(address(0))) terminal = defaultTerminal;
 
         // Accept the funds for the token.
@@ -279,7 +281,7 @@ contract JBSwapTerminalRegistry is IJBSwapTerminalRegistry, JBPermissioned, Owna
         hasLockedTerminal[projectId] = true;
 
         // If the terminal is not set, lock in the default terminal.
-        if (terminalOf[projectId] == IJBTerminal(address(0))) terminalOf[projectId] = defaultTerminal;
+        if (_terminalOf[projectId] == IJBTerminal(address(0))) _terminalOf[projectId] = defaultTerminal;
 
         emit JBSwapTerminalRegistry_LockTerminal(projectId);
     }
@@ -326,10 +328,8 @@ contract JBSwapTerminalRegistry is IJBSwapTerminalRegistry, JBPermissioned, Owna
         override
         returns (uint256)
     {
-        // Get the terminal for the project.
-        IJBTerminal terminal = terminalOf[projectId];
-
-        // If the terminal is not set, use the default terminal.
+        // Get the terminal for the project (falls back to default).
+        IJBTerminal terminal = _terminalOf[projectId];
         if (terminal == IJBTerminal(address(0))) terminal = defaultTerminal;
 
         // Accept the funds for the token.
@@ -384,7 +384,7 @@ contract JBSwapTerminalRegistry is IJBSwapTerminalRegistry, JBPermissioned, Owna
         });
 
         // Set the terminal.
-        terminalOf[projectId] = terminal;
+        _terminalOf[projectId] = terminal;
 
         emit JBSwapTerminalRegistry_SetTerminal(projectId, terminal);
     }
