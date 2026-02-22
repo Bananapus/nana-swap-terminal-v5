@@ -27,14 +27,20 @@ contract UnitFixture is Test {
     function setUp() public virtual {
         // -- create random addresses --
         mockJBProjects = IJBProjects(makeAddr("mockJBProjects"));
+        vm.etch(address(mockJBProjects), hex"00");
         mockJBPermissions = IJBPermissions(makeAddr("mockJBPermissions"));
+        vm.etch(address(mockJBPermissions), hex"00");
         mockJBDirectory = IJBDirectory(makeAddr("mockJBDirectory"));
+        vm.etch(address(mockJBDirectory), hex"00");
 
         mockPermit2 = IPermit2(makeAddr("mockPermit2"));
+        vm.etch(address(mockPermit2), hex"00");
         mockWETH = IWETH9(makeAddr("mockWETH"));
+        vm.etch(address(mockWETH), hex"00");
         mockTokenOut = makeAddr("tokenOut");
 
         mockUniswapFactory = IUniswapV3Factory(makeAddr("mockUniswapFactory"));
+        vm.etch(address(mockUniswapFactory), hex"00");
 
         terminalOwner = makeAddr("terminalOwner");
 
