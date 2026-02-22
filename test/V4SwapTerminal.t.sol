@@ -599,6 +599,7 @@ contract V4SwapTerminalTest is Test {
                 key: _makePoolKey(),
                 zeroForOne: true,
                 amountIn: 100,
+                minimumSwapAmountOut: 0,
                 tokenIn: tokenA
             })
         );
@@ -784,6 +785,181 @@ contract V4SwapTerminalTest is Test {
             assertLe(tolerance, 8800);
             assertGe(tolerance, 200);
         }
+    }
+
+    // =====================================================================
+    // Test: sqrtPriceLimitFromAmounts formula regression
+    // =====================================================================
+
+    function test_sqrtPriceLimitFormula() public pure {
+        // Case 1: no minimum -> extreme values
+        assertEq(
+            JBSwapLib.sqrtPriceLimitFromAmounts(100, 0, true),
+            TickMath.MIN_SQRT_PRICE + 1,
+            "zero min zeroForOne"
+        );
+        assertEq(
+            JBSwapLib.sqrtPriceLimitFromAmounts(100, 0, false),
+            TickMath.MAX_SQRT_PRICE - 1,
+            "zero min !zeroForOne"
+        );
+
+        // Case 2: 1:1 ratio (amountIn == minOut)
+        // sqrt(1 * 2^192) = 2^96 = 79228162514264337593543950336
+        uint160 expected1to1 = uint160(uint256(1) << 96);
+        assertEq(
+            JBSwapLib.sqrtPriceLimitFromAmounts(1e18, 1e18, true),
+            expected1to1,
+            "1:1 zeroForOne"
+        );
+        assertEq(
+            JBSwapLib.sqrtPriceLimitFromAmounts(1e18, 1e18, false),
+            expected1to1,
+            "1:1 !zeroForOne"
+        );
+
+        // Case 3: zeroForOne with minOut=1, amountIn=4
+        // sqrt(1/4 * 2^192) = sqrt(2^192 / 4) = 2^96 / 2 = 2^95
+        uint160 expected = uint160(uint256(1) << 95);
+        assertEq(
+            JBSwapLib.sqrtPriceLimitFromAmounts(4, 1, true),
+            expected,
+            "4:1 zeroForOne"
+        );
+    }
+
+    // =====================================================================
+    // Test: fuzz sqrtPriceLimitFromAmounts always in valid range
+    // =====================================================================
+
+    function testFuzz_sqrtPriceLimitBounds(uint256 amountIn, uint256 minOut, bool zeroForOne) public pure {
+        amountIn = bound(amountIn, 1, type(uint128).max);
+        minOut = bound(minOut, 0, type(uint128).max);
+
+        uint160 limit = JBSwapLib.sqrtPriceLimitFromAmounts(amountIn, minOut, zeroForOne);
+
+        assertGe(uint256(limit), uint256(TickMath.MIN_SQRT_PRICE), "Below MIN_SQRT_PRICE");
+        assertLe(uint256(limit), uint256(TickMath.MAX_SQRT_PRICE), "Above MAX_SQRT_PRICE");
+    }
+
+    // =====================================================================
+    // Test: MIN_TWAP_WINDOW is 5 minutes
+    // =====================================================================
+
+    function test_minTwapWindow5Minutes() public {
+        PoolKey memory key = _makePoolKey();
+        _registerPool(PROJECT_ID, key, 300); // 5 min should work
+
+        PoolId poolId = key.toId();
+
+        // 4 minutes should revert (below new 5 minute minimum)
+        vm.mockCall(address(projects), abi.encodeCall(IERC721.ownerOf, (PROJECT_ID)), abi.encode(projectOwner));
+        vm.expectRevert(
+            abi.encodeWithSelector(JBSwapTerminal.JBSwapTerminal_InvalidTwapWindow.selector, 240, 300, 172800)
+        );
+        vm.prank(projectOwner);
+        swapTerminal.addTwapParamsFor(PROJECT_ID, poolId, 240);
+
+        // 2 minutes should also revert
+        vm.expectRevert(
+            abi.encodeWithSelector(JBSwapTerminal.JBSwapTerminal_InvalidTwapWindow.selector, 120, 300, 172800)
+        );
+        vm.prank(projectOwner);
+        swapTerminal.addTwapParamsFor(PROJECT_ID, poolId, 120);
+    }
+
+    // =====================================================================
+    // Test: Payer quote cross-validated against TWAP
+    // =====================================================================
+
+    function test_payerQuoteCrossValidation() public {
+        uint256 amountIn = 1000e18;
+        uint256 twapWindow = 600; // 10 minutes
+
+        PoolKey memory key = _makePoolKey();
+        _registerPool(PROJECT_ID, key, twapWindow);
+
+        // Set oracle: tick=0 (1:1 price), non-zero liquidity
+        int56 tc0 = 0;
+        int56 tc1 = 0;
+        uint160 spl0 = 1000;
+        uint160 spl1 = 2000;
+        oracleHook.setObserveData(tc0, tc1, spl0, spl1);
+
+        // Set liquidity for impact calc
+        _setLiquidityInMock(key.toId(), 1000000e18);
+
+        // At tick=0, TWAP quote ~ 1000e18. With slippage, TWAP minimum ~ 980e18 (roughly).
+        // User provides a stale quote of 500e18 (way too low).
+        uint256 staleQuote = 500e18;
+
+        // The swap should use the TWAP minimum (higher than stale quote).
+        // To verify, we set the swap output to 700e18 which is above the stale quote
+        // but likely below the TWAP minimum.
+        uint256 actualOut = 700e18;
+        poolManager.setMockDeltas(int128(int256(amountIn)), -int128(int256(actualOut)));
+
+        _mockTokenTransfers(tokenA, caller, amountIn);
+        vm.mockCall(address(tokenA), abi.encodeCall(IERC20.transfer, (address(poolManager), amountIn)), abi.encode(true));
+        vm.mockCall(tokenOut, abi.encodeCall(IERC20.transfer, (address(swapTerminal), actualOut)), abi.encode(true));
+
+        _mockDirectoryTerminal(PROJECT_ID);
+
+        bytes memory metadata = _quoteMetadata(staleQuote);
+
+        // The cross-validation should override staleQuote with TWAP minimum,
+        // and the swap output (700e18) should be less than TWAP minimum -> revert
+        vm.expectRevert(); // SpecifiedSlippageExceeded
+        vm.prank(caller);
+        swapTerminal.pay({
+            projectId: PROJECT_ID,
+            token: tokenA,
+            amount: amountIn,
+            beneficiary: beneficiary,
+            minReturnedTokens: 0,
+            memo: "",
+            metadata: metadata
+        });
+    }
+
+    // =====================================================================
+    // Test: sqrtPriceLimit is enforced (swap stops at limit)
+    // =====================================================================
+
+    function test_sqrtPriceLimitEnforced() public {
+        uint256 amountIn = 1000e18;
+        // Set a minimum that the swap won't meet, to verify price limit kicks in.
+        // With an explicit high quote, the sqrtPriceLimit will be tight.
+        // If the mock returns less, the post-swap check in _swap should revert.
+        uint256 minQuote = 990e18;
+        uint256 actualOut = 950e18; // Below minimum -> should revert
+
+        PoolKey memory key = _makePoolKey();
+        _registerPool(PROJECT_ID, key, 0);
+
+        poolManager.setMockDeltas(int128(int256(amountIn)), -int128(int256(actualOut)));
+
+        _mockTokenTransfers(tokenA, caller, amountIn);
+        vm.mockCall(address(tokenA), abi.encodeCall(IERC20.transfer, (address(poolManager), amountIn)), abi.encode(true));
+        vm.mockCall(tokenOut, abi.encodeCall(IERC20.transfer, (address(swapTerminal), actualOut)), abi.encode(true));
+
+        _mockDirectoryTerminal(PROJECT_ID);
+
+        bytes memory metadata = _quoteMetadata(minQuote);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(JBSwapTerminal.JBSwapTerminal_SpecifiedSlippageExceeded.selector, actualOut, minQuote)
+        );
+        vm.prank(caller);
+        swapTerminal.pay({
+            projectId: PROJECT_ID,
+            token: tokenA,
+            amount: amountIn,
+            beneficiary: beneficiary,
+            minReturnedTokens: 0,
+            memo: "",
+            metadata: metadata
+        });
     }
 
     /// @notice Deterministic multi-fee-tier monotonicity.

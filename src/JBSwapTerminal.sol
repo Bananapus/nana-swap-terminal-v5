@@ -91,7 +91,7 @@ contract JBSwapTerminal is
     uint256 public constant override MAX_TWAP_WINDOW = 2 days;
 
     /// @notice Projects cannot specify a TWAP window shorter than this constant.
-    uint256 public constant override MIN_TWAP_WINDOW = 2 minutes;
+    uint256 public constant override MIN_TWAP_WINDOW = 5 minutes;
 
     /// @notice The denominator used when calculating TWAP slippage tolerance values.
     uint160 public constant override SLIPPAGE_DENOMINATOR = 10_000;
@@ -153,6 +153,7 @@ contract JBSwapTerminal is
         PoolKey key;
         bool zeroForOne;
         uint256 amountIn;
+        uint256 minimumSwapAmountOut;
         address tokenIn;
     }
 
@@ -332,6 +333,46 @@ contract JBSwapTerminal is
         return _OUT_IS_NATIVE_TOKEN ? address(WETH) : TOKEN_OUT;
     }
 
+    /// @notice Compute the TWAP-based minimum output for cross-validating user quotes.
+    /// @dev Returns 0 if no TWAP data is available.
+    function _twapMinimumOut(
+        uint256 projectId,
+        PoolKey memory key,
+        uint256 amount,
+        address normalizedTokenIn,
+        address normalizedTokenOut
+    )
+        internal
+        view
+        returns (uint256)
+    {
+        PoolId poolId = key.toId();
+        uint256 twapWindow = _twapWindowOf[projectId][poolId];
+        if (twapWindow == 0) twapWindow = _twapWindowOf[DEFAULT_PROJECT_ID][poolId];
+        if (twapWindow == 0) return 0;
+
+        (uint256 twapQuote, int24 arithmeticMeanTick, uint128 meanLiquidity) = JBSwapLib.getQuoteFromOracle({
+            poolManager: POOL_MANAGER,
+            key: key,
+            twapWindow: uint32(twapWindow),
+            amountIn: uint128(amount),
+            baseToken: normalizedTokenIn,
+            quoteToken: normalizedTokenOut
+        });
+
+        if (twapQuote == 0 || meanLiquidity == 0) return 0;
+
+        bool zeroForOne = normalizedTokenIn < normalizedTokenOut;
+        uint160 sqrtP = TickMath.getSqrtPriceAtTick(arithmeticMeanTick);
+        uint256 impactBps = JBSwapLib.calculateImpact(amount, meanLiquidity, sqrtP, zeroForOne);
+        uint256 poolFeeBps = uint256(key.fee) / 100;
+        uint256 slippageTolerance = JBSwapLib.getSlippageTolerance(impactBps, poolFeeBps);
+
+        if (slippageTolerance >= SLIPPAGE_DENOMINATOR) return 0;
+
+        return twapQuote - (twapQuote * slippageTolerance) / SLIPPAGE_DENOMINATOR;
+    }
+
     /// @notice Picks the pool and quote for the swap.
     function _pickPoolAndQuote(
         bytes calldata metadata,
@@ -363,6 +404,11 @@ contract JBSwapTerminal is
 
         if (exists) {
             (minAmountOut) = abi.decode(quote, (uint256));
+
+            // Cross-validate: also compute TWAP-based minimum and use the higher of the two.
+            uint256 twapMinimum =
+                _twapMinimumOut(projectId, key, amount, normalizedTokenIn, normalizedTokenOut);
+            if (twapMinimum > minAmountOut) minAmountOut = twapMinimum;
         } else {
             // Get a TWAP-based quote.
             PoolId poolId = key.toId();
@@ -561,15 +607,20 @@ contract JBSwapTerminal is
 
         SwapCallbackData memory params = abi.decode(data, (SwapCallbackData));
 
+        // Compute a real sqrtPriceLimit to stop the swap if the price moves too far.
+        uint160 sqrtPriceLimit = JBSwapLib.sqrtPriceLimitFromAmounts({
+            amountIn: params.amountIn,
+            minimumAmountOut: params.minimumSwapAmountOut,
+            zeroForOne: params.zeroForOne
+        });
+
         // Execute the swap.
         BalanceDelta delta = POOL_MANAGER.swap({
             key: params.key,
             params: SwapParams({
                 zeroForOne: params.zeroForOne,
                 amountSpecified: -int256(params.amountIn), // Negative = exact input
-                sqrtPriceLimitX96: params.zeroForOne
-                    ? TickMath.MIN_SQRT_PRICE + 1
-                    : TickMath.MAX_SQRT_PRICE - 1
+                sqrtPriceLimitX96: sqrtPriceLimit
             }),
             hookData: ""
         });
@@ -740,7 +791,13 @@ contract JBSwapTerminal is
 
         // Encode callback data.
         bytes memory callbackData = abi.encode(
-            SwapCallbackData({key: key, zeroForOne: zeroForOne, amountIn: amountIn, tokenIn: tokenIn})
+            SwapCallbackData({
+                key: key,
+                zeroForOne: zeroForOne,
+                amountIn: amountIn,
+                minimumSwapAmountOut: minAmountOut,
+                tokenIn: tokenIn
+            })
         );
 
         // Execute the V4 unlock/callback swap. Reverts on failure (no fallback).

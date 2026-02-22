@@ -7,6 +7,7 @@ import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
 import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IGeomeanOracle} from "../interfaces/IGeomeanOracle.sol";
 
 /// @notice Shared library for oracle queries, slippage tolerance, and price calculations
@@ -194,6 +195,93 @@ library JBSwapLib {
             quoteAmount = baseToken < quoteToken
                 ? FullMath.mulDiv(ratioX128, baseAmount, 1 << 128)
                 : FullMath.mulDiv(1 << 128, baseAmount, ratioX128);
+        }
+    }
+
+    //*********************************************************************//
+    // -------------------- Price Limit -------------------------------- //
+    //*********************************************************************//
+
+    /// @notice Compute a sqrtPriceLimitX96 from input/output amounts so the swap stops
+    ///         if the execution price would be worse than the minimum acceptable rate.
+    /// @dev When `minimumAmountOut == 0`, returns extreme values (no limit, current behaviour).
+    /// @param amountIn The amount of tokens being swapped in.
+    /// @param minimumAmountOut The minimum acceptable output (from payer quote or TWAP).
+    /// @param zeroForOne True when selling token0 for token1 (price decreases).
+    /// @return sqrtPriceLimit The V4-compatible sqrtPriceLimitX96.
+    function sqrtPriceLimitFromAmounts(
+        uint256 amountIn,
+        uint256 minimumAmountOut,
+        bool zeroForOne
+    )
+        internal
+        pure
+        returns (uint160 sqrtPriceLimit)
+    {
+        // No minimum specified — no limit (legacy behaviour).
+        if (minimumAmountOut == 0 || amountIn == 0) {
+            return zeroForOne
+                ? TickMath.MIN_SQRT_PRICE + 1
+                : TickMath.MAX_SQRT_PRICE - 1;
+        }
+
+        // sqrtPriceX96 = sqrt(price) * 2^96
+        // price = token1 / token0
+        //
+        // zeroForOne (selling token0, buying token1):
+        //   Minimum acceptable price = minimumAmountOut / amountIn  (token1 per token0)
+        //   sqrtPriceLimit = sqrt(minimumAmountOut / amountIn) * 2^96
+        //                  = sqrt(minimumAmountOut * 2^192 / amountIn)
+        //   Clamp to >= MIN_SQRT_PRICE + 1
+        //
+        // !zeroForOne (selling token1, buying token0):
+        //   Maximum acceptable price = amountIn / minimumAmountOut  (token1 per token0)
+        //   sqrtPriceLimit = sqrt(amountIn / minimumAmountOut) * 2^96
+        //                  = sqrt(amountIn * 2^192 / minimumAmountOut)
+        //   Clamp to <= MAX_SQRT_PRICE - 1
+
+        // Determine the numerator and denominator for the price ratio.
+        // FullMath.mulDiv(num, 2^192, den) reverts when the 256-bit result overflows,
+        // which happens when num / den >= 2^64.
+        uint256 num;
+        uint256 den;
+        if (zeroForOne) {
+            num = minimumAmountOut;
+            den = amountIn;
+        } else {
+            num = amountIn;
+            den = minimumAmountOut;
+        }
+
+        // Overflow guard: if num / den >= 2^64, mulDiv result won't fit in uint256.
+        if (num / den >= (uint256(1) << 64)) {
+            // For zeroForOne: user demands impossibly high rate — fall back to no limit.
+            // For !zeroForOne: user accepts extreme price — fall back to no limit.
+            return zeroForOne
+                ? TickMath.MIN_SQRT_PRICE + 1
+                : TickMath.MAX_SQRT_PRICE - 1;
+        }
+
+        uint256 ratioX192 = FullMath.mulDiv(num, uint256(1) << 192, den);
+        uint256 sqrtResult = Math.sqrt(ratioX192);
+
+        // Clamp to valid V4 range.
+        if (zeroForOne) {
+            if (sqrtResult <= uint256(TickMath.MIN_SQRT_PRICE)) {
+                return TickMath.MIN_SQRT_PRICE + 1;
+            }
+            if (sqrtResult >= uint256(TickMath.MAX_SQRT_PRICE)) {
+                return TickMath.MAX_SQRT_PRICE - 1;
+            }
+            return uint160(sqrtResult);
+        } else {
+            if (sqrtResult >= uint256(TickMath.MAX_SQRT_PRICE)) {
+                return TickMath.MAX_SQRT_PRICE - 1;
+            }
+            if (sqrtResult <= uint256(TickMath.MIN_SQRT_PRICE)) {
+                return TickMath.MIN_SQRT_PRICE + 1;
+            }
+            return uint160(sqrtResult);
         }
     }
 
