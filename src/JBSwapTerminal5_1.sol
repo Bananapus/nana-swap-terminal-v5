@@ -832,11 +832,14 @@ contract JBSwapTerminal5_1 is
                 catch {}
         }
 
+        // Get a reference to the balance before receiving tokens.
+        uint256 balanceBefore = IERC20(token).balanceOf(address(this));
+
         // Transfer the tokens from the `msg.sender` to this terminal.
         _transferFrom({from: msg.sender, to: payable(address(this)), token: token, amount: amount});
 
-        // The amount actually received.
-        return IERC20(token).balanceOf(address(this));
+        // The amount should reflect the change in balance.
+        return IERC20(token).balanceOf(address(this)) - balanceBefore;
     }
 
     /// @notice Logic to be triggered before transferring tokens from this terminal.
