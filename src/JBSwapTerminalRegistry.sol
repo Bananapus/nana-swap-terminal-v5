@@ -438,8 +438,8 @@ contract JBSwapTerminalRegistry is IJBSwapTerminalRegistry, JBPermissioned, Owna
         // Transfer the tokens from the `_msgSender()` to this terminal.
         _transferFrom({from: _msgSender(), to: payable(address(this)), token: token, amount: amount});
 
-        // The amount actually received.
-        return IERC20(token).balanceOf(address(this));
+        // Return the amount transferred. Fee-on-transfer tokens are not supported by the swap terminal.
+        return amount;
     }
 
     /// @notice Logic to be triggered before transferring tokens from this terminal.

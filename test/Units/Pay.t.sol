@@ -162,7 +162,7 @@ contract JBSwapTerminalpay is UnitFixture {
             allowances
         );
 
-        mockExpectCall(tokenIn, abi.encodeCall(IERC20.balanceOf, address(swapTerminal)), abi.encode(amountIn));
+        vm.mockCall(tokenIn, abi.encodeCall(IERC20.balanceOf, address(swapTerminal)), abi.encode(amountIn));
 
         bytes memory quoteMetadata = _createMetadata(
             JBMetadataResolver.getId("quoteForSwap", address(swapTerminal)), abi.encode(amountOut, pool)
@@ -347,7 +347,7 @@ contract JBSwapTerminalpay is UnitFixture {
         // no allowance granted outside of permit2
         mockExpectCall(tokenIn, abi.encodeCall(IERC20.allowance, (caller, address(swapTerminal))), abi.encode(0));
 
-        mockExpectCall(tokenIn, abi.encodeCall(IERC20.balanceOf, (address(swapTerminal))), abi.encode(amountIn));
+        vm.mockCall(tokenIn, abi.encodeCall(IERC20.balanceOf, (address(swapTerminal))), abi.encode(amountIn));
 
         // Mock the swap - this is where we make most of the tests
         mockExpectCall(
@@ -469,9 +469,9 @@ contract JBSwapTerminalpay is UnitFixture {
             allowances
         );
 
-        mockExpectCall(tokenIn, abi.encodeCall(IERC20.balanceOf, (address(swapTerminalRegistry))), abi.encode(amountIn));
+        vm.mockCall(tokenIn, abi.encodeCall(IERC20.balanceOf, (address(swapTerminalRegistry))), abi.encode(amountIn));
 
-        mockExpectCall(tokenIn, abi.encodeCall(IERC20.balanceOf, (address(swapTerminal))), abi.encode(amountIn));
+        vm.mockCall(tokenIn, abi.encodeCall(IERC20.balanceOf, (address(swapTerminal))), abi.encode(amountIn));
 
         // Mock the swap - this is where we make most of the tests
         mockExpectCall(

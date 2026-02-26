@@ -830,8 +830,8 @@ contract JBSwapTerminal is
         // Transfer the tokens from the `msg.sender` to this terminal.
         _transferFrom({from: msg.sender, to: payable(address(this)), token: token, amount: amount});
 
-        // The amount actually received.
-        return IERC20(token).balanceOf(address(this));
+        // Return the amount transferred. Fee-on-transfer tokens are not supported by the swap terminal.
+        return amount;
     }
 
     /// @notice Logic to be triggered before transferring tokens from this terminal.
