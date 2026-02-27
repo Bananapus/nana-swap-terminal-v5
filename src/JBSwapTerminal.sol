@@ -33,6 +33,7 @@ import {OracleLibrary} from "@uniswap/v3-periphery/contracts/libraries/OracleLib
 
 import {IJBSwapTerminal} from "./interfaces/IJBSwapTerminal.sol";
 import {IWETH9} from "./interfaces/IWETH9.sol";
+import {JBSwapLib} from "./libraries/JBSwapLib.sol";
 
 /// @notice The `JBSwapTerminal` accepts payments in any token. When the `JBSwapTerminal` is paid, it uses a Uniswap
 /// pool to exchange the tokens it received for tokens that another one of its project's terminals can accept. Then, it
@@ -448,44 +449,52 @@ contract JBSwapTerminal is
             // If there's no liquidity, return an empty quote.
             if (liquidity == 0) return (0, pool);
 
-            // Calculate the slippage tolerance.
-            uint256 slippageTolerance = _getSlippageTolerance({
-                amountIn: amount,
-                liquidity: liquidity,
-                tokenOut: normalizedTokenOut,
-                tokenIn: normalizedTokenIn,
-                arithmeticMeanTick: arithmeticMeanTick
-            });
+            // Calculate slippage tolerance + quote in a scoped block to avoid stack-too-deep.
+            {
+                // Calculate the slippage tolerance using the continuous sigmoid formula.
+                // Pool fee is converted from hundredths of a bip (Uniswap V3 format) to basis points.
+                uint256 slippageTolerance = _getSlippageTolerance({
+                    amountIn: amount,
+                    liquidity: liquidity,
+                    tokenOut: normalizedTokenOut,
+                    tokenIn: normalizedTokenIn,
+                    arithmeticMeanTick: arithmeticMeanTick,
+                    poolFeeBps: uint256(pool.fee()) / 100
+                });
 
-            // If the slippage tolerance is the maximum, return an empty quote.
-            if (slippageTolerance == SLIPPAGE_DENOMINATOR) return (0, pool);
+                // If the slippage tolerance meets or exceeds the maximum, return an empty quote.
+                if (slippageTolerance >= SLIPPAGE_DENOMINATOR) return (0, pool);
 
-            // Get a quote based on this TWAP tick.
-            minAmountOut = OracleLibrary.getQuoteAtTick({
-                tick: arithmeticMeanTick,
-                baseAmount: uint128(amount),
-                baseToken: normalizedTokenIn,
-                quoteToken: normalizedTokenOut
-            });
+                // Get a quote based on this TWAP tick.
+                minAmountOut = OracleLibrary.getQuoteAtTick({
+                    tick: arithmeticMeanTick,
+                    baseAmount: uint128(amount),
+                    baseToken: normalizedTokenIn,
+                    quoteToken: normalizedTokenOut
+                });
 
-            // Return the lowest acceptable return based on the TWAP and its parameters.
-            minAmountOut -= (minAmountOut * slippageTolerance) / SLIPPAGE_DENOMINATOR;
+                // Return the lowest acceptable return based on the TWAP and its parameters.
+                minAmountOut -= (minAmountOut * slippageTolerance) / SLIPPAGE_DENOMINATOR;
+            }
         }
     }
 
     /// @notice Get the slippage tolerance for a given amount in and liquidity.
+    /// @dev Uses the continuous sigmoid formula from JBSwapLib for smoother behavior across all swap sizes.
     /// @param amountIn The amount in to get the slippage tolerance for.
     /// @param liquidity The liquidity to get the slippage tolerance for.
     /// @param tokenOut The outgoing token to get the slippage tolerance for.
     /// @param tokenIn The incoming token to get the slippage tolerance for.
     /// @param arithmeticMeanTick The arithmetic mean tick to get the slippage tolerance for.
+    /// @param poolFeeBps The pool fee in basis points (e.g., 30 for 0.3%).
     /// @return slippageTolerance The slippage tolerance for the given amount in and liquidity.
     function _getSlippageTolerance(
         uint256 amountIn,
         uint128 liquidity,
         address tokenOut,
         address tokenIn,
-        int24 arithmeticMeanTick
+        int24 arithmeticMeanTick,
+        uint256 poolFeeBps
     )
         internal
         pure
@@ -501,25 +510,11 @@ contract JBSwapTerminal is
         // If the sqrtP is 0, there's no valid price so we'll return the maximum slippage tolerance.
         if (sqrtP == 0) return SLIPPAGE_DENOMINATOR;
 
-        // Approximate % of range liquidity consumed by the swap (in bps)
-        // Multiply by 10 to to amplify the results and prevent results on the low end from rounding to zero.
-        uint256 base = mulDiv(amountIn, 10 * SLIPPAGE_DENOMINATOR, uint256(liquidity));
+        // Calculate impact using 1e18 precision (prevents rounding to 0 for small swaps).
+        uint256 impact = JBSwapLib.calculateImpact(amountIn, liquidity, sqrtP, zeroForOne);
 
-        // Compute final slippage tolerance (bps), normalized by √P
-        uint256 slippageTolerance =
-            zeroForOne ? mulDiv(base, uint256(sqrtP), uint256(1) << 96) : mulDiv(base, uint256(1) << 96, uint256(sqrtP));
-
-        // Adjust the slippage tolerance to be reasonable given the ranges.
-        if (slippageTolerance > 15 * SLIPPAGE_DENOMINATOR) return SLIPPAGE_DENOMINATOR * 88 / 100;
-        else if (slippageTolerance > 10 * SLIPPAGE_DENOMINATOR) return SLIPPAGE_DENOMINATOR * 67 / 100;
-        else if (slippageTolerance > 30_000) return slippageTolerance / 12;
-        else if (slippageTolerance > 15_000) return slippageTolerance / 10;
-        else if (slippageTolerance > 10_000) return slippageTolerance * 2 / 15;
-        else if (slippageTolerance > 5000) return slippageTolerance * 3 / 20;
-        else if (slippageTolerance > 1500) return slippageTolerance / 5;
-        else if (slippageTolerance > 500) return (slippageTolerance / 5) + 200;
-        else if (slippageTolerance > 0) return (slippageTolerance / 5) + 100;
-        else return UNCERTAIN_SLIPPAGE_TOLERANCE;
+        // Use the continuous sigmoid formula with pool fee awareness.
+        return JBSwapLib.getSlippageTolerance(impact, poolFeeBps);
     }
 
     //*********************************************************************//
@@ -941,11 +936,9 @@ contract JBSwapTerminal is
             recipient: address(this), // Send output tokens to this terminal.
             zeroForOne: zeroForOne, // The direction of the swap.
             amountSpecified: int256(amountIn), // The amount of input tokens to swap.
-            sqrtPriceLimitX96: zeroForOne ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1, // The price
-                // limit for the swap.
-            data: abi.encode(projectId, tokenIn) // Additional data which will be
-                // forwarded to the
-                // callback.
+            // Dynamic sqrtPriceLimit computed from minimum acceptable output (MEV protection).
+            sqrtPriceLimitX96: JBSwapLib.sqrtPriceLimitFromAmounts(amountIn, minAmountOut, zeroForOne),
+            data: abi.encode(projectId, tokenIn) // Additional data forwarded to the callback.
         });
 
         // Calculate the amount of tokens received from the swap.
