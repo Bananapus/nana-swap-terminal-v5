@@ -37,13 +37,15 @@ contract DeployScript is Script, Sphinx {
     uint256 constant BASE_SEPOLIA = 84_532;
     uint256 constant ARBITRUM_SEPOLIA = 421_614;
 
+    uint256 constant CELO_MAINNET = 42_220;
+
     /// @notice the salts that are used to deploy the contracts.
     bytes32 SWAP_TERMINAL = "JBSwapTerminal";
 
     function configureSphinx() public override {
         sphinxConfig.projectName = "nana-swap-terminal-v5";
-        sphinxConfig.mainnets = ["ethereum", "optimism", "base", "arbitrum"];
-        sphinxConfig.testnets = ["ethereum_sepolia", "optimism_sepolia", "base_sepolia", "arbitrum_sepolia"];
+        sphinxConfig.mainnets = ["ethereum", "optimism", "base", "arbitrum", "celo"];
+        sphinxConfig.testnets = ["ethereum_sepolia", "optimism_sepolia", "base_sepolia", "arbitrum_sepolia", "celo_sepolia"];
     }
 
     function run() public {
@@ -104,6 +106,11 @@ contract DeployScript is Script, Sphinx {
             usdc = 0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d;
             weth = 0x980B62Da83eFf3D4576C647993b0c1D7faf17c73;
             factory = 0x248AB79Bbb9bC29bB72f7Cd42F17e054Fc40188e;
+            // Celo Mainnet
+        } else if (block.chainid == 42_220) {
+            usdc = 0xcebA9300f2b948710d2653dD7B07f33A8B32118C;
+            weth = 0xD221812de1BD094f35587EE8E174B07B6167D9Af;
+            factory = 0xAfE208a311B21f13EF87E33A90049fC17A7acDEc;
         } else {
             revert("Invalid RPC / no juice contracts deployed on this network");
         }
