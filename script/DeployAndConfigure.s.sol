@@ -7,7 +7,7 @@ import {IERC20, IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extens
 import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import {Sphinx} from "@sphinx-labs/contracts/SphinxPlugin.sol";
 
-import {JBSwapTerminal5_1, IUniswapV3Pool, IPermit2, IWETH9} from "./../src/JBSwapTerminal5_1.sol";
+import {JBSwapTerminal, IUniswapV3Pool, IPermit2, IWETH9} from "./../src/JBSwapTerminal.sol";
 
 import {JBSwapTerminalRegistry} from "./../src/JBSwapTerminalRegistry.sol";
 import "@bananapus/core-v5/script/helpers/CoreDeploymentLib.sol";
@@ -124,8 +124,8 @@ contract DeployScript is Script, Sphinx {
 
     function deploy() public sphinx {
         // Deploy and configure both the terminals.
-        JBSwapTerminal5_1 nativeTerminal = deployAndConfigureNative();
-        JBSwapTerminal5_1 usdcTerminal = deployAndConfigureUSDC();
+        JBSwapTerminal nativeTerminal = deployAndConfigureNative();
+        JBSwapTerminal usdcTerminal = deployAndConfigureUSDC();
 
         // Set the default terminals.
         swapTerminal.native_registry.setDefaultTerminal(nativeTerminal);
@@ -137,9 +137,9 @@ contract DeployScript is Script, Sphinx {
         swapTerminal.native_registry.allowTerminal(usdcTerminal);
     }
 
-    function deployAndConfigureNative() internal returns (JBSwapTerminal5_1) {
+    function deployAndConfigureNative() internal returns (JBSwapTerminal) {
         // Perform the deployment.
-        JBSwapTerminal5_1 nativeTerminal = new JBSwapTerminal5_1{salt: SWAP_TERMINAL}({
+        JBSwapTerminal nativeTerminal = new JBSwapTerminal{salt: SWAP_TERMINAL}({
             projects: core.projects,
             permissions: core.permissions,
             directory: core.directory,
@@ -276,7 +276,7 @@ contract DeployScript is Script, Sphinx {
 
     function configurePairFor(
         uint256 chainId,
-        JBSwapTerminal5_1 terminal,
+        JBSwapTerminal terminal,
         address token,
         IUniswapV3Pool pool,
         uint256 twapWindow
@@ -303,9 +303,9 @@ contract DeployScript is Script, Sphinx {
         terminal.addTwapParamsFor({projectId: 0, pool: pool, twapWindow: twapWindow});
     }
 
-    function deployAndConfigureUSDC() internal returns (JBSwapTerminal5_1) {
+    function deployAndConfigureUSDC() internal returns (JBSwapTerminal) {
         // Perform the deployment.
-        JBSwapTerminal5_1 usdcSwapTerminal = new JBSwapTerminal5_1{salt: SWAP_TERMINAL}({
+        JBSwapTerminal usdcSwapTerminal = new JBSwapTerminal{salt: SWAP_TERMINAL}({
             projects: core.projects,
             permissions: core.permissions,
             directory: core.directory,

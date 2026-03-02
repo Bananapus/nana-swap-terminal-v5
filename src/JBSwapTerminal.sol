@@ -424,7 +424,7 @@ contract JBSwapTerminal is
             (minAmountOut) = abi.decode(quote, (uint256));
         } else {
             // Get a quote based on the pool's TWAP, including a default slippage maximum.
-            uint256 twapWindow = _twapWindowOf[projectId][pool];
+            uint256 twapWindow = twapWindowOf(projectId, pool);
 
             // Use the oldest observation if it's less than the twapWindow.
             uint32 oldestObservation = OracleLibrary.getOldestObservationSecondsAgo(address(pool));
@@ -576,8 +576,7 @@ contract JBSwapTerminal is
         }
 
         // Call the pool to increase the cardinality, if the cardinality is already higher this is a no-op.
-        // slither-disable-next-line reentrancy-benign
-        // pool.increaseObservationCardinalityNext(MIN_DEFAULT_POOL_CARDINALITY);
+        pool.increaseObservationCardinalityNext(MIN_DEFAULT_POOL_CARDINALITY);
 
         // Store the token as having an accounting context.
         if (_poolFor[projectId][normalizedTokenIn] == IUniswapV3Pool(address(0))) {
