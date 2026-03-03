@@ -573,8 +573,8 @@ contract JBSwapTerminal is
             );
         }
 
-        // Call the pool to increase the cardinality, if the cardinality is already higher this is a no-op.
-        pool.increaseObservationCardinalityNext(MIN_DEFAULT_POOL_CARDINALITY);
+        // No need to call pool.increaseObservationCardinalityNext — _getQuote reverts if the pool lacks
+        // sufficient TWAP observations, which is the correct safety mechanism.
 
         // Store the token as having an accounting context.
         if (_poolFor[projectId][normalizedTokenIn] == IUniswapV3Pool(address(0))) {
