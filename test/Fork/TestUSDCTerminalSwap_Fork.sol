@@ -43,6 +43,10 @@ contract TestUSDCTerminalSwap_Fork is Test {
     uint256 projectId;
 
     function setUp() public {
+        if (!vm.envOr("FORK_TESTS", false)) {
+            vm.skip(true);
+            return;
+        }
         // Fork base sepolia.
         vm.createSelectFork("https://base.gateway.tenderly.co", 33_850_552);
 
