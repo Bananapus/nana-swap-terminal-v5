@@ -125,15 +125,22 @@ library JBSwapLib {
             den = minimumAmountOut;
         }
 
-        // Overflow guard: if num / den >= 2^64, mulDiv result won't fit in uint256.
-        if (num / den >= (uint256(1) << 64)) {
+        uint256 sqrtResult;
+
+        if (num / den >= (uint256(1) << 128)) {
+            // Ratio too large for any valid sqrtPriceX96 — fall back to no limit.
             return zeroForOne
                 ? TickMath.MIN_SQRT_RATIO + 1
                 : TickMath.MAX_SQRT_RATIO - 1;
+        } else if (num / den >= (uint256(1) << 64)) {
+            // Extended range: use ratioX128 to avoid mulDiv overflow, then shift.
+            uint256 ratioX128 = mulDiv(num, uint256(1) << 128, den);
+            sqrtResult = Math.sqrt(ratioX128) * (uint256(1) << 32);
+        } else {
+            // Normal range: full precision via ratioX192.
+            uint256 ratioX192 = mulDiv(num, uint256(1) << 192, den);
+            sqrtResult = Math.sqrt(ratioX192);
         }
-
-        uint256 ratioX192 = mulDiv(num, uint256(1) << 192, den);
-        uint256 sqrtResult = Math.sqrt(ratioX192);
 
         if (zeroForOne) {
             if (sqrtResult <= uint256(TickMath.MIN_SQRT_RATIO)) {
