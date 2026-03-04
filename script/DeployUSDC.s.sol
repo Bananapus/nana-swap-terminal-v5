@@ -42,7 +42,7 @@ contract DeployUSDCScript is Script, Sphinx {
     IJBSwapTerminal swapTerminal;
 
     /// @notice the salts that are used to deploy the contracts.
-    bytes32 SWAP_TERMINAL = "JBSwapTerminal_";
+    bytes32 SWAP_TERMINAL = "JBSwapTerminalV6_";
 
     function configureSphinx() public override {
         sphinxConfig.projectName = "nana-swap-terminal-v5";
