@@ -71,6 +71,7 @@ contract JBSwapTerminal is
     error JBSwapTerminal_TokenNotAccepted(uint256 projectId, address token);
     error JBSwapTerminal_UnexpectedCall(address caller);
     error JBSwapTerminal_WrongPool(address pool, address expectedPool);
+    error JBSwapTerminal_AmountOverflow(uint256 amount);
     error JBSwapTerminal_ZeroToken();
 
     //*********************************************************************//
@@ -478,6 +479,7 @@ contract JBSwapTerminal is
                 if (slippageTolerance >= SLIPPAGE_DENOMINATOR) return (0, pool);
 
                 // Get a quote based on this TWAP tick.
+                if (amount > type(uint128).max) revert JBSwapTerminal_AmountOverflow(amount);
                 minAmountOut = OracleLibrary.getQuoteAtTick({
                     tick: arithmeticMeanTick,
                     baseAmount: uint128(amount),
@@ -566,7 +568,7 @@ contract JBSwapTerminal is
         address normalizedTokenIn = token == JBConstants.NATIVE_TOKEN ? address(WETH) : token;
 
         // Keep a reference to whether the token is being swapped into or out of the pool.
-        bool zeroForOne = token < normalizedTokenOut;
+        bool zeroForOne = normalizedTokenIn < normalizedTokenOut;
 
         // Check if the pool has beed deployed by the factory
         // Factory stores both directions, future proofing
@@ -836,14 +838,14 @@ contract JBSwapTerminal is
                 sigDeadline: allowance.sigDeadline
             });
 
-            try PERMIT2.permit({owner: msg.sender, permitSingle: permitSingle, signature: allowance.signature}) {}
+            try PERMIT2.permit({owner: _msgSender(), permitSingle: permitSingle, signature: allowance.signature}) {}
                 catch (bytes memory reason) {
-                    emit Permit2AllowanceFailed(token, msg.sender, reason);
+                    emit Permit2AllowanceFailed(token, _msgSender(), reason);
                 }
         }
 
-        // Transfer the tokens from the `msg.sender` to this terminal.
-        _transferFrom({from: msg.sender, to: payable(address(this)), token: token, amount: amount});
+        // Transfer the tokens from the `_msgSender()` to this terminal.
+        _transferFrom({from: _msgSender(), to: payable(address(this)), token: token, amount: amount});
 
         // Return the amount transferred. Fee-on-transfer tokens are not supported by the swap terminal.
         return amount;
@@ -921,7 +923,7 @@ contract JBSwapTerminal is
                 WETH.withdraw(leftover);
             }
 
-            _transferFrom({from: address(this), to: payable(msg.sender), token: tokenIn, amount: leftover});
+            _transferFrom({from: address(this), to: payable(_msgSender()), token: tokenIn, amount: leftover});
         }
 
         return amountToSend;
