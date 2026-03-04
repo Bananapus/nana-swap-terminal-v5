@@ -208,3 +208,128 @@ contract SwapTerminalSecurityTests is UnitFixture {
         assertEq(weth1, weth2, "WETH should be immutable");
     }
 }
+
+/// @title RegistryLowFindingsTests
+/// @notice Tests for L-26 (disallow clears default) and L-27 (lock reverts without terminal).
+contract RegistryLowFindingsTests is Test {
+    JBSwapTerminalRegistry registry;
+    address owner = makeAddr("registryOwner");
+
+    IJBPermissions permissions;
+    IJBProjects projects;
+    IPermit2 permit2;
+
+    function setUp() public {
+        permissions = IJBPermissions(makeAddr("permissions"));
+        vm.etch(address(permissions), hex"00");
+        projects = IJBProjects(makeAddr("projects"));
+        vm.etch(address(projects), hex"00");
+        permit2 = IPermit2(makeAddr("permit2"));
+        vm.etch(address(permit2), hex"00");
+
+        registry = new JBSwapTerminalRegistry(permissions, projects, permit2, owner, address(0));
+
+        // Mock permissions to return true by default.
+        vm.mockCall(
+            address(permissions), abi.encodeWithSelector(IJBPermissions.hasPermission.selector), abi.encode(true)
+        );
+        // Mock project ownership.
+        vm.mockCall(address(projects), abi.encodeWithSelector(IERC721.ownerOf.selector), abi.encode(owner));
+    }
+
+    // =========================================================================
+    // L-26: Disallowing a terminal clears it from default
+    // =========================================================================
+    /// @notice After disallowing the default terminal, defaultTerminal should be address(0).
+    function test_L26_disallowTerminal_clearsDefault() public {
+        IJBTerminal terminal = IJBTerminal(makeAddr("terminal"));
+
+        // Allow and set as default.
+        vm.startPrank(owner);
+        registry.allowTerminal(terminal);
+        registry.setDefaultTerminal(terminal);
+        vm.stopPrank();
+
+        assertEq(address(registry.defaultTerminal()), address(terminal), "default should be set");
+
+        // Disallow the terminal.
+        vm.prank(owner);
+        registry.disallowTerminal(terminal);
+
+        // Default should now be cleared.
+        assertEq(address(registry.defaultTerminal()), address(0), "L-26: default should be cleared after disallow");
+    }
+
+    /// @notice Disallowing a non-default terminal should NOT clear the default.
+    function test_L26_disallowNonDefault_doesNotClearDefault() public {
+        IJBTerminal terminalA = IJBTerminal(makeAddr("terminalA"));
+        IJBTerminal terminalB = IJBTerminal(makeAddr("terminalB"));
+
+        vm.startPrank(owner);
+        registry.allowTerminal(terminalA);
+        registry.allowTerminal(terminalB);
+        registry.setDefaultTerminal(terminalA);
+        vm.stopPrank();
+
+        // Disallow terminalB (not the default).
+        vm.prank(owner);
+        registry.disallowTerminal(terminalB);
+
+        // Default should still be terminalA.
+        assertEq(address(registry.defaultTerminal()), address(terminalA), "default should remain unchanged");
+    }
+
+    // =========================================================================
+    // L-27: Locking reverts when no terminal and no default
+    // =========================================================================
+    /// @notice lockTerminalFor reverts when no terminal is set and no default exists.
+    function test_L27_lockTerminal_revertsWithoutTerminal() public {
+        uint256 projectId = 42;
+
+        // No terminal set, no default terminal.
+        vm.prank(owner);
+        vm.expectRevert(
+            abi.encodeWithSelector(JBSwapTerminalRegistry.JBSwapTerminalRegistry_TerminalNotSet.selector, projectId)
+        );
+        registry.lockTerminalFor(projectId);
+    }
+
+    /// @notice lockTerminalFor succeeds and records the default when no project-specific terminal exists.
+    function test_L27_lockTerminal_fallsBackToDefault() public {
+        uint256 projectId = 42;
+        IJBTerminal terminal = IJBTerminal(makeAddr("terminal"));
+
+        // Allow and set as default.
+        vm.startPrank(owner);
+        registry.allowTerminal(terminal);
+        registry.setDefaultTerminal(terminal);
+        vm.stopPrank();
+
+        // Lock without setting a project-specific terminal.
+        vm.prank(owner);
+        registry.lockTerminalFor(projectId);
+
+        assertTrue(registry.hasLockedTerminal(projectId), "should be locked");
+        assertEq(
+            address(registry.terminalOf(projectId)), address(terminal), "should record default as project terminal"
+        );
+    }
+
+    /// @notice lockTerminalFor succeeds when project has a specific terminal set.
+    function test_L27_lockTerminal_withProjectTerminal() public {
+        uint256 projectId = 42;
+        IJBTerminal terminal = IJBTerminal(makeAddr("terminal"));
+
+        // Allow terminal and set for project.
+        vm.startPrank(owner);
+        registry.allowTerminal(terminal);
+        registry.setTerminalFor(projectId, terminal);
+        vm.stopPrank();
+
+        // Lock.
+        vm.prank(owner);
+        registry.lockTerminalFor(projectId);
+
+        assertTrue(registry.hasLockedTerminal(projectId), "should be locked");
+    }
+}

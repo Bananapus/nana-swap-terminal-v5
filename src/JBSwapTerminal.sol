@@ -64,12 +64,20 @@ contract JBSwapTerminal is
     error JBSwapTerminal_InvalidTwapWindow(uint256 window, uint256 minWindow, uint256 maxWindow);
     error JBSwapTerminal_SpecifiedSlippageExceeded(uint256 amount, uint256 minimum);
     error JBSwapTerminal_NoDefaultPoolDefined(uint256 projectId, address token);
+    error JBSwapTerminal_NoLiquidity();
     error JBSwapTerminal_NoMsgValueAllowed(uint256 value);
+    error JBSwapTerminal_NoObservationHistory();
     error JBSwapTerminal_PermitAllowanceNotEnough(uint256 amount, uint256 allowance);
     error JBSwapTerminal_TokenNotAccepted(uint256 projectId, address token);
     error JBSwapTerminal_UnexpectedCall(address caller);
     error JBSwapTerminal_WrongPool(address pool, address expectedPool);
     error JBSwapTerminal_ZeroToken();
+
+    //*********************************************************************//
+    // -------------------------- custom events -------------------------- //
+    //*********************************************************************//
+
+    event Permit2AllowanceFailed(address indexed token, address indexed owner, bytes reason);
 
     //*********************************************************************//
     // ------------------------- public constants ------------------------ //
@@ -420,7 +428,15 @@ contract JBSwapTerminal is
 
         // If there's a quote, use it.
         if (exists) {
-            // If there is a quote, use it for the swap config.
+            // M-4 NOTE: The user-provided quote is accepted without a TWAP floor. This is by design:
+            // - The quote comes from the payer (msg.sender) who is spending their own funds. A low minAmountOut
+            //   only harms the payer themselves (via sandwich attacks), not the project.
+            // - Frontends/aggregators typically fetch real-time quotes from Uniswap's Quoter contract, which are
+            //   more accurate than TWAP. Enforcing a TWAP floor could cause legitimate swaps to revert if the
+            //   TWAP is stale or has been manipulated upward.
+            // - Protocol-internal flows (e.g., payouts via JBMultiTerminal._sendPayoutToSplit) do NOT include a
+            //   quoteForSwap in metadata, so they always use the TWAP-based fallback below.
+            // - This pattern is consistent with the JBBuybackHook's "quote" metadata and standard DEX routers.
             (minAmountOut) = abi.decode(quote, (uint256));
         } else {
             // Get a quote based on the pool's TWAP, including a default slippage maximum.
@@ -436,18 +452,14 @@ contract JBSwapTerminal is
             // Keep a reference to the liquidity.
             uint128 liquidity;
 
-            if (oldestObservation == 0) {
-                // Get the current tick from the pool's slot0
-                // slither-disable-next-line unused-return
-                (, arithmeticMeanTick,,,,,) = pool.slot0();
-                liquidity = pool.liquidity();
-            } else {
-                //slither-disable-next-line unused-return
-                (arithmeticMeanTick, liquidity) = OracleLibrary.consult(address(pool), uint32(twapWindow));
-            }
+            // Revert when the pool lacks observation history — slot0 is flash-loan manipulable.
+            if (oldestObservation == 0) revert JBSwapTerminal_NoObservationHistory();
 
-            // If there's no liquidity, return an empty quote.
-            if (liquidity == 0) return (0, pool);
+            //slither-disable-next-line unused-return
+            (arithmeticMeanTick, liquidity) = OracleLibrary.consult(address(pool), uint32(twapWindow));
+
+            // Revert when there's no liquidity — accepting zero output loses the user's funds.
+            if (liquidity == 0) revert JBSwapTerminal_NoLiquidity();
 
             // Calculate slippage tolerance + quote in a scoped block to avoid stack-too-deep.
             {
@@ -575,8 +587,8 @@ contract JBSwapTerminal is
             );
         }
 
-        // Call the pool to increase the cardinality, if the cardinality is already higher this is a no-op.
-        pool.increaseObservationCardinalityNext(MIN_DEFAULT_POOL_CARDINALITY);
+        // No need to call pool.increaseObservationCardinalityNext — _getQuote reverts if the pool lacks
+        // sufficient TWAP observations, which is the correct safety mechanism.
 
         // Store the token as having an accounting context.
         if (_poolFor[projectId][normalizedTokenIn] == IUniswapV3Pool(address(0))) {
@@ -824,7 +836,9 @@ contract JBSwapTerminal is
             });
 
             try PERMIT2.permit({owner: msg.sender, permitSingle: permitSingle, signature: allowance.signature}) {}
-                catch {}
+                catch (bytes memory reason) {
+                    emit Permit2AllowanceFailed(token, msg.sender, reason);
+                }
         }
 
         // Transfer the tokens from the `msg.sender` to this terminal.

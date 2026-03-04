@@ -25,7 +25,7 @@ contract UnitFixture is Test {
     JBSwapTerminalRegistry public swapTerminalRegistry;
 
     function setUp() public virtual {
-        // -- create random addresses --
+        // -- create random addresses and etch code so vm.mockCall works --
         mockJBProjects = IJBProjects(makeAddr("mockJBProjects"));
         vm.etch(address(mockJBProjects), hex"00");
         mockJBPermissions = IJBPermissions(makeAddr("mockJBPermissions"));

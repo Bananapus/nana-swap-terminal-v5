@@ -265,6 +265,9 @@ contract JBSwapTerminalRegistry is IJBSwapTerminalRegistry, JBPermissioned, Owna
         // Disallow the hook.
         isTerminalAllowed[terminal] = false;
 
+        // L-26: Clear default terminal if it matches the terminal being disallowed.
+        if (defaultTerminal == terminal) defaultTerminal = IJBTerminal(address(0));
+
         emit JBSwapTerminalRegistry_DisallowTerminal(terminal);
     }
 
@@ -281,11 +284,16 @@ contract JBSwapTerminalRegistry is IJBSwapTerminalRegistry, JBPermissioned, Owna
             permissionId: JBPermissionIds.ADD_SWAP_TERMINAL_POOL
         });
 
+        // L-27: Require a non-zero terminal before locking. Either the project has one set, or the default exists.
+        IJBTerminal terminal = _terminalOf[projectId];
+        if (terminal == IJBTerminal(address(0))) {
+            terminal = defaultTerminal;
+            if (terminal == IJBTerminal(address(0))) revert JBSwapTerminalRegistry_TerminalNotSet(projectId);
+            _terminalOf[projectId] = terminal;
+        }
+
         // Set the terminal to locked.
         hasLockedTerminal[projectId] = true;
-
-        // If the terminal is not set, lock in the default terminal.
-        if (_terminalOf[projectId] == IJBTerminal(address(0))) _terminalOf[projectId] = defaultTerminal;
 
         emit JBSwapTerminalRegistry_LockTerminal(projectId);
     }
