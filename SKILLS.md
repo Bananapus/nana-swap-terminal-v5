@@ -9,7 +9,6 @@ Accept payments in any ERC-20 token (or native ETH), swap to a configured output
 | Contract | Role |
 |----------|------|
 | `JBSwapTerminal` | Core terminal: accepts tokens, swaps via Uniswap V3, forwards to primary terminal. Implements `IJBTerminal`, `IJBPermitTerminal`, `IUniswapV3SwapCallback`. |
-| `JBSwapTerminal5_1` | Same as `JBSwapTerminal` but calls `pool.increaseObservationCardinalityNext(10)` when adding default pools. |
 | `JBSwapTerminalRegistry` | Proxy terminal routing `pay`/`addToBalanceOf` to a per-project or default `JBSwapTerminal`. Implements `IJBTerminal`. |
 
 ## Key Functions
@@ -54,7 +53,7 @@ Accept payments in any ERC-20 token (or native ETH), swap to a configured output
 | `MAX_TWAP_WINDOW` | `2 days` | Maximum TWAP oracle window |
 | `SLIPPAGE_DENOMINATOR` | `10,000` | Basis points denominator for slippage |
 | `UNCERTAIN_SLIPPAGE_TOLERANCE` | `1,050` | Default 10.5% slippage when impact is zero |
-| `MIN_DEFAULT_POOL_CARDINALITY` | `10` | Minimum oracle observation slots (V5.1 only bumps this) |
+| `MIN_DEFAULT_POOL_CARDINALITY` | `10` | Minimum oracle observation slots for `addDefaultPool` |
 
 ## Gotchas
 
@@ -65,7 +64,7 @@ Accept payments in any ERC-20 token (or native ETH), swap to a configured output
 - Pool validation uses `FACTORY.getPool()` rather than create2 address derivation, so the terminal works on chains where Uniswap V3 factory bytecode may differ.
 - TWAP fallback: when no observations exist (`oldestObservation == 0`), the terminal falls back to the pool's current spot tick and liquidity rather than reverting.
 - Slippage tolerance is dynamically calculated from the swap's estimated price impact using a stepped bracket system (ranging from ~100 bps for tiny swaps to 88% for massive ones).
-- `JBSwapTerminal` (V5.0) comments out `pool.increaseObservationCardinalityNext()`. `JBSwapTerminal5_1` enables it.
+- `addDefaultPool` calls `pool.increaseObservationCardinalityNext(10)` to proactively set up TWAP history. `_getQuote` also reverts if observations are missing as a safety net.
 - The `JBSwapTerminalRegistry` forwards Permit2 data internally and handles token custody during delegation.
 - Metadata keys: `"quoteForSwap"` for the minimum output amount, `"permit2"` for gasless approvals.
 - `_msgSender()` (ERC-2771) is used instead of `msg.sender` for meta-transaction compatibility.

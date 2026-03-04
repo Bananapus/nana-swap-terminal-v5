@@ -440,7 +440,7 @@ contract JBSwapTerminal is
             (minAmountOut) = abi.decode(quote, (uint256));
         } else {
             // Get a quote based on the pool's TWAP, including a default slippage maximum.
-            uint256 twapWindow = _twapWindowOf[projectId][pool];
+            uint256 twapWindow = twapWindowOf(projectId, pool);
 
             // Use the oldest observation if it's less than the twapWindow.
             uint32 oldestObservation = OracleLibrary.getOldestObservationSecondsAgo(address(pool));
@@ -587,8 +587,9 @@ contract JBSwapTerminal is
             );
         }
 
-        // No need to call pool.increaseObservationCardinalityNext — _getQuote reverts if the pool lacks
-        // sufficient TWAP observations, which is the correct safety mechanism.
+        // Proactively set up TWAP history. If the cardinality is already higher this is a no-op.
+        // _getQuote also reverts if the pool lacks sufficient observations as a safety net.
+        pool.increaseObservationCardinalityNext(MIN_DEFAULT_POOL_CARDINALITY);
 
         // Store the token as having an accounting context.
         if (_poolFor[projectId][normalizedTokenIn] == IUniswapV3Pool(address(0))) {
