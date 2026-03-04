@@ -322,7 +322,7 @@ contract JBSwapTerminaladdToBalanceOf is UnitFixture {
         // no allowance granted outside of permit2
         mockExpectCall(tokenIn, abi.encodeCall(IERC20.allowance, (caller, address(swapTerminal))), abi.encode(0));
 
-        mockExpectCall(tokenIn, abi.encodeCall(IERC20.balanceOf, (address(swapTerminal))), abi.encode(amountIn));
+        vm.mockCall(tokenIn, abi.encodeCall(IERC20.balanceOf, (address(swapTerminal))), abi.encode(amountIn));
 
         // Mock the swap - this is where we make most of the tests
         mockExpectCall(
