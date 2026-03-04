@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import {JBConstants} from "@bananapus/core-v5/src/libraries/JBConstants.sol";
+import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 import {IERC20, IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Sphinx} from "@sphinx-labs/contracts/SphinxPlugin.sol";
 import {IUniswapV3Factory} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
@@ -27,7 +27,7 @@ contract ConfigurePairs is Script, Sphinx {
     uint256 constant ARBITRUM_SEPOLIA = 421_614;
 
     function configureSphinx() public override {
-        sphinxConfig.projectName = "nana-swap-terminal-v5";
+        sphinxConfig.projectName = "nana-swap-terminal-v6";
         sphinxConfig.mainnets = ["ethereum", "optimism", "base", "arbitrum"];
         sphinxConfig.testnets = ["ethereum_sepolia", "optimism_sepolia", "base_sepolia", "arbitrum_sepolia"];
     }
