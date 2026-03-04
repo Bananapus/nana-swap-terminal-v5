@@ -258,6 +258,6 @@ contract DeployUSDCScript is Script, Sphinx {
 
         // Add the pair to the swap terminal.
         swapTerminal.addDefaultPool({projectId: 0, token: token, pool: pool});
-        swapTerminal.addTwapParamsFor({projectId: 0, pool: pool, secondsAgo: twapWindow});
+        swapTerminal.addTwapParamsFor({projectId: 0, pool: pool, twapWindow: twapWindow});
     }
 }

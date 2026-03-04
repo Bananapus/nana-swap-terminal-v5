@@ -169,6 +169,6 @@ contract ConfigurePairs is Script, Sphinx {
 
         // Add the pair to the swap terminal.
         swapTerminal.swap_terminal.addDefaultPool({projectId: projectId, token: token, pool: pool});
-        swapTerminal.swap_terminal.addTwapParamsFor({projectId: projectId, pool: pool, secondsAgo: twapWindow});
+        swapTerminal.swap_terminal.addTwapParamsFor({projectId: projectId, pool: pool, twapWindow: twapWindow});
     }
 }

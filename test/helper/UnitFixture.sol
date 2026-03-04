@@ -25,7 +25,7 @@ contract UnitFixture is Test {
     JBSwapTerminalRegistry public swapTerminalRegistry;
 
     function setUp() public virtual {
-        // -- create random addresses --
+        // -- create random addresses and etch code so vm.mockCall works --
         mockJBProjects = IJBProjects(makeAddr("mockJBProjects"));
         vm.etch(address(mockJBProjects), hex"00");
         mockJBPermissions = IJBPermissions(makeAddr("mockJBPermissions"));
@@ -85,7 +85,8 @@ contract UnitFixture is Test {
 
         mockExpectCall(token, abi.encodeCall(IERC20.transferFrom, (from, to, amount)), abi.encode(true));
 
-        mockExpectCall(token, abi.encodeCall(IERC20.balanceOf, to), abi.encode(amount));
+        // Mock balanceOf for the leftover check (no expectation — _acceptFundsFor no longer calls balanceOf)
+        vm.mockCall(token, abi.encodeCall(IERC20.balanceOf, to), abi.encode(amount));
     }
 
     // compare 2 uniswap v3 pool addresses
