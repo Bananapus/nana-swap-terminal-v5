@@ -9,7 +9,6 @@ _If you're having trouble understanding this contract, take a look at the [core 
 | Contract | Description |
 |----------|-------------|
 | `JBSwapTerminal` | Core terminal. Accepts any token via `pay` or `addToBalanceOf`, swaps through a Uniswap V3 pool to a configured `TOKEN_OUT`, then forwards the output to the project's primary terminal. Uses TWAP oracle for automatic slippage protection when the caller doesn't provide a quote. |
-| `JBSwapTerminal5_1` | Identical to `JBSwapTerminal` except it calls `pool.increaseObservationCardinalityNext()` when adding default pools. V5.0 disables this call for compatibility with non-standard pools. |
 | `JBSwapTerminalRegistry` | A proxy terminal that delegates `pay` and `addToBalanceOf` to a per-project or default `JBSwapTerminal` instance. Allows project owners to choose (and lock) which swap terminal implementation they use. |
 
 ## How It Works
@@ -92,8 +91,7 @@ Key `foundry.toml` settings:
 ```
 nana-swap-terminal-v5/
 ├── src/
-│   ├── JBSwapTerminal.sol          # Core swap terminal (V5.0)
-│   ├── JBSwapTerminal5_1.sol       # Swap terminal (V5.1, with cardinality bump)
+│   ├── JBSwapTerminal.sol          # Core swap terminal
 │   ├── JBSwapTerminalRegistry.sol  # Per-project terminal routing
 │   └── interfaces/
 │       ├── IJBSwapTerminal.sol     # Swap terminal interface
@@ -128,4 +126,4 @@ The terminal also supports Permit2 metadata (key: `"permit2"`) for gasless token
 - The terminal never holds a token balance. After every swap, all output tokens are forwarded and leftover input tokens are returned to the payer.
 - Pool validation uses `FACTORY.getPool()` rather than create2, so the terminal works on chains where Uniswap V3 factory bytecode may differ.
 - TWAP fallback: when no observations exist, the terminal falls back to the pool's current spot tick rather than reverting.
-- `JBSwapTerminal` (V5.0) comments out `pool.increaseObservationCardinalityNext()`. `JBSwapTerminal5_1` enables it.
+- `addDefaultPool` calls `pool.increaseObservationCardinalityNext(10)` to proactively set up TWAP history. `_getQuote` also reverts if observations are missing as a safety net.
