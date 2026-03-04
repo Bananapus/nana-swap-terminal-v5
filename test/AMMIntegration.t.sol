@@ -13,12 +13,12 @@ import {OracleLibrary} from "@uniswap/v3-periphery/contracts/libraries/OracleLib
 import "../src/JBSwapTerminal.sol";
 import {JBSwapLib} from "../src/libraries/JBSwapLib.sol";
 import {IWETH9} from "../src/interfaces/IWETH9.sol";
-import {JBMetadataResolver} from "@bananapus/core-v5/src/libraries/JBMetadataResolver.sol";
-import {JBConstants} from "@bananapus/core-v5/src/libraries/JBConstants.sol";
-import {IJBDirectory} from "@bananapus/core-v5/src/interfaces/IJBDirectory.sol";
-import {IJBPermissions} from "@bananapus/core-v5/src/interfaces/IJBPermissions.sol";
-import {IJBProjects} from "@bananapus/core-v5/src/interfaces/IJBProjects.sol";
-import {IJBTerminal} from "@bananapus/core-v5/src/interfaces/IJBTerminal.sol";
+import {JBMetadataResolver} from "@bananapus/core-v6/src/libraries/JBMetadataResolver.sol";
+import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
+import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
+import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
+import {IJBProjects} from "@bananapus/core-v6/src/interfaces/IJBProjects.sol";
+import {IJBTerminal} from "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 

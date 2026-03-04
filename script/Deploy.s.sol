@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import "@bananapus/core-v5/script/helpers/CoreDeploymentLib.sol";
-import {JBConstants} from "@bananapus/core-v5/src/libraries/JBConstants.sol";
+import "@bananapus/core-v6/script/helpers/CoreDeploymentLib.sol";
+import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 import {IERC20, IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 import {Sphinx} from "@sphinx-labs/contracts/SphinxPlugin.sol";
@@ -19,7 +19,7 @@ contract DeployScript is Script, Sphinx {
     CoreDeployment core;
 
     /// @notice tracks the addresses that are required for the chain we are deploying to.
-    address manager = address(0x80a8F7a4bD75b539CE26937016Df607fdC9ABeb5); // `nana-core-v5` multisig.
+    address manager = address(0x80a8F7a4bD75b539CE26937016Df607fdC9ABeb5); // `nana-core-v6` multisig.
     address weth;
     address factory;
     address trustedForwarder;
@@ -29,7 +29,7 @@ contract DeployScript is Script, Sphinx {
     bytes32 SWAP_TERMINAL = "JBSwapTerminalV6";
 
     function configureSphinx() public override {
-        sphinxConfig.projectName = "nana-swap-terminal-v5";
+        sphinxConfig.projectName = "nana-swap-terminal-v6";
         sphinxConfig.mainnets = ["ethereum", "optimism", "base", "arbitrum"];
         sphinxConfig.testnets = ["ethereum_sepolia", "optimism_sepolia", "base_sepolia", "arbitrum_sepolia"];
     }
@@ -38,7 +38,7 @@ contract DeployScript is Script, Sphinx {
         // Get the deployment addresses for the nana CORE for this chain.
         // We want to do this outside of the `sphinx` modifier.
         core = CoreDeploymentLib.getDeployment(
-            vm.envOr("NANA_CORE_DEPLOYMENT_PATH", string("node_modules/@bananapus/core-v5/deployments/"))
+            vm.envOr("NANA_CORE_DEPLOYMENT_PATH", string("node_modules/@bananapus/core-v6/deployments/"))
         );
 
         // Get the permit2 that the multiterminal also makes use of.

@@ -3,12 +3,12 @@ pragma solidity ^0.8.16;
 
 import "forge-std/Test.sol";
 
-import "@bananapus/core-v5/src/interfaces/IJBPermissions.sol";
-import "@bananapus/core-v5/src/interfaces/IJBProjects.sol";
-import "@bananapus/core-v5/src/interfaces/IJBTerminal.sol";
+import "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
+import "@bananapus/core-v6/src/interfaces/IJBProjects.sol";
+import "@bananapus/core-v6/src/interfaces/IJBTerminal.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "@bananapus/core-v5/src/structs/JBAccountingContext.sol";
-import "@bananapus/permission-ids-v5/src/JBPermissionIds.sol";
+import "@bananapus/core-v6/src/structs/JBAccountingContext.sol";
+import "@bananapus/permission-ids-v6/src/JBPermissionIds.sol";
 import {IPermit2} from "@uniswap/permit2/src/interfaces/IPermit2.sol";
 
 import "src/JBSwapTerminalRegistry.sol";
