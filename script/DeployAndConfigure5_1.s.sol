@@ -38,7 +38,7 @@ contract DeployScript is Script, Sphinx {
     uint256 constant ARBITRUM_SEPOLIA = 421_614;
 
     /// @notice the salts that are used to deploy the contracts.
-    bytes32 SWAP_TERMINAL = "JBSwapTerminal";
+    bytes32 SWAP_TERMINAL = "JBSwapTerminalV6";
 
     function configureSphinx() public override {
         sphinxConfig.projectName = "nana-swap-terminal-v5";
