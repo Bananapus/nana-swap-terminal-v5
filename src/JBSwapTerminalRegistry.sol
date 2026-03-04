@@ -59,13 +59,17 @@ contract JBSwapTerminalRegistry is IJBSwapTerminalRegistry, JBPermissioned, Owna
     /// @custom:param projectId The ID of the project to get the locked hook for.
     mapping(uint256 projectId => bool) public override hasLockedTerminal;
 
-    /// @notice The terminal explicitly set for the given project.
-    /// @custom:param projectId The ID of the project to get the terminal for.
-    mapping(uint256 projectId => IJBTerminal) internal _terminalOf;
-
     /// @notice The address of each project's token.
     /// @custom:param projectId The ID of the project the token belongs to.
     mapping(IJBTerminal terminal => bool) public override isTerminalAllowed;
+
+    //*********************************************************************//
+    // --------------------- internal stored properties ------------------ //
+    //*********************************************************************//
+
+    /// @notice The terminal explicitly set for the given project.
+    /// @custom:param projectId The ID of the project to get the terminal for.
+    mapping(uint256 projectId => IJBTerminal) internal _terminalOf;
 
     //*********************************************************************//
     // ---------------------------- constructor -------------------------- //
