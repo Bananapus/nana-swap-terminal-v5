@@ -1,7 +1,7 @@
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
 [profile.default]
 solc = '0.8.23'
-vm_version = 'paris'                   # Required for L2s (Optimism, Arbitrum, etc.)
+evm_version = 'paris'                   # Required for L2s (Optimism, Arbitrum, etc.)
 sizes = true
 verbosity = 3                           # display errors
 optimizer_runs = 100000000
@@ -35,3 +35,4 @@ fail_on_revert = false
 number_underscore = "thousands"
 multiline_func_header = "all"
 wrap_comments = true
+ignore = ["**/node_modules/**"]

@@ -12,34 +12,34 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "../../src/JBSwapTerminal.sol";
 import {IWETH9} from "../../src/interfaces/IWETH9.sol";
 
-import {MetadataResolverHelper} from "@bananapus/core-v5/test/helpers/MetadataResolverHelper.sol";
-import {JBMultiTerminal} from "@bananapus/core-v5/src/JBMultiTerminal.sol";
+import {MetadataResolverHelper} from "@bananapus/core-v6/test/helpers/MetadataResolverHelper.sol";
+import {JBMultiTerminal} from "@bananapus/core-v6/src/JBMultiTerminal.sol";
 
-import {JBTokens} from "@bananapus/core-v5/src/JBTokens.sol";
+import {JBTokens} from "@bananapus/core-v6/src/JBTokens.sol";
 
-import {IJBController} from "@bananapus/core-v5/src/interfaces/IJBController.sol";
-import {IJBProjects} from "@bananapus/core-v5/src/interfaces/IJBProjects.sol";
-import {IJBPermissions} from "@bananapus/core-v5/src/interfaces/IJBPermissions.sol";
-import {IJBDirectory} from "@bananapus/core-v5/src/interfaces/IJBDirectory.sol";
-import {IJBTerminalStore} from "@bananapus/core-v5/src/interfaces/IJBTerminalStore.sol";
+import {IJBController} from "@bananapus/core-v6/src/interfaces/IJBController.sol";
+import {IJBProjects} from "@bananapus/core-v6/src/interfaces/IJBProjects.sol";
+import {IJBPermissions} from "@bananapus/core-v6/src/interfaces/IJBPermissions.sol";
+import {IJBDirectory} from "@bananapus/core-v6/src/interfaces/IJBDirectory.sol";
+import {IJBTerminalStore} from "@bananapus/core-v6/src/interfaces/IJBTerminalStore.sol";
 
-import {JBConstants} from "@bananapus/core-v5/src/libraries/JBConstants.sol";
+import {JBConstants} from "@bananapus/core-v6/src/libraries/JBConstants.sol";
 
-import {JBRulesetMetadata} from "@bananapus/core-v5/src/structs/JBRulesetMetadata.sol";
-import {JBRulesetMetadataResolver} from "@bananapus/core-v5/src/libraries/JBRulesetMetadataResolver.sol";
-import {JBRuleset} from "@bananapus/core-v5/src/structs/JBRuleset.sol";
+import {JBRulesetMetadata} from "@bananapus/core-v6/src/structs/JBRulesetMetadata.sol";
+import {JBRulesetMetadataResolver} from "@bananapus/core-v6/src/libraries/JBRulesetMetadataResolver.sol";
+import {JBRuleset} from "@bananapus/core-v6/src/structs/JBRuleset.sol";
 
-import {JBRulesetConfig} from "@bananapus/core-v5/src/structs/JBRulesetConfig.sol";
+import {JBRulesetConfig} from "@bananapus/core-v6/src/structs/JBRulesetConfig.sol";
 
-import {JBSplitGroup} from "@bananapus/core-v5/src/structs/JBSplitGroup.sol";
+import {JBSplitGroup} from "@bananapus/core-v6/src/structs/JBSplitGroup.sol";
 
-import {JBFundAccessLimitGroup} from "@bananapus/core-v5/src/structs/JBFundAccessLimitGroup.sol";
+import {JBFundAccessLimitGroup} from "@bananapus/core-v6/src/structs/JBFundAccessLimitGroup.sol";
 
-import {IJBRulesetApprovalHook} from "@bananapus/core-v5/src/interfaces/IJBRulesetApprovalHook.sol";
+import {IJBRulesetApprovalHook} from "@bananapus/core-v6/src/interfaces/IJBRulesetApprovalHook.sol";
 
 import {MockERC20} from "../helper/MockERC20.sol";
 
-import "@bananapus/core-v5/script/helpers/CoreDeploymentLib.sol";
+import "@bananapus/core-v6/script/helpers/CoreDeploymentLib.sol";
 
 import "forge-std/Test.sol";
 
@@ -79,6 +79,10 @@ contract TestSwapTerminal_Fork is Test {
     uint256 internal _projectId = 2;
 
     function setUp() public {
+        if (!vm.envOr("FORK_TESTS", false)) {
+            vm.skip(true);
+            return;
+        }
         vm.createSelectFork("https://eth-sepolia.g.alchemy.com/v2/aqe_TW1SAuXZdaooXMhf1RW0WSAW7XFd", 7_638_426);
 
         vm.label(address(UNI), "UNI");
@@ -87,7 +91,7 @@ contract TestSwapTerminal_Fork is Test {
 
         // Fetch the latest core deployments on this network
         core = CoreDeploymentLib.getDeployment(
-            vm.envOr("NANA_CORE_DEPLOYMENT_PATH", string("node_modules/@bananapus/core-v5/deployments/"))
+            vm.envOr("NANA_CORE_DEPLOYMENT_PATH", string("node_modules/@bananapus/core-v6/deployments/"))
         );
 
         _controller = core.controller;
