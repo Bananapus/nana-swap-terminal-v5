@@ -46,21 +46,21 @@ contract JBSwapTerminalRegistry is IJBSwapTerminalRegistry, JBPermissioned, Owna
     IJBProjects public immutable override PROJECTS;
 
     /// @notice The permit2 utility.
-    IPermit2 public immutable PERMIT2;
+    IPermit2 public immutable override PERMIT2;
 
     //*********************************************************************//
     // --------------------- public stored properties -------------------- //
     //*********************************************************************//
 
-    /// @notice The default hook to use.
+    /// @notice The default terminal to use.
     IJBTerminal public override defaultTerminal;
 
     /// @notice Whether the terminal for the given project is locked.
-    /// @custom:param projectId The ID of the project to get the locked hook for.
+    /// @custom:param projectId The ID of the project to get the locked terminal for.
     mapping(uint256 projectId => bool) public override hasLockedTerminal;
 
-    /// @notice The address of each project's token.
-    /// @custom:param projectId The ID of the project the token belongs to.
+    /// @notice Whether the given terminal is allowed to be set for projects.
+    /// @custom:param terminal The terminal to check.
     mapping(IJBTerminal terminal => bool) public override isTerminalAllowed;
 
     //*********************************************************************//
@@ -157,6 +157,7 @@ contract JBSwapTerminalRegistry is IJBSwapTerminalRegistry, JBPermissioned, Owna
     )
         external
         view
+        override
         returns (uint256)
     {}
 
@@ -248,8 +249,8 @@ contract JBSwapTerminalRegistry is IJBSwapTerminalRegistry, JBPermissioned, Owna
         });
     }
 
-    /// @notice Allow a hook.
-    /// @dev Only the owner can allow a hook.
+    /// @notice Allow a terminal.
+    /// @dev Only the owner can allow a terminal.
     /// @param terminal The terminal to allow.
     function allowTerminal(IJBTerminal terminal) external onlyOwner {
         // Allow the terminal.
@@ -259,10 +260,10 @@ contract JBSwapTerminalRegistry is IJBSwapTerminalRegistry, JBPermissioned, Owna
     }
 
     /// @notice Disallow a terminal.
-    /// @dev Only the owner can disallow a hook.
+    /// @dev Only the owner can disallow a terminal.
     /// @param terminal The terminal to disallow.
     function disallowTerminal(IJBTerminal terminal) external onlyOwner {
-        // Disallow the hook.
+        // Disallow the terminal.
         isTerminalAllowed[terminal] = false;
 
         // L-26: Clear default terminal if it matches the terminal being disallowed.
@@ -364,7 +365,7 @@ contract JBSwapTerminalRegistry is IJBSwapTerminalRegistry, JBPermissioned, Owna
     }
 
     /// @notice Set the default terminal.
-    /// @dev Only the owner can set the default hook.
+    /// @dev Only the owner can set the default terminal.
     /// @param terminal The terminal to set as the default.
     function setDefaultTerminal(IJBTerminal terminal) external onlyOwner {
         // Set the default terminal.
@@ -383,7 +384,7 @@ contract JBSwapTerminalRegistry is IJBSwapTerminalRegistry, JBPermissioned, Owna
     /// @param projectId The ID of the project to set the terminal for.
     /// @param terminal The terminal to set for the project.
     function setTerminalFor(uint256 projectId, IJBTerminal terminal) external {
-        // Make sure the hook is not locked.
+        // Make sure the terminal is not locked.
         if (hasLockedTerminal[projectId]) revert JBSwapTerminalRegistry_TerminalLocked(projectId);
 
         if (!isTerminalAllowed[terminal]) revert JBSwapTerminalRegistry_TerminalNotAllowed(terminal);

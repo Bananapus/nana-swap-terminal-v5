@@ -304,14 +304,16 @@ contract JBSwapTerminal is
     )
         external
         view
+        override
         returns (uint256)
     {}
 
     /// @notice Returns the default pool for a given project and token or, if a project has no default pool for the
-    ///         token, the overal default pool for the token
+    ///         token, the overall default pool for the token.
     /// @param projectId The ID of the project to retrieve the default pool for.
     /// @param tokenIn The address of the token to retrieve the default pool for.
-    /// @return pool The default pool for the token, or the overall default pool for the token if the
+    /// @return pool The default pool for the token, or the overall default pool for the token if the project has none.
+    /// @return zeroForOne Whether `tokenIn` is token0 in the pool (true) or token1 (false).
     function getPoolFor(
         uint256 projectId,
         address tokenIn
